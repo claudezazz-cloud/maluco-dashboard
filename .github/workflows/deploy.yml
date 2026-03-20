@@ -1,0 +1,38 @@
+name: Deploy Workflow to N8N
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'workflow.json'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Inject secrets into workflow
+        run: |
+          sed -i "s/YOUR_ANTHROPIC_API_KEY/${{ secrets.ANTHROPIC_API_KEY }}/g" workflow.json
+          sed -i "s/YOUR_NOTION_TOKEN/${{ secrets.NOTION_TOKEN }}/g" workflow.json
+
+      - name: Deploy to N8N via webhook
+        run: |
+          HTTP_STATUS=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -X POST "https://lanlunar-n8n.cloudfy.live/webhook/n8n-deploy" \
+            -H "Content-Type: application/json" \
+            -H "x-deploy-token: ZAZZ_DEPLOY_2026" \
+            --data-binary @workflow.json)
+
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "Response: $(cat /tmp/response.txt)"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Deploy falhou com status $HTTP_STATUS"
+            exit 1
+          fi
+
+          echo "Deploy realizado com sucesso!"
