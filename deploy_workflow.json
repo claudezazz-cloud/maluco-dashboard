@@ -1,0 +1,226 @@
+{
+  "name": "Deploy Webhook - Auto Update Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "n8n-deploy",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        300
+      ],
+      "id": "deploy-webhook-01",
+      "name": "Deploy Webhook",
+      "webhookId": "deploy-webhook-01"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "auth-check",
+              "leftValue": "={{ $json.headers['x-deploy-token'] }}",
+              "rightValue": "ZAZZ_DEPLOY_2026",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        460,
+        300
+      ],
+      "id": "deploy-auth-check",
+      "name": "Verifica Token"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Remove campos que a API do N8N não aceita no PUT\nconst wf = $json.body;\n\n// Limpa cada nó removendo campos extras\nconst cleanNodes = wf.nodes.map(node => {\n  const clean = {\n    id: node.id,\n    name: node.name,\n    type: node.type,\n    typeVersion: node.typeVersion,\n    position: node.position,\n    parameters: node.parameters\n  };\n  if (node.credentials) clean.credentials = node.credentials;\n  if (node.onError) clean.onError = node.onError;\n  return clean;\n});\n\nconst cleanWorkflow = {\n  name: wf.name,\n  nodes: cleanNodes,\n  connections: wf.connections,\n  settings: wf.settings || {}\n};\n\nreturn [{ json: { cleanWorkflow } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        220
+      ],
+      "id": "deploy-clean-json",
+      "name": "Limpa JSON"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "http://localhost:5678/api/v1/workflows/BhIJ7UrKM9uWhXHa",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhNTc3ZDQyMy1kMWY3LTQyOWQtODg1ZS05MTYzZTZmMGMwYzIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiOWQwMDYwZTUtNDQ1Yi00ZmRiLWE0YTAtMzAzZGEwM2E1YzViIiwiaWF0IjoxNzc0MDI3MTUxfQ.seOJHfOXKA_0l1PhHze6Hq3qMOpmYsBBTTlsfVx8f9U"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.cleanWorkflow) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        900,
+        220
+      ],
+      "id": "deploy-update-wf",
+      "name": "Atualiza Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/api/v1/workflows/BhIJ7UrKM9uWhXHa/activate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhNTc3ZDQyMy1kMWY3LTQyOWQtODg1ZS05MTYzZTZmMGMwYzIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiOWQwMDYwZTUtNDQ1Yi00ZmRiLWE0YTAtMzAzZGEwM2E1YzViIiwiaWF0IjoxNzc0MDI3MTUxfQ.seOJHfOXKA_0l1PhHze6Hq3qMOpmYsBBTTlsfVx8f9U"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        220
+      ],
+      "id": "deploy-activate-wf",
+      "name": "Ativa Workflow"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({success: true, message: 'Workflow atualizado!'}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        220
+      ],
+      "id": "deploy-respond-ok",
+      "name": "Responde OK"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({success: false, message: 'Token invalido'}) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        400
+      ],
+      "id": "deploy-respond-err",
+      "name": "Responde Erro"
+    }
+  ],
+  "connections": {
+    "Deploy Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verifica Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifica Token": {
+      "main": [
+        [
+          {
+            "node": "Limpa JSON",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responde Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpa JSON": {
+      "main": [
+        [
+          {
+            "node": "Atualiza Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualiza Workflow": {
+      "main": [
+        [
+          {
+            "node": "Ativa Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ativa Workflow": {
+      "main": [
+        [
+          {
+            "node": "Responde OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "tags": []
+}
