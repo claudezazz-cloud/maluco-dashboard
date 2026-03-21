@@ -18,6 +18,7 @@ jobs:
         run: |
           sed -i "s/YOUR_ANTHROPIC_API_KEY/${{ secrets.ANTHROPIC_API_KEY }}/g" workflow.json
           sed -i "s/YOUR_NOTION_TOKEN/${{ secrets.NOTION_TOKEN }}/g" workflow.json
+          sed -i "s/YOUR_OPENAI_API_KEY/${{ secrets.OPENAI_API_KEY }}/g" workflow.json
 
       - name: Deploy to N8N via webhook
         run: |
