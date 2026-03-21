@@ -649,6 +649,130 @@
       ],
       "id": "e374d538-3742-4e0e-8354-78f660c1997d",
       "name": "Filter1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst b = body.body || {};\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst isAudio = !!(eMsg.audioMessage || eMsg.pttMessage);\nif (!isAudio) return [];\n\nconst eMsgId = eData.key?.id || '';\nconst eChat = eData.key?.remoteJid || '';\nconst fromMe = eData.key?.fromMe || false;\nconst eSender = eData.pushName || 'Alguém';\nconst msgTimestamp = eData.messageTimestamp || 0;\nconst nowTimestamp = Math.floor(Date.now() / 1000);\nif (msgTimestamp && (nowTimestamp - msgTimestamp) > 120) return [];\n\nreturn [{ json: { msgKey: { id: eMsgId, remoteJid: eChat, fromMe }, chatId: eChat, sender: eSender, messageId: eMsgId }}];"
+      },
+      "id": "audio-detecta-01",
+      "name": "Detecta Áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [13968, 4500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lanlunar-evolution.cloudfy.live/chat/getBase64FromMediaMessage/ZazzClaude",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "KGWUTIl4uXDVxFiJMhFgT1LzP8bHRcze" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ key: $json.msgKey, convertToMp4: false }) }}",
+        "options": {}
+      },
+      "id": "audio-baixa-02",
+      "name": "Baixa Áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [14280, 4500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base64 = $json.base64;\nif (!base64) return [];\nconst mimetypeFull = $json.mimetype || 'audio/ogg';\nconst mimetype = mimetypeFull.split(';')[0].trim();\nconst ext = mimetype.includes('mp4') ? 'mp4' : mimetype.includes('mpeg') ? 'mp3' : 'ogg';\nconst detecta = $('Detecta Áudio').first().json;\nconst binaryData = await this.helpers.prepareBinaryData(\n  Buffer.from(base64, 'base64'),\n  'audio.' + ext,\n  mimetype\n);\nreturn [{\n  json: { chatId: detecta.chatId, sender: detecta.sender, messageId: detecta.messageId },\n  binary: { audioFile: binaryData }\n}];"
+      },
+      "id": "audio-converte-03",
+      "name": "Converte p/ Whisper",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [14590, 4500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer YOUR_OPENAI_API_KEY" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            { "parameterType": "formBinaryData", "name": "file", "inputDataFieldName": "audioFile" },
+            { "name": "model", "value": "whisper-1" },
+            { "name": "language", "value": "pt" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "audio-whisper-04",
+      "name": "Transcreve Áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [14900, 4500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const transcription = $json.text || '';\nconst detecta = $('Detecta Áudio').first().json;\nif (!transcription) return [];\n\nconst botNumbers = ['554396543242', '235437994062039'];\nconst txtLower = transcription.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\nconst isMentionedText = botNumbers.some(n => transcription.includes('@' + n) || transcription.includes('@' + n.slice(2)));\nconst isMentionedName = txtLower.includes('maluco') || txtLower.includes('claude');\nconst isDirectMessage = detecta.chatId && !detecta.chatId.includes('@g.us');\nconst isMentioned = isMentionedText || isMentionedName || isDirectMessage;\n\nconst isReportMensal = txtLower.includes('mensal') || txtLower.includes('mes');\nconst isReportSemanal = !isReportMensal && (txtLower.includes('semanal') || txtLower.includes('semana'));\nconst isReport = txtLower.includes('relatorio') || txtLower.includes('resumo');\nconst reportType = isReportMensal ? 'mensal' : isReportSemanal ? 'semanal' : 'diario';\nconst isTraining = txtLower.includes('claude aprenda') || txtLower.includes('claude correcao');\n\nreturn [{\n  json: {\n    chatId: detecta.chatId,\n    textMessage: transcription,\n    dbRemetente: detecta.sender + ' \uD83C\uDFA4',\n    dbMensagem: '\uD83C\uDFA4 ' + transcription,\n    messageId: detecta.messageId,\n    isReport, isTraining, reportType, isMentioned\n  }\n}];"
+      },
+      "id": "audio-formata-05",
+      "name": "Formata Transcrição",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [15210, 4500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ `INSERT INTO mensagens (message_id, remetente, mensagem, chat_id) VALUES ('${$json.messageId}', '${$json.dbRemetente.replace(/'/g, \"''\")}', '${$json.dbMensagem.substring(0,2000).replace(/'/g, \"''\")}', '${($json.chatId || '').replace(/'/g, \"''\")}') ON CONFLICT (message_id) DO NOTHING` }}",
+        "options": {}
+      },
+      "id": "audio-salva-06",
+      "name": "Salva Transcrição",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [15520, 4500],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "audio-mention-chk",
+              "leftValue": "={{ $json.isMentioned }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "audio-mencao-07",
+      "name": "Verifica Menção Áudio",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [15830, 4500]
     }
   ],
   "pinData": {},
@@ -893,8 +1017,47 @@
             "node": "Verifica Menção",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Detecta Áudio",
+            "type": "main",
+            "index": 0
           }
         ]
+      ]
+    },
+    "Detecta Áudio": {
+      "main": [
+        [{ "node": "Baixa Áudio", "type": "main", "index": 0 }]
+      ]
+    },
+    "Baixa Áudio": {
+      "main": [
+        [{ "node": "Converte p/ Whisper", "type": "main", "index": 0 }]
+      ]
+    },
+    "Converte p/ Whisper": {
+      "main": [
+        [{ "node": "Transcreve Áudio", "type": "main", "index": 0 }]
+      ]
+    },
+    "Transcreve Áudio": {
+      "main": [
+        [{ "node": "Formata Transcrição", "type": "main", "index": 0 }]
+      ]
+    },
+    "Formata Transcrição": {
+      "main": [
+        [
+          { "node": "Salva Transcrição", "type": "main", "index": 0 },
+          { "node": "Verifica Menção Áudio", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Verifica Menção Áudio": {
+      "main": [
+        [{ "node": "É Treinamento?", "type": "main", "index": 0 }],
+        []
       ]
     }
   },
