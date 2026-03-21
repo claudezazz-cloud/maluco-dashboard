@@ -672,7 +672,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ key: $json.msgKey, convertToMp4: false }) }}",
+        "jsonBody": "={{ JSON.stringify({ message: { key: $json.msgKey }, convertToMp4: false }) }}",
         "options": {}
       },
       "id": "audio-baixa-02",
