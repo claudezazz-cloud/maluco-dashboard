@@ -52,7 +52,8 @@ export default function TreinamentoPage() {
       showMsg('Regra adicionada com sucesso!')
       fetchRegras()
     } else {
-      showMsg('Erro ao adicionar regra', 'error')
+      const data = await r.json().catch(() => ({}))
+      showMsg('Erro: ' + (data.error || r.status), 'error')
     }
   }
 
