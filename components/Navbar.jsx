@@ -23,9 +23,14 @@ export default function Navbar({ user }) {
               Dashboard
             </Link>
             {user?.role === 'admin' && (
-              <Link href="/admin" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                Admin
-              </Link>
+              <>
+                <Link href="/treinamento" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                  🧠 Treinamento
+                </Link>
+                <Link href="/admin" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                  Admin
+                </Link>
+              </>
             )}
           </div>
         </div>
