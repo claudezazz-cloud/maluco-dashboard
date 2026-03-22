@@ -36,14 +36,23 @@ export async function GET() {
         online = false
       }
 
-      // Mensagens hoje
+      // Mensagens hoje (timezone America/Sao_Paulo)
       let mensagensHoje = 0
       try {
         const chatId = filial.group_chat_id
         if (chatId) {
           const msgResult = await query(
-            `SELECT COUNT(*) as total FROM mensagens WHERE chat_id = $1 AND DATE(data_hora) = CURRENT_DATE`,
+            `SELECT COUNT(*) as total FROM mensagens
+             WHERE chat_id = $1
+             AND DATE(data_hora AT TIME ZONE 'America/Sao_Paulo') = CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo'`,
             [chatId]
+          )
+          mensagensHoje = parseInt(msgResult.rows[0]?.total || 0)
+        } else {
+          // Sem chat_id configurado: conta todas as mensagens de hoje do banco
+          const msgResult = await query(
+            `SELECT COUNT(*) as total FROM mensagens
+             WHERE DATE(data_hora AT TIME ZONE 'America/Sao_Paulo') = CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo'`
           )
           mensagensHoje = parseInt(msgResult.rows[0]?.total || 0)
         }
