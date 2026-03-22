@@ -14,6 +14,13 @@ export default function TreinamentoPage() {
   const [msg, setMsg] = useState({ texto: '', tipo: '' })
   const [salvando, setSalvando] = useState(false)
 
+  // Colaboradores
+  const [colaboradores, setColaboradores] = useState([])
+  const [novoColab, setNovoColab] = useState({ nome: '', cargo: '', funcoes: '' })
+  const [editandoColab, setEditandoColab] = useState(null)
+  const [editColabForm, setEditColabForm] = useState({})
+  const [msgColab, setMsgColab] = useState({ texto: '', tipo: '' })
+
   useEffect(() => {
     fetch('/api/auth/me').then(r => {
       if (!r.ok) { router.push('/login'); return null }
@@ -24,7 +31,51 @@ export default function TreinamentoPage() {
       setUser(d)
     })
     fetchRegras()
+    fetchColaboradores()
   }, [router])
+
+  async function fetchColaboradores() {
+    const r = await fetch('/api/colaboradores')
+    if (r.ok) setColaboradores(await r.json())
+  }
+
+  function showMsgColab(texto, tipo = 'success') {
+    setMsgColab({ texto, tipo })
+    setTimeout(() => setMsgColab({ texto: '', tipo: '' }), 3000)
+  }
+
+  async function adicionarColab() {
+    if (!novoColab.nome.trim()) return
+    const r = await fetch('/api/colaboradores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(novoColab),
+    })
+    if (r.ok) {
+      setNovoColab({ nome: '', cargo: '', funcoes: '' })
+      showMsgColab('Colaborador adicionado!')
+      fetchColaboradores()
+    } else {
+      const d = await r.json().catch(() => ({}))
+      showMsgColab('Erro: ' + (d.error || r.status), 'error')
+    }
+  }
+
+  async function salvarColab(id) {
+    const r = await fetch(`/api/colaboradores/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editColabForm),
+    })
+    if (r.ok) { setEditandoColab(null); showMsgColab('Atualizado!'); fetchColaboradores() }
+    else showMsgColab('Erro ao salvar', 'error')
+  }
+
+  async function excluirColab(id, nome) {
+    if (!confirm(`Remover ${nome}?`)) return
+    await fetch(`/api/colaboradores/${id}`, { method: 'DELETE' })
+    fetchColaboradores()
+  }
 
   async function fetchRegras() {
     setLoading(true)
@@ -223,6 +274,130 @@ export default function TreinamentoPage() {
             </div>
           )}
         </div>
+        {/* ===== COLABORADORES ===== */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h1 className="text-2xl font-bold text-white">Colaboradores 👥</h1>
+              <p className="text-gray-400 text-sm mt-1">Cargo e funções de cada membro da equipe</p>
+            </div>
+            <span className="bg-purple-900/40 text-purple-300 border border-purple-800 text-sm px-3 py-1 rounded-full">
+              {colaboradores.length} {colaboradores.length === 1 ? 'colaborador' : 'colaboradores'}
+            </span>
+          </div>
+
+          {msgColab.texto && (
+            <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgColab.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+              {msgColab.texto}
+            </div>
+          )}
+
+          {/* Adicionar colaborador */}
+          <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
+            <h2 className="text-white font-medium mb-3">+ Adicionar colaborador</h2>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Nome *</label>
+                <input
+                  value={novoColab.nome}
+                  onChange={e => setNovoColab({...novoColab, nome: e.target.value})}
+                  placeholder="Ex: Franquelin"
+                  className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Cargo</label>
+                <input
+                  value={novoColab.cargo}
+                  onChange={e => setNovoColab({...novoColab, cargo: e.target.value})}
+                  placeholder="Ex: Agente de Relacionamento"
+                  className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs text-gray-400 mb-1">Funções e responsabilidades</label>
+              <textarea
+                value={novoColab.funcoes}
+                onChange={e => setNovoColab({...novoColab, funcoes: e.target.value})}
+                placeholder="Ex: Atende clientes, realiza visitas técnicas, gera ordens de serviço..."
+                rows={2}
+                className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 resize-none"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={adicionarColab}
+                disabled={!novoColab.nome.trim()}
+                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
+              >
+                Adicionar
+              </button>
+            </div>
+          </div>
+
+          {/* Lista colaboradores */}
+          <div className="bg-[#1a1a24] rounded-xl border border-gray-800">
+            <div className="px-5 py-4 border-b border-gray-800">
+              <h2 className="text-white font-medium">Equipe cadastrada</h2>
+            </div>
+            {colaboradores.length === 0 ? (
+              <div className="p-10 text-center">
+                <div className="text-4xl mb-3">👥</div>
+                <p className="text-gray-400">Nenhum colaborador cadastrado.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-800/60">
+                {colaboradores.map(c => (
+                  <div key={c.id} className="px-5 py-4 group">
+                    {editandoColab === c.id ? (
+                      <div>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Nome</label>
+                            <input value={editColabForm.nome || ''} onChange={e => setEditColabForm({...editColabForm, nome: e.target.value})}
+                              className="w-full bg-[#0f0f13] border border-purple-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Cargo</label>
+                            <input value={editColabForm.cargo || ''} onChange={e => setEditColabForm({...editColabForm, cargo: e.target.value})}
+                              className="w-full bg-[#0f0f13] border border-purple-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
+                          </div>
+                        </div>
+                        <textarea value={editColabForm.funcoes || ''} onChange={e => setEditColabForm({...editColabForm, funcoes: e.target.value})}
+                          rows={2} className="w-full bg-[#0f0f13] border border-purple-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none resize-none mb-2" />
+                        <div className="flex gap-2">
+                          <button onClick={() => salvarColab(c.id)} className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-4 py-1.5 rounded-lg">Salvar</button>
+                          <button onClick={() => setEditandoColab(null)} className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-4 py-1.5 rounded-lg">Cancelar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-4">
+                        <div className="w-9 h-9 rounded-full bg-purple-900/50 border border-purple-800 flex items-center justify-center text-purple-300 font-bold text-sm shrink-0">
+                          {c.nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-medium">{c.nome}</span>
+                            {c.cargo && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{c.cargo}</span>}
+                          </div>
+                          {c.funcoes && <p className="text-gray-400 text-sm mt-1 leading-relaxed">{c.funcoes}</p>}
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                          <button onClick={() => { setEditandoColab(c.id); setEditColabForm({nome: c.nome, cargo: c.cargo, funcoes: c.funcoes}) }}
+                            className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg">Editar</button>
+                          <button onClick={() => excluirColab(c.id, c.nome)}
+                            className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg">Remover</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
       </main>
     </div>
   )
