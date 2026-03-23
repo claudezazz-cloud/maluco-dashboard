@@ -24,6 +24,9 @@ export default function Navbar({ user }) {
             </Link>
             {user?.role === 'admin' && (
               <>
+                <Link href="/pops" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                  📋 POPs
+                </Link>
                 <Link href="/treinamento" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                   🧠 Treinamento
                 </Link>
