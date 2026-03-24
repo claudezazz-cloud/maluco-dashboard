@@ -160,7 +160,7 @@ export default function TreinamentoPage() {
               Regras e instruções que o Maluco da IA segue em todas as respostas
             </p>
           </div>
-          <span className="bg-purple-900/40 text-purple-300 border border-purple-800 text-sm px-3 py-1 rounded-full">
+          <span className="bg-blue-900/40 text-blue-300 border border-blue-900 text-sm px-3 py-1 rounded-full">
             {regras.length} {regras.length === 1 ? 'regra' : 'regras'}
           </span>
         </div>
@@ -189,14 +189,14 @@ export default function TreinamentoPage() {
             onChange={e => setNovaRegra(e.target.value)}
             placeholder="Ex: Sempre responda em português formal. Nunca mencione preços sem consultar a tabela oficial."
             rows={3}
-            className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500 resize-none transition"
+            className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#071DE3] resize-none transition"
           />
           <div className="flex justify-between items-center mt-3">
             <span className="text-xs text-gray-500">{novaRegra.length} caracteres</span>
             <button
               onClick={adicionarRegra}
               disabled={!novaRegra.trim() || salvando}
-              className="bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
+              className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
             >
               {salvando ? 'Salvando...' : 'Adicionar Regra'}
             </button>
@@ -224,19 +224,19 @@ export default function TreinamentoPage() {
                   {editandoId === r.id ? (
                     /* Modo edição */
                     <div>
-                      <div className="text-xs text-purple-400 mb-2 font-medium">Editando regra #{i + 1}</div>
+                      <div className="text-xs text-blue-400 mb-2 font-medium">Editando regra #{i + 1}</div>
                       <textarea
                         value={editandoTexto}
                         onChange={e => setEditandoTexto(e.target.value)}
                         rows={3}
-                        className="w-full bg-[#0f0f13] border border-purple-700 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-purple-500 resize-none"
+                        className="w-full bg-[#0f0f13] border border-[#071DE3] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-[#071DE3] resize-none"
                         autoFocus
                       />
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={() => salvarEdicao(r.id)}
                           disabled={salvando}
-                          className="bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs px-4 py-1.5 rounded-lg transition"
+                          className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white text-xs px-4 py-1.5 rounded-lg transition"
                         >
                           {salvando ? 'Salvando...' : 'Salvar'}
                         </button>
@@ -281,7 +281,7 @@ export default function TreinamentoPage() {
               <h1 className="text-2xl font-bold text-white">Colaboradores 👥</h1>
               <p className="text-gray-400 text-sm mt-1">Cargo e funções de cada membro da equipe</p>
             </div>
-            <span className="bg-purple-900/40 text-purple-300 border border-purple-800 text-sm px-3 py-1 rounded-full">
+            <span className="bg-blue-900/40 text-blue-300 border border-blue-900 text-sm px-3 py-1 rounded-full">
               {colaboradores.length} {colaboradores.length === 1 ? 'colaborador' : 'colaboradores'}
             </span>
           </div>
@@ -302,7 +302,7 @@ export default function TreinamentoPage() {
                   value={novoColab.nome}
                   onChange={e => setNovoColab({...novoColab, nome: e.target.value})}
                   placeholder="Ex: Franquelin"
-                  className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
+                  className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#071DE3]"
                 />
               </div>
               <div>
@@ -311,7 +311,7 @@ export default function TreinamentoPage() {
                   value={novoColab.cargo}
                   onChange={e => setNovoColab({...novoColab, cargo: e.target.value})}
                   placeholder="Ex: Agente de Relacionamento"
-                  className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500"
+                  className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#071DE3]"
                 />
               </div>
             </div>
@@ -322,14 +322,14 @@ export default function TreinamentoPage() {
                 onChange={e => setNovoColab({...novoColab, funcoes: e.target.value})}
                 placeholder="Ex: Atende clientes, realiza visitas técnicas, gera ordens de serviço..."
                 rows={2}
-                className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 resize-none"
+                className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#071DE3] resize-none"
               />
             </div>
             <div className="flex justify-end">
               <button
                 onClick={adicionarColab}
                 disabled={!novoColab.nome.trim()}
-                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
+                className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
               >
                 Adicionar
               </button>
@@ -356,24 +356,24 @@ export default function TreinamentoPage() {
                           <div>
                             <label className="block text-xs text-gray-400 mb-1">Nome</label>
                             <input value={editColabForm.nome || ''} onChange={e => setEditColabForm({...editColabForm, nome: e.target.value})}
-                              className="w-full bg-[#0f0f13] border border-purple-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
+                              className="w-full bg-[#0f0f13] border border-[#071DE3] rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
                           </div>
                           <div>
                             <label className="block text-xs text-gray-400 mb-1">Cargo</label>
                             <input value={editColabForm.cargo || ''} onChange={e => setEditColabForm({...editColabForm, cargo: e.target.value})}
-                              className="w-full bg-[#0f0f13] border border-purple-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
+                              className="w-full bg-[#0f0f13] border border-[#071DE3] rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
                           </div>
                         </div>
                         <textarea value={editColabForm.funcoes || ''} onChange={e => setEditColabForm({...editColabForm, funcoes: e.target.value})}
-                          rows={2} className="w-full bg-[#0f0f13] border border-purple-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none resize-none mb-2" />
+                          rows={2} className="w-full bg-[#0f0f13] border border-[#071DE3] rounded-lg px-3 py-2 text-white text-sm focus:outline-none resize-none mb-2" />
                         <div className="flex gap-2">
-                          <button onClick={() => salvarColab(c.id)} className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-4 py-1.5 rounded-lg">Salvar</button>
+                          <button onClick={() => salvarColab(c.id)} className="bg-[#071DE3] hover:bg-[#0516B0] text-white text-xs px-4 py-1.5 rounded-lg">Salvar</button>
                           <button onClick={() => setEditandoColab(null)} className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-4 py-1.5 rounded-lg">Cancelar</button>
                         </div>
                       </div>
                     ) : (
                       <div className="flex items-start gap-4">
-                        <div className="w-9 h-9 rounded-full bg-purple-900/50 border border-purple-800 flex items-center justify-center text-purple-300 font-bold text-sm shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-blue-900/50 border border-blue-900 flex items-center justify-center text-blue-300 font-bold text-sm shrink-0">
                           {c.nome.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1">

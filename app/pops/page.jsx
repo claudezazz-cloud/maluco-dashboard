@@ -101,8 +101,8 @@ export default function PopsPage() {
     return matchBusca && matchCat
   })
 
-  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 transition'
-  const inputEditCls = 'w-full bg-[#0f0f13] border border-purple-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition'
+  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#071DE3] transition'
+  const inputEditCls = 'w-full bg-[#0f0f13] border border-[#071DE3] rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition'
 
   return (
     <div className="min-h-screen bg-[#0f0f13]">
@@ -116,12 +116,12 @@ export default function PopsPage() {
             <p className="text-gray-400 text-sm mt-1">Procedimentos Operacionais Padrão da empresa</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="bg-purple-900/40 text-purple-300 border border-purple-800 text-sm px-3 py-1 rounded-full">
+            <span className="bg-blue-900/40 text-blue-300 border border-blue-900 text-sm px-3 py-1 rounded-full">
               {pops.length} {pops.length === 1 ? 'POP' : 'POPs'}
             </span>
             <button
               onClick={() => { setMostraNovo(true); setExpandido(null); setEditandoId(null) }}
-              className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition font-medium"
+              className="bg-[#071DE3] hover:bg-[#0516B0] text-white text-sm px-4 py-2 rounded-lg transition font-medium"
             >
               + Novo POP
             </button>
@@ -136,7 +136,7 @@ export default function PopsPage() {
 
         {/* Formulário novo POP */}
         {mostraNovo && (
-          <div className="bg-[#1a1a24] rounded-xl border border-purple-800 p-6 mb-6">
+          <div className="bg-[#1a1a24] rounded-xl border border-blue-900 p-6 mb-6">
             <h2 className="text-white font-medium mb-4">Novo POP</h2>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
@@ -164,7 +164,7 @@ export default function PopsPage() {
             </div>
             <div className="flex gap-3">
               <button onClick={salvarNovo} disabled={!novoForm.titulo.trim() || !novoForm.conteudo.trim() || salvando}
-                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
+                className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
                 {salvando ? 'Salvando...' : 'Salvar POP'}
               </button>
               <button onClick={() => setMostraNovo(false)}
@@ -181,10 +181,10 @@ export default function PopsPage() {
             value={busca}
             onChange={e => setBusca(e.target.value)}
             placeholder="Buscar por título ou conteúdo..."
-            className="flex-1 bg-[#1a1a24] border border-gray-800 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-purple-500 transition"
+            className="flex-1 bg-[#1a1a24] border border-gray-800 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-[#071DE3] transition"
           />
           <select value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}
-            className="bg-[#1a1a24] border border-gray-800 rounded-lg px-3 py-2 text-gray-300 text-sm focus:outline-none focus:border-purple-500">
+            className="bg-[#1a1a24] border border-gray-800 rounded-lg px-3 py-2 text-gray-300 text-sm focus:outline-none focus:border-[#071DE3]">
             {categorias.map(c => <option key={c}>{c}</option>)}
           </select>
         </div>
@@ -214,7 +214,7 @@ export default function PopsPage() {
                       <span className="text-white font-medium">{pop.titulo}</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         {pop.categoria && (
-                          <span className="text-xs bg-purple-900/30 text-purple-400 border border-purple-800/50 px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-blue-900/30 text-blue-400 border border-blue-900/50 px-2 py-0.5 rounded-full">
                             {pop.categoria}
                           </span>
                         )}
@@ -263,7 +263,7 @@ export default function PopsPage() {
                         />
                         <div className="flex gap-3">
                           <button onClick={salvarEdicao} disabled={salvando}
-                            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition">
+                            className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition">
                             {salvando ? 'Salvando...' : 'Salvar'}
                           </button>
                           <button onClick={() => setEditandoId(null)}

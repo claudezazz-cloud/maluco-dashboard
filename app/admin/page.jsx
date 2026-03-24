@@ -50,7 +50,7 @@ export default function AdminPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-md text-sm font-medium transition capitalize ${tab === t ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`px-5 py-2 rounded-md text-sm font-medium transition capitalize ${tab === t ? 'bg-[#071DE3] text-white' : 'text-gray-400 hover:text-white'}`}
             >
               {t === 'filiais' ? 'Filiais' : t}
             </button>
@@ -64,7 +64,7 @@ export default function AdminPage() {
               <h2 className="text-gray-300 font-medium">Filiais cadastradas</h2>
               <Link
                 href="/admin/filiais"
-                className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-[#071DE3] hover:bg-[#0516B0] text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 + Nova Filial
               </Link>
@@ -123,7 +123,7 @@ export default function AdminPage() {
                   <p className="text-gray-500 text-sm mb-4">Nenhuma filial cadastrada.</p>
                   <Link
                     href="/admin/filiais"
-                    className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-5 py-2 rounded-lg transition"
+                    className="bg-[#071DE3] hover:bg-[#0516B0] text-white text-sm px-5 py-2 rounded-lg transition"
                   >
                     Criar primeira filial
                   </Link>

@@ -129,7 +129,7 @@ export default function NovaFilialPage() {
     }
   }
 
-  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500'
+  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#071DE3]'
   const labelCls = 'block text-xs text-gray-400 mb-1'
 
   const stepTitles = [
@@ -166,7 +166,7 @@ export default function NovaFilialPage() {
             return (
               <div key={n} className="flex items-center gap-2 flex-1">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition
-                  ${done ? 'bg-green-600 text-white' : active ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-500'}`}>
+                  ${done ? 'bg-green-600 text-white' : active ? 'bg-[#071DE3] text-white' : 'bg-gray-800 text-gray-500'}`}>
                   {done ? '✓' : n}
                 </div>
                 <span className={`text-xs hidden sm:block ${active ? 'text-white' : 'text-gray-500'}`}>{title}</span>
@@ -202,7 +202,7 @@ export default function NovaFilialPage() {
                   />
                   {form.webhook_path && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Preview: <span className="text-purple-400">[N8N_URL]/webhook/{form.webhook_path}</span>
+                      Preview: <span className="text-blue-400">[N8N_URL]/webhook/{form.webhook_path}</span>
                     </p>
                   )}
                 </div>
@@ -356,7 +356,7 @@ export default function NovaFilialPage() {
               <button
                 onClick={criarFilial}
                 disabled={loading || !form.nome}
-                className="mt-6 w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium py-3 rounded-lg transition"
+                className="mt-6 w-full bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-50 text-white font-medium py-3 rounded-lg transition"
               >
                 {loading ? 'Criando...' : 'Criar Filial'}
               </button>
@@ -386,7 +386,7 @@ export default function NovaFilialPage() {
                     <div className="bg-[#0f0f13] rounded-lg p-4">
                       <p className="text-gray-400 text-xs mb-2">URL do Webhook</p>
                       <div className="flex items-center gap-2">
-                        <code className="text-purple-400 text-sm flex-1 break-all">{result.webhook_url}</code>
+                        <code className="text-blue-400 text-sm flex-1 break-all">{result.webhook_url}</code>
                         <button
                           onClick={copyWebhook}
                           className="shrink-0 bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition"
@@ -449,7 +449,7 @@ export default function NovaFilialPage() {
                     </button>
                     <button
                       onClick={() => router.push(`/admin/filiais/${result.filial?.id}`)}
-                      className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded-lg transition"
+                      className="bg-[#071DE3] hover:bg-[#0516B0] text-white text-sm px-4 py-2 rounded-lg transition"
                     >
                       Ver Detalhes
                     </button>
@@ -478,7 +478,7 @@ export default function NovaFilialPage() {
                 <button
                   onClick={() => setStep(s => s + 1)}
                   disabled={step === 1 && !form.nome}
-                  className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition"
+                  className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition"
                 >
                   Próximo
                 </button>
