@@ -80,7 +80,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "{{ (() => {\n  let textMessage = '';\n  try { textMessage = $('Verifica Menção').first().json.textMessage || ''; } catch(e) {}\n  const normalized = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9\\s]/g, '');\n  const words = normalized.split(/\\s+/).filter(w => w.length > 3).slice(0, 6).map(w => w.replace(/'/g, ''));\n  if (words.length === 0) {\n    return \"SELECT titulo, categoria, NULL::text as conteudo FROM dashboard_pops WHERE ativo = true ORDER BY categoria, titulo\";\n  }\n  const conditions = words.map(w => `(titulo ILIKE '%${w}%' OR LEFT(conteudo, 500) ILIKE '%${w}%')`).join(' OR ');\n  return `SELECT titulo, categoria, CASE WHEN (${conditions}) THEN conteudo ELSE NULL END as conteudo FROM dashboard_pops WHERE ativo = true ORDER BY categoria, titulo`;\n})() }}",
+        "query": "{{ (() => {\n  let msg = '';\n  try { msg = $('Verifica Mencao').first().json.textMessage || ''; } catch(e) {}\n  try { if (!msg) msg = $('Verifica Menção').first().json.textMessage || ''; } catch(e) {}\n  const clean = msg.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9\\s]/g,'').trim();\n  if (!clean || clean.length < 3) {\n    return 'SELECT titulo, categoria, conteudo FROM dashboard_pops WHERE ativo = true ORDER BY categoria, titulo';\n  }\n  const safe = clean.replace(/'/g, \"''\").substring(0, 200);\n  return `SELECT titulo, categoria, conteudo, ts_rank(to_tsvector('portuguese', titulo || ' ' || LEFT(conteudo,1000)), plainto_tsquery('portuguese', '${safe}')) as rank FROM dashboard_pops WHERE ativo = true ORDER BY rank DESC, categoria, titulo`;\n})() }}",
         "options": {}
       },
       "credentials": {
@@ -100,7 +100,7 @@
         4224
       ],
       "parameters": {
-        "jsCode": "// ============================================================\n// MONTA PROMPT - COM DEDUPLICAÇÃO E TRAVA DE EXECUÇÃO\n// ============================================================\n\n// 1. REGRAS (Deduplicar)\nlet rules = '';\ntry {\n  const rulesData = $('Busca Regras').all().map(r => r.json.regra).filter(Boolean);\n  const uniqueRules = [...new Set(rulesData)];\n  rules = uniqueRules.slice(0, 30).join('\\n- ');\n} catch(e) {}\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\n// 2. SYSTEM PROMPT (Primeiro disponível)\nlet systemPromptTemplate = null;\ntry {\n  const spData = $('Busca System Prompt').all().map(d => d.json?.valor).filter(Boolean);\n  systemPromptTemplate = spData[0] || null;\n  if (systemPromptTemplate && systemPromptTemplate.length > 40000) {\n    systemPromptTemplate = systemPromptTemplate.substring(0, 40000) + '\\n[...truncado...]';\n  }\n} catch(e) {}\n\n// 3. HISTÓRICO (Deduplicar por ID)\nlet historicoSection = '';\ntry {\n  const histRows = $('Busca Histórico 10').all().map(e => e.json);\n  const histMap = new Map();\n  for (const h of histRows) {\n    if (h.id) histMap.set(h.id, h);\n  }\n  const uniqueHist = Array.from(histMap.values()).sort((a,b) => a.id - b.id).slice(-10);\n  let historico = '';\n  for (const msg of uniqueHist) {\n    let hora = '??:??';\n    try {\n      const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n      hora = d.toISOString().substring(11, 16);\n    } catch(e) {}\n    historico += `[${hora}] ${msg.remetente}: ${(msg.mensagem || '').substring(0, 300)}\\n`;\n  }\n  if (historico) historicoSection = `\\n\\nÚLTIMAS MENSAGENS DO GRUPO:\\n${historico}`;\n} catch(e) {}\n\n// 4. POPs (Deduplicar por Título e Filtrar por Categoria)\nconst allPopsInputs = $input.all().map(i => i.json).filter(p => p.titulo);\nconst popMap = new Map();\nfor (const p of allPopsInputs) {\n  if (p.conteudo || !popMap.has(p.titulo)) {\n    popMap.set(p.titulo, p);\n  }\n}\nconst uniquePops = Array.from(popMap.values());\n\nlet clientesContent = '';\nconst allNonClientTitles = [];\nconst relevantNonClientPops = [];\n\nfor (const pop of uniquePops) {\n  const cat = (pop.categoria || '').toLowerCase();\n  const isClientDB = cat.includes('cliente') || cat.includes('banco') || cat.includes('base') || cat.includes('crm');\n  if (isClientDB) {\n    if (pop.conteudo) clientesContent += pop.conteudo + '\\n';\n  } else {\n    allNonClientTitles.push(pop);\n    if (pop.conteudo) relevantNonClientPops.push(pop);\n  }\n}\n\n// 5. COLABORADORES (Deduplicar por Nome)\nlet colaboradoresArray = [];\ntry {\n  const colabRows = $('Busca Colaboradores').all().map(i => i.json).filter(c => c.nome);\n  const colabMap = new Map();\n  for (const c of colabRows) {\n    colabMap.set(c.nome, c);\n  }\n  colaboradoresArray = Array.from(colabMap.values());\n} catch(e) {}\n\n// 6. DADOS DA MENSAGEM ATUAL\nlet _vM; \ntry { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst textMessage = _vM.textMessage || '';\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nconst msgLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n// 7. SELEÇÃO DE POPS NO PROMPT\nconst isListingPops = msgLower.includes('pop') || msgLower.includes('procedimento') || msgLower.includes('quais') || msgLower.includes('lista');\nlet pops = '';\nif (relevantNonClientPops.length > 0 && !isListingPops) {\n  for (const pop of relevantNonClientPops) {\n    pops += '=== ' + pop.titulo + ' ===\\n';\n    pops += pop.conteudo.substring(0, 5000) + '\\n\\n';\n  }\n} else {\n  const titulos = allNonClientTitles.map(p => `- ${p.titulo} (${p.categoria || 'Geral'})`).join('\\n');\n  if (titulos) pops = 'POPs disponíveis (peça pelo nome para ver o conteúdo completo):\\n' + titulos;\n}\n\n// 8. PARSER DE CLIENTES (Manteve lógica original)\nconst fonteClientes = clientesContent;\nconst clientesDB = [];\nconst linhas = fonteClientes.split('\\n');\nfor (const linha of linhas) {\n  let nome = '', cod = '';\n  if (linha.includes('\\t')) {\n    const partes = linha.split('\\t').map(p => p.trim());\n    const ultimaParte = partes[partes.length - 1];\n    if (/^\\d+$/.test(ultimaParte)) { cod = ultimaParte; nome = partes[0]; }\n  }\n  if (!cod) {\n    const m = linha.match(/^(.+?)\\s{1,}(\\d{1,6})\\s*$/);\n    if (m) { nome = m[1].trim(); cod = m[2].trim(); }\n  }\n  if (nome && cod && !/^(nome|cód|cod|cliente|código)$/i.test(nome)) {\n    clientesDB.push({ nome, cod, nomeLower: nome.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') });\n  }\n}\n\nconst palavrasMsg = msgLower.split(/\\s+/).filter(p => p.length > 2);\nconst clientesEncontrados = [];\nconst idsAdicionados = new Set();\nfor (const cliente of clientesDB) {\n  for (const palavra of palavrasMsg) {\n    if (cliente.nomeLower.includes(palavra) && !idsAdicionados.has(cliente.cod)) {\n      clientesEncontrados.push(cliente.cod + ' - ' + cliente.nome);\n      idsAdicionados.add(cliente.cod);\n      break;\n    }\n  }\n}\n\nconst clienteInfo = clientesEncontrados.length > 0\n  ? 'CLIENTES ENCONTRADOS NA BUSCA: ' + clientesEncontrados.join(' | ')\n  : 'NENHUM CLIENTE ENCONTRADO COM ESSE NOME';\n\nconst colaboradoresStr = colaboradoresArray.length > 0\n  ? 'COLABORADORES DA EQUIPE:\\n' + colaboradoresArray.map(c => `- ${c.nome}${c.cargo ? ' (' + c.cargo + ')' : ''}${c.funcoes ? ': ' + c.funcoes : ''}`).join('\\n')\n  : '';\n\n// 9. MONTAGEM FINAL DO SYSTEM CONTENT\nlet systemContent;\nif (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {\n  systemContent = systemPromptTemplate\n    .replace(/\\{\\{DATA\\}\\}/g, `${dia}/${mes}/${ano}`)\n    .replace(/\\{\\{ANO\\}\\}/g, String(ano))\n    .replace(/\\{\\{TODAY\\}\\}/g, today)\n    .replace(/\\{\\{COLABORADORES\\}\\}/g, colaboradoresStr)\n    .replace(/\\{\\{CLIENTES\\}\\}/g, clienteInfo)\n    .replace(/\\{\\{POPS\\}\\}/g, pops)\n    .replace(/\\{\\{HISTORICO\\}\\}/g, historicoSection);\n  systemContent = rulesPrompt + '\\n' + systemContent;\n} else {\n  systemContent = rulesPrompt + '\\nVocê é o assistente interno da Zazz Internet, provedor de fibra óptica em Lunardelli-PR. Seu nome é Maluco da IA 👽🍀. Use o emoji 🍀 ocasionalmente.\\n\\nDATA ATUAL: ' + dia + '/' + mes + '/' + ano + ' (' + today + '). O ANO ATUAL É ' + ano + '.\\n\\nFORMATAÇÃO OBRIGATÓRIA (WhatsApp):\\n- Negrito: use *texto*\\n- PROIBIDO usar ** ## ### ou blocos de código\\n\\n' + colaboradoresStr + '\\n\\n' + clienteInfo + '\\n\\nPOPs DA EMPRESA:\\n' + pops + historicoSection;\n}\n\n// 10. TRAVA DE EXECUÇÃO ÚNICA (Para evitar múltiplas chamadas à API Claude)\nif ($input.index > 0) return [];\n\nreturn [{\n  json: {\n    chatId: chatId,\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: 2048,\n      system: systemContent,\n      messages: [{\"role\": \"user\", \"content\": textMessage}]\n    }\n  }\n}];"
+        "jsCode": "// ============================================================\n// MONTA PROMPT - COM DEDUPLICAÇÃO E TRAVA DE EXECUÇÃO\n// ============================================================\n\n\n// HISTORICO REDIS\nlet redisHistory = [];\ntry {\n  const rv = $('Busca Histórico Redis').first().json?.value;\n  if (rv) redisHistory = JSON.parse(rv);\n} catch(e) {}\n\n// REMETENTE\nlet remetente = '';\ntry { remetente = $('Extrai Dados Mensagem').first().json?.dbRemetente || ''; } catch(e) {}\n\n// 1. REGRAS (Deduplicar)\nlet rules = '';\ntry {\n  const rulesData = $('Busca Regras').all().map(r => r.json.regra).filter(Boolean);\n  const uniqueRules = [...new Set(rulesData)];\n  rules = uniqueRules.slice(0, 30).join('\\n- ');\n} catch(e) {}\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\n// 2. SYSTEM PROMPT (Primeiro disponível)\nlet systemPromptTemplate = null;\ntry {\n  const spData = $('Busca System Prompt').all().map(d => d.json?.valor).filter(Boolean);\n  systemPromptTemplate = spData[0] || null;\n  if (systemPromptTemplate && systemPromptTemplate.length > 40000) {\n    systemPromptTemplate = systemPromptTemplate.substring(0, 40000) + '\\n[...truncado...]';\n  }\n} catch(e) {}\n\n// 3. HISTÓRICO (Deduplicar por ID)\nlet historicoSection = '';\ntry {\n  const histRows = $('Busca Histórico 10').all().map(e => e.json);\n  const histMap = new Map();\n  for (const h of histRows) {\n    if (h.id) histMap.set(h.id, h);\n  }\n  const uniqueHist = Array.from(histMap.values()).sort((a,b) => a.id - b.id).slice(-10);\n  let historico = '';\n  for (const msg of uniqueHist) {\n    let hora = '??:??';\n    try {\n      const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n      hora = d.toISOString().substring(11, 16);\n    } catch(e) {}\n    historico += `[${hora}] ${msg.remetente}: ${(msg.mensagem || '').substring(0, 300)}\\n`;\n  }\n  if (historico) historicoSection = `\\n\\nÚLTIMAS MENSAGENS DO GRUPO:\\n${historico}`;\n} catch(e) {}\n\n// 4. POPs (Deduplicar por Título e Filtrar por Categoria)\nconst allPopsInputs = $(\"Busca POPs\").all().map(i => i.json).filter(p => p.titulo);\nconst popMap = new Map();\nfor (const p of allPopsInputs) {\n  if (p.conteudo || !popMap.has(p.titulo)) {\n    popMap.set(p.titulo, p);\n  }\n}\nconst uniquePops = Array.from(popMap.values());\n\nlet clientesContent = '';\nconst allNonClientTitles = [];\nconst relevantNonClientPops = [];\n\nfor (const pop of uniquePops) {\n  const cat = (pop.categoria || '').toLowerCase();\n  const isClientDB = cat.includes('cliente') || cat.includes('banco') || cat.includes('base') || cat.includes('crm');\n  if (isClientDB) {\n    if (pop.conteudo) clientesContent += pop.conteudo + '\\n';\n  } else {\n    allNonClientTitles.push(pop);\n    if (pop.conteudo) relevantNonClientPops.push(pop);\n  }\n}\n\n// 5. COLABORADORES (Deduplicar por Nome)\nlet colaboradoresArray = [];\ntry {\n  const colabRows = $('Busca Colaboradores').all().map(i => i.json).filter(c => c.nome);\n  const colabMap = new Map();\n  for (const c of colabRows) {\n    colabMap.set(c.nome, c);\n  }\n  colaboradoresArray = Array.from(colabMap.values());\n} catch(e) {}\n\n// 6. DADOS DA MENSAGEM ATUAL\nlet _vM; \ntry { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst textMessage = _vM.textMessage || '';\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nconst msgLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n// 7. SELEÇÃO DE POPS NO PROMPT\nconst isListingPops = msgLower.includes('pop') || msgLower.includes('procedimento') || msgLower.includes('quais') || msgLower.includes('lista');\nlet pops = '';\nif (relevantNonClientPops.length > 0 && !isListingPops) {\n  for (const pop of relevantNonClientPops) {\n    pops += '=== ' + pop.titulo + ' ===\\n';\n    pops += pop.conteudo.substring(0, 5000) + '\\n\\n';\n  }\n} else {\n  const titulos = allNonClientTitles.map(p => `- ${p.titulo} (${p.categoria || 'Geral'})`).join('\\n');\n  if (titulos) pops = 'POPs disponíveis (peça pelo nome para ver o conteúdo completo):\\n' + titulos;\n}\n\n\n// Rastreia POPs usados no prompt\nconst popsUsados = (relevantNonClientPops.length > 0 && !isListingPops)\n  ? relevantNonClientPops.map(p => p.titulo).join(', ')\n  : '';\n\n// 8. PARSER DE CLIENTES (Manteve lógica original)\nconst fonteClientes = clientesContent;\nconst clientesDB = [];\nconst linhas = fonteClientes.split('\\n');\nfor (const linha of linhas) {\n  let nome = '', cod = '';\n  if (linha.includes('\\t')) {\n    const partes = linha.split('\\t').map(p => p.trim());\n    const ultimaParte = partes[partes.length - 1];\n    if (/^\\d+$/.test(ultimaParte)) { cod = ultimaParte; nome = partes[0]; }\n  }\n  if (!cod) {\n    const m = linha.match(/^(.+?)\\s{1,}(\\d{1,6})\\s*$/);\n    if (m) { nome = m[1].trim(); cod = m[2].trim(); }\n  }\n  if (nome && cod && !/^(nome|cód|cod|cliente|código)$/i.test(nome)) {\n    clientesDB.push({ nome, cod, nomeLower: nome.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') });\n  }\n}\n\nconst palavrasMsg = msgLower.split(/\\s+/).filter(p => p.length > 2);\nconst clientesEncontrados = [];\nconst idsAdicionados = new Set();\nfor (const cliente of clientesDB) {\n  for (const palavra of palavrasMsg) {\n    if (cliente.nomeLower.includes(palavra) && !idsAdicionados.has(cliente.cod)) {\n      clientesEncontrados.push(cliente.cod + ' - ' + cliente.nome);\n      idsAdicionados.add(cliente.cod);\n      break;\n    }\n  }\n}\n\nconst clienteInfo = clientesEncontrados.length > 0\n  ? 'CLIENTES ENCONTRADOS NA BUSCA: ' + clientesEncontrados.join(' | ')\n  : 'NENHUM CLIENTE ENCONTRADO COM ESSE NOME';\n\nconst colaboradoresStr = colaboradoresArray.length > 0\n  ? 'COLABORADORES DA EQUIPE:\\n' + colaboradoresArray.map(c => `- ${c.nome}${c.cargo ? ' (' + c.cargo + ')' : ''}${c.funcoes ? ': ' + c.funcoes : ''}`).join('\\n')\n  : '';\n\n// 9. MONTAGEM FINAL DO SYSTEM CONTENT\nlet systemContent;\nif (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {\n  systemContent = systemPromptTemplate\n    .replace(/\\{\\{DATA\\}\\}/g, `${dia}/${mes}/${ano}`)\n    .replace(/\\{\\{ANO\\}\\}/g, String(ano))\n    .replace(/\\{\\{TODAY\\}\\}/g, today)\n    .replace(/\\{\\{COLABORADORES\\}\\}/g, colaboradoresStr)\n    .replace(/\\{\\{CLIENTES\\}\\}/g, clienteInfo)\n    .replace(/\\{\\{POPS\\}\\}/g, pops)\n    .replace(/\\{\\{HISTORICO\\}\\}/g, historicoSection);\n  systemContent = rulesPrompt + '\\n' + systemContent;\n} else {\n  systemContent = rulesPrompt + '\\nVocê é o assistente interno da Zazz Internet, provedor de fibra óptica em Lunardelli-PR. Seu nome é Maluco da IA 👽🍀. Use o emoji 🍀 ocasionalmente.\\n\\nDATA ATUAL: ' + dia + '/' + mes + '/' + ano + ' (' + today + '). O ANO ATUAL É ' + ano + '.\\n\\nFORMATAÇÃO OBRIGATÓRIA (WhatsApp):\\n- Negrito: use *texto*\\n- PROIBIDO usar ** ## ### ou blocos de código\\n\\n' + colaboradoresStr + '\\n\\n' + clienteInfo + '\\n\\nPOPs DA EMPRESA:\\n' + pops + historicoSection;\n}\n\n// 10. TRAVA: só processa se tiver dados válidos\nif (!textMessage) return [];\n\nreturn [{\n  json: {\n    chatId: chatId,\n    remetente: remetente,\n    mensagemUsuario: textMessage,\n    popsUsados: popsUsados,\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: 2048,\n      system: systemContent,\n      messages: [\n        ...redisHistory.slice(-8),\n        {\"role\": \"user\", \"content\": textMessage}\n      ]\n    }\n  }\n}];"
       }
     },
     {
@@ -120,7 +120,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "YOUR_ANTHROPIC_API_KEY"
+              "value": "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"
             },
             {
               "name": "anthropic-version",
@@ -148,7 +148,7 @@
         4224
       ],
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst fullText = response.content[0].text;\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\n\nconst responsavelMap = {\n  'junior': '60f09078-44d0-4a2e-9b56-b8917fdfd87e',\n  'franquelin': '826e94f5-aed7-4421-ae97-deee67c6f6af',\n  'luiz': 'f6b0bba1-309e-46a9-9b37-d5a18c150a16',\n  'negos': '7630461f-d189-4b51-a139-28043faae78f',\n  'nego': '7630461f-d189-4b51-a139-28043faae78f',\n  'gester': '7630461f-d189-4b51-a139-28043faae78f',\n  'victor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'vitor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'russo': '60f09078-44d0-4a2e-9b56-b8917fdfd87e'\n};\n\nlet notionData = null;\nlet whatsappMessage = fullText;\nlet notionBody = null;\n\nif (fullText.includes('|||NOTION|||')) {\n  const notionMatch = fullText.match(/\\|\\|\\|NOTION\\|\\|\\|([\\s\\S]*?)\\|\\|\\|FIM\\|\\|\\|/);\n  if (notionMatch) {\n    try {\n      notionData = JSON.parse(notionMatch[1].trim());\n\n      const respNome = (notionData.responsavel || 'franquelin, victor').toLowerCase()\n        .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n      let respPeople = [];\n      let addedIds = [];\n      for (const [key, id] of Object.entries(responsavelMap)) {\n        if (respNome.includes(key) && !addedIds.includes(id)) {\n          respPeople.push({\"id\": id});\n          addedIds.push(id);\n        }\n      }\n      if (respPeople.length === 0) {\n        respPeople = [{\"id\": \"826e94f5-aed7-4421-ae97-deee67c6f6af\"}];\n      }\n\n      notionBody = {\n        \"parent\": {\"database_id\": \"d54e5911e8af43dfaed8f2893e59f6ef\"},\n        \"properties\": {\n          \"Descrição\": {\"title\": [{\"text\": {\"content\": notionData.descricao || \"\"}}]},\n          \"Cliente\": {\"rich_text\": [{\"text\": {\"content\": notionData.cliente || \"\"}}]},\n          \"status\": {\"select\": {\"name\": notionData.status || \"Parado\"}},\n          \"Data\": {\"date\": {\"start\": notionData.data}},\n          \"Tipo\": {\"multi_select\": [{\"name\": notionData.tipo || \"Internet\"}]},\n          \"Entrega\": {\"date\": {\"start\": notionData.entrega || notionData.data}},\n          \"Obs\": {\"rich_text\": [{\"text\": {\"content\": notionData.obs || \"\"}}]},\n          \"Fone\": {\"phone_number\": notionData.fone || null},\n          \"Valor\": {\"number\": 0},\n          \"Atendente\": {\"people\": [{\"id\": \"325d872b-594c-81fe-a524-00029761e655\"}]},\n          \"Responsável\": {\"people\": respPeople}\n        }\n      };\n\n    } catch(e) {\n      notionData = null;\n    }\n    whatsappMessage = fullText.replace(/\\|\\|\\|NOTION\\|\\|\\|[\\s\\S]*?\\|\\|\\|FIM\\|\\|\\|/, '').trim();\n  }\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    message: whatsappMessage,\n    notionData: notionData,\n    notionBody: notionBody,\n    hasNotion: notionBody !== null\n  }\n}];\n"
+        "jsCode": "const response = $input.first().json;\n\n// Tokens\nconst tokensInput = response.usage?.input_tokens || 0;\nconst tokensOutput = response.usage?.output_tokens || 0;\n\n// Erro da API\nif (response.error || !response.content) {\n  let _vME; try { _vME = $('Verifica Menção').first().json; } catch(e) { _vME = {}; }\n  const errMsg = response.error?.message || response.message || JSON.stringify(response).substring(0,300);\n  return [{ json: {\n    chatId: _vME.chatId || '',\n    message: '❌ Tive um probleminha técnico, tenta de novo em instantes 🍀',\n    hasNotion: false, isError: true,\n    errorMsg: errMsg,\n    mensagemUsuario: _vME.textMessage || '',\n    novoHistorico: '[]', tokensInput: 0, tokensOutput: 0, popsUsados: '', remetente: ''\n  }}];\n}\n\nconst fullText = response.content[0].text;\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\n\nconst responsavelMap = {\n  'junior': '60f09078-44d0-4a2e-9b56-b8917fdfd87e',\n  'franquelin': '826e94f5-aed7-4421-ae97-deee67c6f6af',\n  'luiz': 'f6b0bba1-309e-46a9-9b37-d5a18c150a16',\n  'negos': '7630461f-d189-4b51-a139-28043faae78f',\n  'nego': '7630461f-d189-4b51-a139-28043faae78f',\n  'gester': '7630461f-d189-4b51-a139-28043faae78f',\n  'victor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'vitor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'russo': '60f09078-44d0-4a2e-9b56-b8917fdfd87e'\n};\n\nlet notionData = null;\nlet whatsappMessage = fullText;\nlet notionBody = null;\n\nif (fullText.includes('|||NOTION|||')) {\n  const notionMatch = fullText.match(/\\|\\|\\|NOTION\\|\\|\\|([\\s\\S]*?)\\|\\|\\|FIM\\|\\|\\|/);\n  if (notionMatch) {\n    try {\n      notionData = JSON.parse(notionMatch[1].trim());\n\n      const respNome = (notionData.responsavel || 'franquelin, victor').toLowerCase()\n        .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n      let respPeople = [];\n      let addedIds = [];\n      for (const [key, id] of Object.entries(responsavelMap)) {\n        if (respNome.includes(key) && !addedIds.includes(id)) {\n          respPeople.push({\"id\": id});\n          addedIds.push(id);\n        }\n      }\n      if (respPeople.length === 0) {\n        respPeople = [{\"id\": \"826e94f5-aed7-4421-ae97-deee67c6f6af\"}];\n      }\n\n      notionBody = {\n        \"parent\": {\"database_id\": \"d54e5911e8af43dfaed8f2893e59f6ef\"},\n        \"properties\": {\n          \"Descrição\": {\"title\": [{\"text\": {\"content\": notionData.descricao || \"\"}}]},\n          \"Cliente\": {\"rich_text\": [{\"text\": {\"content\": notionData.cliente || \"\"}}]},\n          \"status\": {\"select\": {\"name\": notionData.status || \"Parado\"}},\n          \"Data\": {\"date\": {\"start\": notionData.data}},\n          \"Tipo\": {\"multi_select\": [{\"name\": notionData.tipo || \"Internet\"}]},\n          \"Entrega\": {\"date\": {\"start\": notionData.entrega || notionData.data}},\n          \"Obs\": {\"rich_text\": [{\"text\": {\"content\": notionData.obs || \"\"}}]},\n          \"Fone\": {\"phone_number\": notionData.fone || null},\n          \"Valor\": {\"number\": 0},\n          \"Atendente\": {\"people\": [{\"id\": \"325d872b-594c-81fe-a524-00029761e655\"}]},\n          \"Responsável\": {\"people\": respPeople}\n        }\n      };\n\n    } catch(e) {\n      notionData = null;\n    }\n    whatsappMessage = fullText.replace(/\\|\\|\\|NOTION\\|\\|\\|[\\s\\S]*?\\|\\|\\|FIM\\|\\|\\|/, '').trim();\n  }\n}\n\n// Monta histórico atualizado para Redis\nlet _prevHist = [];\ntry { const rv2 = $('Busca Histórico Redis').first().json?.value; if(rv2) _prevHist = JSON.parse(rv2); } catch(e) {}\nlet _msgUsr = ''; try { _msgUsr = $('Verifica Menção').first().json?.textMessage || $('Formata Transcrição').first().json?.textMessage || ''; } catch(e) {}\nlet _popsUsd = ''; try { _popsUsd = $('Monta Prompt').first().json?.popsUsados || ''; } catch(e) {}\nlet _rem = ''; try { _rem = $('Monta Prompt').first().json?.remetente || ''; } catch(e) {}\nconst novoHistorico = JSON.stringify([..._prevHist, {role:'user',content:_msgUsr.substring(0,500)}, {role:'assistant',content:whatsappMessage.substring(0,1000)}].slice(-20));\n\nreturn [{\n  json: {\n    chatId: chatId,\n    message: whatsappMessage,\n    notionData: notionData,\n    notionBody: notionBody,\n    hasNotion: notionBody !== null,\n    isError: false,\n    novoHistorico: novoHistorico,\n    mensagemUsuario: _msgUsr,\n    remetente: _rem,\n    popsUsados: _popsUsd,\n    tokensInput: tokensInput,\n    tokensOutput: tokensOutput\n  }\n}];\n"
       }
     },
     {
@@ -233,7 +233,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_NOTION_TOKEN"
+              "value": "Bearer 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"
             },
             {
               "name": "Notion-Version",
@@ -288,7 +288,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "YOUR_ANTHROPIC_API_KEY"
+              "value": "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"
             },
             {
               "name": "anthropic-version",
@@ -830,6 +830,131 @@
           "name": "postgres_cloudfy"
         }
       }
+    },
+    {
+      "id": "2c33c48b-d6f7-45bc-abd7-66aabe8871ed",
+      "name": "Busca Histórico Redis",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        16224,
+        4224
+      ],
+      "parameters": {
+        "operation": "get",
+        "key": "={{ 'conv:' + ($('Verifica Menção').first().json.chatId || '') }}",
+        "keyType": "automatic"
+      },
+      "credentials": {
+        "redis": {
+          "id": "XYsy0h9be9PkUPMP",
+          "name": "redis_cloudfy"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "bba5c0e4-ba08-40b7-9ec5-ddf91c5b1250",
+      "name": "Salva Histórico Redis",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        17060,
+        4384
+      ],
+      "parameters": {
+        "operation": "set",
+        "key": "={{ 'conv:' + ($json.chatId || '') }}",
+        "value": "={{ $json.novoHistorico }}",
+        "keyType": "automatic",
+        "expire": true,
+        "ttl": 14400
+      },
+      "credentials": {
+        "redis": {
+          "id": "XYsy0h9be9PkUPMP",
+          "name": "redis_cloudfy"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "9cb3e00f-4e01-45d1-b2c9-82002cf762b7",
+      "name": "Salva Conversa",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        17060,
+        4544
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ `INSERT INTO bot_conversas (chat_id, remetente, mensagem, resposta, pops_usados, tokens_input, tokens_output) VALUES ('${($json.chatId||'').replace(/'/g,\"''\")}','${($json.remetente||'').replace(/'/g,\"''\")}','${($json.mensagemUsuario||'').substring(0,2000).replace(/'/g,\"''\")}','${($json.message||'').substring(0,4000).replace(/'/g,\"''\")}','${($json.popsUsados||'').replace(/'/g,\"''\")}',${$json.tokensInput||0},${$json.tokensOutput||0})` }}",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "169f383d-4ef7-4638-9f31-4c55d09e63de",
+      "name": "É Erro?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        16920,
+        4064
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "052dfd02-ed69-4db1-9b83-e83a868619f5",
+              "leftValue": "={{ $json.isError }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "634ea445-aee3-409d-8c53-9883d45c7757",
+      "name": "Salva Erro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        17120,
+        4064
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ `INSERT INTO bot_erros (no_n8n, mensagem_erro, mensagem_usuario, chat_id) VALUES ('Claude API','${($json.errorMsg||'').substring(0,1000).replace(/'/g,\"''\")}','${($json.mensagemUsuario||'').substring(0,500).replace(/'/g,\"''\")}','${($json.chatId||'').replace(/'/g,\"''\")}')` }}",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "onError": "continueErrorOutput"
     }
   ],
   "connections": {
@@ -909,6 +1034,21 @@
           },
           {
             "node": "Tem Notion?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Salva Histórico Redis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Salva Conversa",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "É Erro?",
             "type": "main",
             "index": 0
           }
@@ -1158,7 +1298,38 @@
       "main": [
         [
           {
+            "node": "Busca Histórico Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Histórico Redis": {
+      "main": [
+        [
+          {
             "node": "Monta Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Monta Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Erro?": {
+      "main": [
+        [
+          {
+            "node": "Salva Erro",
             "type": "main",
             "index": 0
           }
