@@ -1,12 +1,13 @@
 {
+  "updatedAt": "2026-03-24T02:50:45.099Z",
+  "createdAt": "2026-03-20T00:40:24.326Z",
+  "id": "BhIJ7UrKM9uWhXHa",
   "name": "Teste versão 6.6 - CloudFy (Projeto Maluco da IA)",
+  "description": null,
+  "active": false,
+  "isArchived": false,
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "whatsapp",
-        "options": {}
-      },
       "id": "232add3d-1036-4320-b634-0e6af2dc65ef",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
@@ -15,12 +16,13 @@
         13536,
         3936
       ],
-      "webhookId": "60618c4c-8703-48c0-a1c0-5ca868a9d586"
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "options": {}
+      }
     },
     {
-      "parameters": {
-        "jsCode": "// ============================================================\n// EXTRAI DADOS E SALVA - roda para TODAS as mensagens do grupo\n// (independente de mencionar o bot)\n// ============================================================\nconst body = $input.first().json;\nconst b = body.body || {};\n\n// Green API\nconst gMsg = b.messageData || {};\nconst gText = gMsg.textMessageData?.textMessage || gMsg.extendedTextMessageData?.text || '';\nconst gSender = b.senderData?.senderName || b.senderData?.senderContactName || '';\nconst gMsgId = b.idMessage || gMsg.idMessage || '';\nconst gChat = b.senderData?.chatId || '';\n\n// Evolution API\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst eText = eMsg.conversation || eMsg.extendedTextMessage?.text || eMsg.imageMessage?.caption || '';\nconst eSender = eData.pushName || '';\nconst eMsgId = eData.key?.id || '';\nconst eChat = eData.key?.remoteJid || '';\n\nconst textMessage = gText || eText;\nconst sender = gSender || eSender || 'Alguém';\nconst messageId = gMsgId || eMsgId || ('tmp_' + Date.now());\nconst chatId = gChat || eChat;\n\n// Só salva se tiver texto\nif (!textMessage) {\n  return [];\n}\n\nreturn [{\n  json: {\n    dbRemetente: sender,\n    dbMensagem: textMessage,\n    messageId,\n    chatId\n  }\n}];"
-      },
       "id": "59adc4aa-9e82-4e8f-8597-31ed9a52962e",
       "name": "Extrai Dados Mensagem",
       "type": "n8n-nodes-base.code",
@@ -28,14 +30,12 @@
       "position": [
         13968,
         3776
-      ]
+      ],
+      "parameters": {
+        "jsCode": "// ============================================================\n// EXTRAI DADOS E SALVA - roda para TODAS as mensagens do grupo\n// (independente de mencionar o bot)\n// ============================================================\nconst body = $input.first().json;\nconst b = body.body || {};\n\n// Green API\nconst gMsg = b.messageData || {};\nconst gText = gMsg.textMessageData?.textMessage || gMsg.extendedTextMessageData?.text || '';\nconst gSender = b.senderData?.senderName || b.senderData?.senderContactName || '';\nconst gMsgId = b.idMessage || gMsg.idMessage || '';\nconst gChat = b.senderData?.chatId || '';\n\n// Evolution API\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst eText = eMsg.conversation || eMsg.extendedTextMessage?.text || eMsg.imageMessage?.caption || '';\nconst eSender = eData.pushName || '';\nconst eMsgId = eData.key?.id || '';\nconst eChat = eData.key?.remoteJid || '';\n\nconst textMessage = gText || eText;\nconst sender = gSender || eSender || 'Alguém';\nconst messageId = gMsgId || eMsgId || ('tmp_' + Date.now());\nconst chatId = gChat || eChat;\n\n// Só salva se tiver texto\nif (!textMessage) {\n  return [];\n}\n\nreturn [{\n  json: {\n    dbRemetente: sender,\n    dbMensagem: textMessage,\n    messageId,\n    chatId\n  }\n}];"
+      }
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "{{ `INSERT INTO mensagens (message_id, remetente, mensagem, chat_id) VALUES ('${$json.messageId}', '${$json.dbRemetente.replace(/'/g, \"''\")}', '${$json.dbMensagem.substring(0,2000).replace(/'/g, \"''\")}', '${($json.chatId || '').replace(/'/g, \"''\")}') ON CONFLICT (message_id) DO NOTHING` }}",
-        "options": {}
-      },
       "id": "987b23fe-8300-47a0-b22e-6f8c73b0577c",
       "name": "Salva no Postgres",
       "type": "n8n-nodes-base.postgres",
@@ -44,6 +44,11 @@
         14320,
         3776
       ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ `INSERT INTO mensagens (message_id, remetente, mensagem, chat_id) VALUES ('${$json.messageId}', '${$json.dbRemetente.replace(/'/g, \"''\")}', '${$json.dbMensagem.substring(0,2000).replace(/'/g, \"''\")}', '${($json.chatId || '').replace(/'/g, \"''\")}') ON CONFLICT (message_id) DO NOTHING` }}",
+        "options": {}
+      },
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
@@ -52,9 +57,6 @@
       }
     },
     {
-      "parameters": {
-        "jsCode": "// ============================================================\n// VERIFICA MENÇÃO - só continua se o bot foi mencionado\n// ============================================================\nconst body = $('Webhook').first().json;\nconst b = body.body || {};\n\n// Green API\nconst gMsg = b.messageData || {};\nconst gText = gMsg.textMessageData?.textMessage || gMsg.extendedTextMessageData?.text || '';\nconst gChat = b.senderData?.chatId || '';\n\n// Evolution API\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst eText = eMsg.conversation || eMsg.extendedTextMessage?.text || '';\nconst eChat = eData.key?.remoteJid || '';\n\nconst textMessage = gText || eText;\nconst chatId = gChat || eChat;\n// Ignora mensagens antigas (histórico de sincronização da Evolution API)\nconst msgTimestamp = eData.messageTimestamp || 0;\nconst nowTimestamp = Math.floor(Date.now() / 1000);\nif (msgTimestamp && (nowTimestamp - msgTimestamp) > 120) {\n  return []; // mensagem com mais de 2 minutos, ignora\n}\n\n// Verifica menção de forma precisa (não usa fullContent para evitar falsos positivos)\nconst botNumbers = ['554396543242', '235437994062039'];\n\n// 1. Checa mentionedJid (Evolution API)\nconst mentionedJids = eMsg.extendedTextMessage?.contextInfo?.mentionedJid ||\n  eMsg.imageMessage?.contextInfo?.mentionedJid || [];\nconst isMentionedJid = mentionedJids.some(jid => botNumbers.some(n => jid.includes(n)));\n\n// 2. Checa @menção no texto\nconst isMentionedText = botNumbers.some(n => textMessage.includes('@' + n) || textMessage.includes('@' + n.slice(2)));\n\n// 3. Checa se é mensagem direta (não grupo)\nconst isDirectMessage = chatId && !chatId.includes('@g.us');\n\nif (!isMentionedJid && !isMentionedText && !isDirectMessage) {\n  return [];\n}\n\nconst txtLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n// Detecta tipo de relatório\nconst isReportMensal = txtLower.includes('mensal') || txtLower.includes('mes') || txtLower.includes('mês');\nconst isReportSemanal = !isReportMensal && (txtLower.includes('semanal') || txtLower.includes('semana'));\nconst isReport = txtLower.includes('relatorio') || txtLower.includes('resumo');\nconst reportType = isReportMensal ? 'mensal' : isReportSemanal ? 'semanal' : 'diario';\n\nconst isTraining = txtLower.startsWith('claude aprenda') || txtLower.startsWith('claude correcao') ||\n  textMessage.toLowerCase().includes('claude aprenda') || textMessage.toLowerCase().includes('claude correcao');\n\nreturn [{ json: { chatId, textMessage, isReport, isTraining, reportType } }];"
-      },
       "id": "ff52a62a-1d12-4fcf-b199-0a2d24418857",
       "name": "Verifica Menção",
       "type": "n8n-nodes-base.code",
@@ -62,34 +64,33 @@
       "position": [
         13968,
         4032
-      ]
+      ],
+      "parameters": {
+        "jsCode": "// ============================================================\n// VERIFICA MENÇÃO - só continua se o bot foi mencionado\n// ============================================================\nconst body = $('Webhook').first().json;\nconst b = body.body || {};\n\n// Green API\nconst gMsg = b.messageData || {};\nconst gText = gMsg.textMessageData?.textMessage || gMsg.extendedTextMessageData?.text || '';\nconst gChat = b.senderData?.chatId || '';\n\n// Evolution API\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst eText = eMsg.conversation || eMsg.extendedTextMessage?.text || '';\nconst eChat = eData.key?.remoteJid || '';\n\nconst textMessage = gText || eText;\nconst chatId = gChat || eChat;\n// Ignora mensagens antigas (histórico de sincronização da Evolution API)\nconst msgTimestamp = eData.messageTimestamp || 0;\nconst nowTimestamp = Math.floor(Date.now() / 1000);\nif (msgTimestamp && (nowTimestamp - msgTimestamp) > 120) {\n  return []; // mensagem com mais de 2 minutos, ignora\n}\n\n// Verifica menção de forma precisa (não usa fullContent para evitar falsos positivos)\nconst botNumbers = ['554396543242', '235437994062039'];\n\n// 1. Checa mentionedJid (Evolution API)\nconst mentionedJids = eMsg.extendedTextMessage?.contextInfo?.mentionedJid ||\n  eMsg.imageMessage?.contextInfo?.mentionedJid || [];\nconst isMentionedJid = mentionedJids.some(jid => botNumbers.some(n => jid.includes(n)));\n\n// 2. Checa @menção no texto\nconst isMentionedText = botNumbers.some(n => textMessage.includes('@' + n) || textMessage.includes('@' + n.slice(2)));\n\n// 3. Checa se é mensagem direta (não grupo)\nconst isDirectMessage = chatId && !chatId.includes('@g.us');\n\nif (!isMentionedJid && !isMentionedText && !isDirectMessage) {\n  return [];\n}\n\nconst txtLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n// Detecta tipo de relatório\nconst isReportMensal = txtLower.includes('mensal') || txtLower.includes('mes') || txtLower.includes('mês');\nconst isReportSemanal = !isReportMensal && (txtLower.includes('semanal') || txtLower.includes('semana'));\nconst isReport = txtLower.includes('relatorio') || txtLower.includes('resumo');\nconst reportType = isReportMensal ? 'mensal' : isReportSemanal ? 'semanal' : 'diario';\n\nconst isTraining = txtLower.startsWith('claude aprenda') || txtLower.startsWith('claude correcao') ||\n  textMessage.toLowerCase().includes('claude aprenda') || textMessage.toLowerCase().includes('claude correcao');\n\nreturn [{ json: { chatId, textMessage, isReport, isTraining, reportType } }];"
+      }
     },
     {
+      "id": "9aca69e2-ca89-4b8e-a686-b7b5c7f7a05e",
+      "name": "Busca POPs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        15984,
+        4224
+      ],
       "parameters": {
         "operation": "executeQuery",
         "query": "SELECT titulo, categoria, conteudo FROM dashboard_pops WHERE ativo = true ORDER BY categoria, titulo",
         "options": {}
       },
-      "id": "9aca69e2-ca89-4b8e-a686-b7b5c7f7a05e",
-      "name": "Busca POPs",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
           "name": "postgres_cloudfy"
         }
-      },
-      "position": [
-        15984,
-        4224
-      ]
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const rulesData = $('Busca Regras').all();\nconst rules = rulesData.map(r => r.json.regra).filter(Boolean).slice(0, 30).join('\\n- ');\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\n// Busca system prompt customizado do banco (cap at 40000 chars)\nlet systemPromptTemplate = null;\ntry {\n  const spData = $('Busca System Prompt').all();\n  let sp = spData[0]?.json?.valor || null;\n  if (sp && sp.length > 40000) sp = sp.substring(0, 40000) + '\\n[...truncado...]';\n  systemPromptTemplate = sp;\n} catch(e) {}\n\n// Busca as últimas mensagens do grupo para contexto\nlet historicoData = [];\ntry { historicoData = $('Busca Histórico 10').all(); } catch(e) {}\nlet historico = '';\nif (historicoData && historicoData.length > 0) {\n  const msgs = historicoData.map(e => e.json);\n  for (const msg of msgs) {\n    let hora = '??:??';\n    try {\n      const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n      hora = d.toISOString().substring(11, 16);\n    } catch(e) {}\n    const msgTxt = (msg.mensagem || '').substring(0, 300);\n    historico += `[${hora}] ${msg.remetente}: ${msgTxt}\\n`;\n  }\n  if (historico.length > 3000) historico = historico.substring(historico.length - 3000);\n}\nconst historicoSection = historico ? `\\n\\nÚLTIMAS MENSAGENS DO GRUPO (use como contexto para entender o assunto em andamento):\\n${historico}` : '';\n\n// Lê POPs direto do Postgres (múltiplos itens)\nconst popsArray = $input.all().map(i => i.json).filter(p => p.titulo && p.conteudo);\nlet colaboradoresArray = [];\ntry { colaboradoresArray = $('Busca Colaboradores').all().map(i => i.json).filter(c => c.nome); } catch(e) {}\n\nlet clientesContent = '';\nconst allNonClientPops = [];\n\nfor (const pop of popsArray) {\n  const cat = (pop.categoria || '').toLowerCase();\n  const isClientDB = cat.includes('cliente') || cat.includes('banco') || cat.includes('base') || cat.includes('crm');\n  if (isClientDB) {\n    clientesContent += pop.conteudo + '\\n';\n  } else {\n    allNonClientPops.push(pop);\n  }\n}\n\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst textMessage = _vM.textMessage || '';\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nconst msgLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\nconst palavrasMsg = msgLower.split(/\\s+/).filter(p => p.length > 2);\n\n// Smart POP selection: injeta apenas POPs relevantes à mensagem atual\nconst matchedPops = allNonClientPops.filter(pop => {\n  const titleNorm = pop.titulo.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  const contentPreview = (pop.conteudo || '').substring(0, 200).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  return palavrasMsg.some(w => w.length > 3 && (titleNorm.includes(w) || contentPreview.includes(w)));\n});\n\nconst isListingPops = msgLower.includes('pop') || msgLower.includes('procedimento') || msgLower.includes('quais') || msgLower.includes('lista');\nlet pops = '';\nif (matchedPops.length > 0 && !isListingPops) {\n  // Injeta conteúdo completo só dos POPs relevantes\n  for (const pop of matchedPops) {\n    pops += '=== ' + pop.titulo + ' ===\\n';\n    pops += pop.conteudo.substring(0, 5000) + '\\n\\n';\n  }\n} else {\n  // Apenas lista os títulos disponíveis\n  const titulos = allNonClientPops.map(p => `- ${p.titulo} (${p.categoria || 'Geral'})`).join('\\n');\n  if (titulos) pops = 'POPs disponíveis (peça pelo nome para ver o conteúdo completo):\\n' + titulos;\n}\n\n// Parser de clientes\nconst fonteClientes = clientesContent;\nconst clientesDB = [];\nconst linhas = fonteClientes.split('\\n');\nfor (const linha of linhas) {\n  let nome = '', cod = '';\n  if (linha.includes('\\t')) {\n    const partes = linha.split('\\t').map(p => p.trim());\n    const ultimaParte = partes[partes.length - 1];\n    if (/^\\d+$/.test(ultimaParte)) { cod = ultimaParte; nome = partes[0]; }\n  }\n  if (!cod) {\n    const m = linha.match(/^(.+?)\\s{1,}(\\d{1,6})\\s*$/);\n    if (m) { nome = m[1].trim(); cod = m[2].trim(); }\n  }\n  if (nome && cod && !/^(nome|cód|cod|cliente|código)$/i.test(nome)) {\n    clientesDB.push({ nome, cod, nomeLower: nome.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') });\n  }\n}\n\nconst clientesEncontrados = [];\nconst idsAdicionados = new Set();\nfor (const cliente of clientesDB) {\n  for (const palavra of palavrasMsg) {\n    if (cliente.nomeLower.includes(palavra) && !idsAdicionados.has(cliente.cod)) {\n      clientesEncontrados.push(cliente.cod + ' - ' + cliente.nome);\n      idsAdicionados.add(cliente.cod);\n      break;\n    }\n  }\n}\n\nconst clienteInfo = clientesEncontrados.length > 0\n  ? 'CLIENTES ENCONTRADOS NA BUSCA: ' + clientesEncontrados.join(' | ')\n  : 'NENHUM CLIENTE ENCONTRADO COM ESSE NOME';\n\nconst colaboradoresStr = colaboradoresArray.length > 0\n  ? 'COLABORADORES DA EQUIPE:\\n' + colaboradoresArray.map(c => `- ${c.nome}${c.cargo ? ' (' + c.cargo + ')' : ''}${c.funcoes ? ': ' + c.funcoes : ''}`).join('\\n')\n  : '';\n\nlet systemContent;\nif (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {\n  systemContent = systemPromptTemplate\n    .replace(/\\{\\{DATA\\}\\}/g, `${dia}/${mes}/${ano}`)\n    .replace(/\\{\\{ANO\\}\\}/g, String(ano))\n    .replace(/\\{\\{TODAY\\}\\}/g, today)\n    .replace(/\\{\\{COLABORADORES\\}\\}/g, colaboradoresStr)\n    .replace(/\\{\\{CLIENTES\\}\\}/g, clienteInfo)\n    .replace(/\\{\\{POPS\\}\\}/g, pops)\n    .replace(/\\{\\{HISTORICO\\}\\}/g, historicoSection);\n  systemContent = rulesPrompt + '\\n' + systemContent;\n} else {\n  systemContent = rulesPrompt + '\\nVocê é o assistente interno da Zazz Internet, provedor de fibra óptica em Lunardelli-PR. Seu nome é Maluco da IA 👽🍀. Use o emoji 🍀 ocasionalmente.\\n\\nDATA ATUAL: ' + dia + '/' + mes + '/' + ano + ' (' + today + '). O ANO ATUAL É ' + ano + '. Quando alguém disser \"amanhã\", calcule a partir de ' + dia + '/' + mes + '/' + ano + '. NUNCA use datas de 2024 ou 2025.\\n\\nFORMATAÇÃO OBRIGATÓRIA (WhatsApp):\\n- Negrito: use *texto* (UM asterisco de cada lado)\\n- Itálico: use _texto_ (underline de cada lado)\\n- PROIBIDO usar ** ## ### ou blocos de código\\n- Para passos, use números: 1. 2. 3.\\n- Use emojis: 📌 ✅ ⚠️\\n\\n' + colaboradoresStr + '\\n\\n' + clienteInfo + '\\n⚠️ REGRA CRÍTICA DE CLIENTES (SIGA RIGOROSAMENTE - PRIORIDADE MÁXIMA):\\n- Analise a lista de CLIENTES ENCONTRADOS acima\\n- Se houver APENAS 1 cliente na lista, use esse cliente normalmente\\n- Se houver MAIS DE 1 cliente na lista, você é PROIBIDO de escolher um sozinho. Você DEVE listar TODOS os clientes encontrados numerados e PERGUNTAR ao colaborador qual é o correto\\n- NÃO crie a tarefa no Notion até o colaborador confirmar qual cliente é o correto\\n- Se aparecer NENHUM CLIENTE ENCONTRADO, diga que não encontrou e peça o nome completo ou código\\n- NUNCA invente códigos ou nomes de clientes\\n\\nPROCEDIMENTOS OPERACIONAIS / POPs DA EMPRESA:\\n' + pops + '\\nSe perguntarem \"quais POPs você tem\" ou \"quais procedimentos existem\", liste os títulos acima.\\n' + historicoSection + '\\n\\nCRIAÇÃO DE TAREFAS:\\nQuando pedirem para agendar/criar/registrar, responda com:\\n\\n|||NOTION|||\\n{\"descricao\": \"descrição da tarefa\", \"cliente\": \"código - nome completo\", \"tipo\": \"Internet\", \"status\": \"Parado\", \"responsavel\": \"nome do responsável informado\", \"data\": \"' + today + '\", \"entrega\": \"YYYY-MM-DD\", \"obs\": \"detalhes adicionais\", \"fone\": \"telefone ou vazio\"}\\n|||FIM|||\\n\\nDepois do JSON, confirme no WhatsApp. Se não for tarefa, responda normalmente.';\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: 2048,\n      system: systemContent,\n      messages: [{\"role\": \"user\", \"content\": textMessage}]\n    }\n  }\n}];\n"
-      },
       "id": "aa8fefbc-dd1a-4383-bc64-1f81f58bf2a2",
       "name": "Monta Prompt",
       "type": "n8n-nodes-base.code",
@@ -97,9 +98,20 @@
       "position": [
         16304,
         4224
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const rulesData = $('Busca Regras').all();\nconst rules = rulesData.map(r => r.json.regra).filter(Boolean).slice(0, 30).join('\\n- ');\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\n// Busca system prompt customizado do banco (cap at 40000 chars)\nlet systemPromptTemplate = null;\ntry {\n  const spData = $('Busca System Prompt').all();\n  let sp = spData[0]?.json?.valor || null;\n  if (sp && sp.length > 40000) sp = sp.substring(0, 40000) + '\\n[...truncado...]';\n  systemPromptTemplate = sp;\n} catch(e) {}\n\n// Busca as últimas mensagens do grupo para contexto\nlet historicoData = [];\ntry { historicoData = $('Busca Histórico 10').all(); } catch(e) {}\nlet historico = '';\nif (historicoData && historicoData.length > 0) {\n  const msgs = historicoData.map(e => e.json);\n  for (const msg of msgs) {\n    let hora = '??:??';\n    try {\n      const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n      hora = d.toISOString().substring(11, 16);\n    } catch(e) {}\n    const msgTxt = (msg.mensagem || '').substring(0, 300);\n    historico += `[${hora}] ${msg.remetente}: ${msgTxt}\\n`;\n  }\n  if (historico.length > 3000) historico = historico.substring(historico.length - 3000);\n}\nconst historicoSection = historico ? `\\n\\nÚLTIMAS MENSAGENS DO GRUPO (use como contexto para entender o assunto em andamento):\\n${historico}` : '';\n\n// Lê POPs direto do Postgres (múltiplos itens)\nconst popsArray = $input.all().map(i => i.json).filter(p => p.titulo && p.conteudo);\nlet colaboradoresArray = [];\ntry { colaboradoresArray = $('Busca Colaboradores').all().map(i => i.json).filter(c => c.nome); } catch(e) {}\n\nlet clientesContent = '';\nconst allNonClientPops = [];\n\nfor (const pop of popsArray) {\n  const cat = (pop.categoria || '').toLowerCase();\n  const isClientDB = cat.includes('cliente') || cat.includes('banco') || cat.includes('base') || cat.includes('crm');\n  if (isClientDB) {\n    clientesContent += pop.conteudo + '\\n';\n  } else {\n    allNonClientPops.push(pop);\n  }\n}\n\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst textMessage = _vM.textMessage || '';\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nconst msgLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\nconst palavrasMsg = msgLower.split(/\\s+/).filter(p => p.length > 2);\n\n// Smart POP selection: injeta apenas POPs relevantes à mensagem atual\nconst matchedPops = allNonClientPops.filter(pop => {\n  const titleNorm = pop.titulo.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  const contentPreview = (pop.conteudo || '').substring(0, 200).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  return palavrasMsg.some(w => w.length > 3 && (titleNorm.includes(w) || contentPreview.includes(w)));\n});\n\nconst isListingPops = msgLower.includes('pop') || msgLower.includes('procedimento') || msgLower.includes('quais') || msgLower.includes('lista');\nlet pops = '';\nif (matchedPops.length > 0 && !isListingPops) {\n  // Injeta conteúdo completo só dos POPs relevantes\n  for (const pop of matchedPops) {\n    pops += '=== ' + pop.titulo + ' ===\\n';\n    pops += pop.conteudo.substring(0, 5000) + '\\n\\n';\n  }\n} else {\n  // Apenas lista os títulos disponíveis\n  const titulos = allNonClientPops.map(p => `- ${p.titulo} (${p.categoria || 'Geral'})`).join('\\n');\n  if (titulos) pops = 'POPs disponíveis (peça pelo nome para ver o conteúdo completo):\\n' + titulos;\n}\n\n// Parser de clientes\nconst fonteClientes = clientesContent;\nconst clientesDB = [];\nconst linhas = fonteClientes.split('\\n');\nfor (const linha of linhas) {\n  let nome = '', cod = '';\n  if (linha.includes('\\t')) {\n    const partes = linha.split('\\t').map(p => p.trim());\n    const ultimaParte = partes[partes.length - 1];\n    if (/^\\d+$/.test(ultimaParte)) { cod = ultimaParte; nome = partes[0]; }\n  }\n  if (!cod) {\n    const m = linha.match(/^(.+?)\\s{1,}(\\d{1,6})\\s*$/);\n    if (m) { nome = m[1].trim(); cod = m[2].trim(); }\n  }\n  if (nome && cod && !/^(nome|cód|cod|cliente|código)$/i.test(nome)) {\n    clientesDB.push({ nome, cod, nomeLower: nome.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') });\n  }\n}\n\nconst clientesEncontrados = [];\nconst idsAdicionados = new Set();\nfor (const cliente of clientesDB) {\n  for (const palavra of palavrasMsg) {\n    if (cliente.nomeLower.includes(palavra) && !idsAdicionados.has(cliente.cod)) {\n      clientesEncontrados.push(cliente.cod + ' - ' + cliente.nome);\n      idsAdicionados.add(cliente.cod);\n      break;\n    }\n  }\n}\n\nconst clienteInfo = clientesEncontrados.length > 0\n  ? 'CLIENTES ENCONTRADOS NA BUSCA: ' + clientesEncontrados.join(' | ')\n  : 'NENHUM CLIENTE ENCONTRADO COM ESSE NOME';\n\nconst colaboradoresStr = colaboradoresArray.length > 0\n  ? 'COLABORADORES DA EQUIPE:\\n' + colaboradoresArray.map(c => `- ${c.nome}${c.cargo ? ' (' + c.cargo + ')' : ''}${c.funcoes ? ': ' + c.funcoes : ''}`).join('\\n')\n  : '';\n\nlet systemContent;\nif (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {\n  systemContent = systemPromptTemplate\n    .replace(/\\{\\{DATA\\}\\}/g, `${dia}/${mes}/${ano}`)\n    .replace(/\\{\\{ANO\\}\\}/g, String(ano))\n    .replace(/\\{\\{TODAY\\}\\}/g, today)\n    .replace(/\\{\\{COLABORADORES\\}\\}/g, colaboradoresStr)\n    .replace(/\\{\\{CLIENTES\\}\\}/g, clienteInfo)\n    .replace(/\\{\\{POPS\\}\\}/g, pops)\n    .replace(/\\{\\{HISTORICO\\}\\}/g, historicoSection);\n  systemContent = rulesPrompt + '\\n' + systemContent;\n} else {\n  systemContent = rulesPrompt + '\\nVocê é o assistente interno da Zazz Internet, provedor de fibra óptica em Lunardelli-PR. Seu nome é Maluco da IA 👽🍀. Use o emoji 🍀 ocasionalmente.\\n\\nDATA ATUAL: ' + dia + '/' + mes + '/' + ano + ' (' + today + '). O ANO ATUAL É ' + ano + '. Quando alguém disser \"amanhã\", calcule a partir de ' + dia + '/' + mes + '/' + ano + '. NUNCA use datas de 2024 ou 2025.\\n\\nFORMATAÇÃO OBRIGATÓRIA (WhatsApp):\\n- Negrito: use *texto* (UM asterisco de cada lado)\\n- Itálico: use _texto_ (underline de cada lado)\\n- PROIBIDO usar ** ## ### ou blocos de código\\n- Para passos, use números: 1. 2. 3.\\n- Use emojis: 📌 ✅ ⚠️\\n\\n' + colaboradoresStr + '\\n\\n' + clienteInfo + '\\n⚠️ REGRA CRÍTICA DE CLIENTES (SIGA RIGOROSAMENTE - PRIORIDADE MÁXIMA):\\n- Analise a lista de CLIENTES ENCONTRADOS acima\\n- Se houver APENAS 1 cliente na lista, use esse cliente normalmente\\n- Se houver MAIS DE 1 cliente na lista, você é PROIBIDO de escolher um sozinho. Você DEVE listar TODOS os clientes encontrados numerados e PERGUNTAR ao colaborador qual é o correto\\n- NÃO crie a tarefa no Notion até o colaborador confirmar qual cliente é o correto\\n- Se aparecer NENHUM CLIENTE ENCONTRADO, diga que não encontrou e peça o nome completo ou código\\n- NUNCA invente códigos ou nomes de clientes\\n\\nPROCEDIMENTOS OPERACIONAIS / POPs DA EMPRESA:\\n' + pops + '\\nSe perguntarem \"quais POPs você tem\" ou \"quais procedimentos existem\", liste os títulos acima.\\n' + historicoSection + '\\n\\nCRIAÇÃO DE TAREFAS:\\nQuando pedirem para agendar/criar/registrar, responda com:\\n\\n|||NOTION|||\\n{\"descricao\": \"descrição da tarefa\", \"cliente\": \"código - nome completo\", \"tipo\": \"Internet\", \"status\": \"Parado\", \"responsavel\": \"nome do responsável informado\", \"data\": \"' + today + '\", \"entrega\": \"YYYY-MM-DD\", \"obs\": \"detalhes adicionais\", \"fone\": \"telefone ou vazio\"}\\n|||FIM|||\\n\\nDepois do JSON, confirme no WhatsApp. Se não for tarefa, responda normalmente.';\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: 2048,\n      system: systemContent,\n      messages: [{\"role\": \"user\", \"content\": textMessage}]\n    }\n  }\n}];\n"
+      }
     },
     {
+      "id": "59d4de1d-7cf3-409b-9948-a545cc338501",
+      "name": "Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        16560,
+        4224
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.anthropic.com/v1/messages",
@@ -124,20 +136,9 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.claudeBody) }}",
         "options": {}
-      },
-      "id": "59d4de1d-7cf3-409b-9948-a545cc338501",
-      "name": "Claude API",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        16560,
-        4224
-      ]
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst fullText = response.content[0].text;\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\n\nconst responsavelMap = {\n  'junior': '60f09078-44d0-4a2e-9b56-b8917fdfd87e',\n  'franquelin': '826e94f5-aed7-4421-ae97-deee67c6f6af',\n  'luiz': 'f6b0bba1-309e-46a9-9b37-d5a18c150a16',\n  'negos': '7630461f-d189-4b51-a139-28043faae78f',\n  'nego': '7630461f-d189-4b51-a139-28043faae78f',\n  'gester': '7630461f-d189-4b51-a139-28043faae78f',\n  'victor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'vitor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'russo': '60f09078-44d0-4a2e-9b56-b8917fdfd87e'\n};\n\nlet notionData = null;\nlet whatsappMessage = fullText;\nlet notionBody = null;\n\nif (fullText.includes('|||NOTION|||')) {\n  const notionMatch = fullText.match(/\\|\\|\\|NOTION\\|\\|\\|([\\s\\S]*?)\\|\\|\\|FIM\\|\\|\\|/);\n  if (notionMatch) {\n    try {\n      notionData = JSON.parse(notionMatch[1].trim());\n\n      const respNome = (notionData.responsavel || 'franquelin, victor').toLowerCase()\n        .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n      let respPeople = [];\n      let addedIds = [];\n      for (const [key, id] of Object.entries(responsavelMap)) {\n        if (respNome.includes(key) && !addedIds.includes(id)) {\n          respPeople.push({\"id\": id});\n          addedIds.push(id);\n        }\n      }\n      if (respPeople.length === 0) {\n        respPeople = [{\"id\": \"826e94f5-aed7-4421-ae97-deee67c6f6af\"}];\n      }\n\n      notionBody = {\n        \"parent\": {\"database_id\": \"d54e5911e8af43dfaed8f2893e59f6ef\"},\n        \"properties\": {\n          \"Descrição\": {\"title\": [{\"text\": {\"content\": notionData.descricao || \"\"}}]},\n          \"Cliente\": {\"rich_text\": [{\"text\": {\"content\": notionData.cliente || \"\"}}]},\n          \"status\": {\"select\": {\"name\": notionData.status || \"Parado\"}},\n          \"Data\": {\"date\": {\"start\": notionData.data}},\n          \"Tipo\": {\"multi_select\": [{\"name\": notionData.tipo || \"Internet\"}]},\n          \"Entrega\": {\"date\": {\"start\": notionData.entrega || notionData.data}},\n          \"Obs\": {\"rich_text\": [{\"text\": {\"content\": notionData.obs || \"\"}}]},\n          \"Fone\": {\"phone_number\": notionData.fone || null},\n          \"Valor\": {\"number\": 0},\n          \"Atendente\": {\"people\": [{\"id\": \"325d872b-594c-81fe-a524-00029761e655\"}]},\n          \"Responsável\": {\"people\": respPeople}\n        }\n      };\n\n    } catch(e) {\n      notionData = null;\n    }\n    whatsappMessage = fullText.replace(/\\|\\|\\|NOTION\\|\\|\\|[\\s\\S]*?\\|\\|\\|FIM\\|\\|\\|/, '').trim();\n  }\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    message: whatsappMessage,\n    notionData: notionData,\n    notionBody: notionBody,\n    hasNotion: notionBody !== null\n  }\n}];\n"
-      },
       "id": "a46c7f5b-dea1-458d-8c9b-ddbae957b339",
       "name": "Parse Resposta",
       "type": "n8n-nodes-base.code",
@@ -145,9 +146,20 @@
       "position": [
         16800,
         4224
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst fullText = response.content[0].text;\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\n\nconst responsavelMap = {\n  'junior': '60f09078-44d0-4a2e-9b56-b8917fdfd87e',\n  'franquelin': '826e94f5-aed7-4421-ae97-deee67c6f6af',\n  'luiz': 'f6b0bba1-309e-46a9-9b37-d5a18c150a16',\n  'negos': '7630461f-d189-4b51-a139-28043faae78f',\n  'nego': '7630461f-d189-4b51-a139-28043faae78f',\n  'gester': '7630461f-d189-4b51-a139-28043faae78f',\n  'victor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'vitor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'russo': '60f09078-44d0-4a2e-9b56-b8917fdfd87e'\n};\n\nlet notionData = null;\nlet whatsappMessage = fullText;\nlet notionBody = null;\n\nif (fullText.includes('|||NOTION|||')) {\n  const notionMatch = fullText.match(/\\|\\|\\|NOTION\\|\\|\\|([\\s\\S]*?)\\|\\|\\|FIM\\|\\|\\|/);\n  if (notionMatch) {\n    try {\n      notionData = JSON.parse(notionMatch[1].trim());\n\n      const respNome = (notionData.responsavel || 'franquelin, victor').toLowerCase()\n        .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n      let respPeople = [];\n      let addedIds = [];\n      for (const [key, id] of Object.entries(responsavelMap)) {\n        if (respNome.includes(key) && !addedIds.includes(id)) {\n          respPeople.push({\"id\": id});\n          addedIds.push(id);\n        }\n      }\n      if (respPeople.length === 0) {\n        respPeople = [{\"id\": \"826e94f5-aed7-4421-ae97-deee67c6f6af\"}];\n      }\n\n      notionBody = {\n        \"parent\": {\"database_id\": \"d54e5911e8af43dfaed8f2893e59f6ef\"},\n        \"properties\": {\n          \"Descrição\": {\"title\": [{\"text\": {\"content\": notionData.descricao || \"\"}}]},\n          \"Cliente\": {\"rich_text\": [{\"text\": {\"content\": notionData.cliente || \"\"}}]},\n          \"status\": {\"select\": {\"name\": notionData.status || \"Parado\"}},\n          \"Data\": {\"date\": {\"start\": notionData.data}},\n          \"Tipo\": {\"multi_select\": [{\"name\": notionData.tipo || \"Internet\"}]},\n          \"Entrega\": {\"date\": {\"start\": notionData.entrega || notionData.data}},\n          \"Obs\": {\"rich_text\": [{\"text\": {\"content\": notionData.obs || \"\"}}]},\n          \"Fone\": {\"phone_number\": notionData.fone || null},\n          \"Valor\": {\"number\": 0},\n          \"Atendente\": {\"people\": [{\"id\": \"325d872b-594c-81fe-a524-00029761e655\"}]},\n          \"Responsável\": {\"people\": respPeople}\n        }\n      };\n\n    } catch(e) {\n      notionData = null;\n    }\n    whatsappMessage = fullText.replace(/\\|\\|\\|NOTION\\|\\|\\|[\\s\\S]*?\\|\\|\\|FIM\\|\\|\\|/, '').trim();\n  }\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    message: whatsappMessage,\n    notionData: notionData,\n    notionBody: notionBody,\n    hasNotion: notionBody !== null\n  }\n}];\n"
+      }
     },
     {
+      "id": "c248b84b-cf53-4b7e-9789-a3d93526f25e",
+      "name": "Envia WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        16960,
+        4224
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://lanlunar-evolution.cloudfy.live/message/sendText/ZazzClaude",
@@ -168,17 +180,17 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: $json.chatId, text: $json.message }) }}",
         "options": {}
-      },
-      "id": "c248b84b-cf53-4b7e-9789-a3d93526f25e",
-      "name": "Envia WhatsApp",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        16960,
-        4224
-      ]
+      }
     },
     {
+      "id": "79b5d6fb-a0e1-41cd-9a88-c8451c3ef0e9",
+      "name": "Tem Notion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        16960,
+        4432
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -202,17 +214,17 @@
         },
         "looseTypeValidation": true,
         "options": {}
-      },
-      "id": "79b5d6fb-a0e1-41cd-9a88-c8451c3ef0e9",
-      "name": "Tem Notion?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        16960,
-        4432
-      ]
+      }
     },
     {
+      "id": "6bda18bf-dad8-4587-a942-e91100b2c504",
+      "name": "Cria no Notion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        17120,
+        4432
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.notion.com/v1/pages",
@@ -237,17 +249,17 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.notionBody) }}",
         "options": {}
-      },
-      "id": "6bda18bf-dad8-4587-a942-e91100b2c504",
-      "name": "Cria no Notion",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        17120,
-        4432
-      ]
+      }
     },
     {
+      "id": "6228abe9-e385-4dd2-87e7-3349a189935d",
+      "name": "Bom Dia Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        13616,
+        3568
+      ],
       "parameters": {
         "rule": {
           "interval": [
@@ -257,17 +269,17 @@
             }
           ]
         }
-      },
-      "id": "6228abe9-e385-4dd2-87e7-3349a189935d",
-      "name": "Bom Dia Trigger",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.3,
-      "position": [
-        13616,
-        3568
-      ]
+      }
     },
     {
+      "id": "7867480f-bced-4deb-bdd0-7a4eff67262b",
+      "name": "Gera Bom Dia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        13760,
+        3568
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.anthropic.com/v1/messages",
@@ -292,20 +304,9 @@
         "specifyBody": "json",
         "jsonBody": "={{ (() => { const hoje = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })); const diaSemana = hoje.getDay(); const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']; const dia = hoje.getDate().toString().padStart(2,'0'); const mes = (hoje.getMonth()+1).toString().padStart(2,'0'); const ano = hoje.getFullYear(); const dataHoje = dias[diaSemana] + ' ' + dia + '/' + mes + '/' + ano; const isSegunda = diaSemana === 1; const extra = isSegunda ? ' IMPORTANTE: Hoje é segunda-feira! Enfatize que a equipe DEVE estar presente na reunião semanal às 17:45. Deixe isso bem claro e destacado na mensagem.' : ''; return JSON.stringify({ model: \"claude-haiku-4-5-20251001\", max_tokens: 512, system: \"Você é o Maluco da IA 👽🍀, assistente da Zazz Internet de Lunardelli-PR. Use o emoji 🍀. Formatação WhatsApp: *negrito* com um asterisco, NUNCA use ** ou ###. Seja motivacional, divertido e leve.\", messages: [{ role: \"user\", content: \"Hoje é \" + dataHoje + \". Gere uma mensagem de bom dia criativa e motivacional para a equipe da Zazz Internet. Comece incluindo o dia e data (ex: *Terça-feira, 17/03/2026*). Varie o estilo: às vezes engraçado, às vezes inspirador, às vezes com curiosidades. Mencione que é importante conferir os checklists do dia. Use emojis. Seja breve (3-5 linhas). Assine como Maluco da IA 👽🍀\" + extra }] }); })() }}",
         "options": {}
-      },
-      "id": "7867480f-bced-4deb-bdd0-7a4eff67262b",
-      "name": "Gera Bom Dia",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        13760,
-        3568
-      ]
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst message = response.content[0].text;\nreturn [{ json: { message } }];"
-      },
       "id": "239e5ed6-17da-4756-bd01-36e4476da9fa",
       "name": "Extrai Mensagem",
       "type": "n8n-nodes-base.code",
@@ -313,9 +314,20 @@
       "position": [
         13904,
         3568
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst message = response.content[0].text;\nreturn [{ json: { message } }];"
+      }
     },
     {
+      "id": "7de288f5-29e0-4700-86ab-a4e1cc4aa51c",
+      "name": "Envia Bom Dia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        14064,
+        3568
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://lanlunar-evolution.cloudfy.live/message/sendText/ZazzClaude",
@@ -336,17 +348,17 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: '554384924456-1616013394@g.us', text: $json.message }) }}",
         "options": {}
-      },
-      "id": "7de288f5-29e0-4700-86ab-a4e1cc4aa51c",
-      "name": "Envia Bom Dia",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        14064,
-        3568
-      ]
+      }
     },
     {
+      "id": "51bc3328-0eb1-496f-a287-30445f5ad08c",
+      "name": "É Relatório?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        15552,
+        4112
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -370,22 +382,9 @@
         },
         "looseTypeValidation": true,
         "options": {}
-      },
-      "id": "51bc3328-0eb1-496f-a287-30445f5ad08c",
-      "name": "É Relatório?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        15552,
-        4112
-      ]
+      }
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "{{ (() => {\n  let _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {} if (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\n  const chatId = (_vM.chatId || '').replace(/'/g, \"''\");\n  const reportType = _vM.reportType || 'diario';\n  let dateFilter;\n  if (reportType === 'mensal') {\n    dateFilter = \"data_hora >= NOW() - INTERVAL '30 days'\";\n  } else if (reportType === 'semanal') {\n    dateFilter = \"data_hora >= NOW() - INTERVAL '7 days'\";\n  } else {\n    dateFilter = \"DATE(data_hora) = CURRENT_DATE\";\n  }\n  return `SELECT * FROM mensagens WHERE chat_id = '${chatId}' AND ${dateFilter} ORDER BY id ASC`;\n})() }}",
-        "options": {}
-      },
       "id": "09bd7096-5fd6-47be-b3c5-d2a909dacf95",
       "name": "Busca Histórico Postgres",
       "type": "n8n-nodes-base.postgres",
@@ -394,6 +393,11 @@
         15808,
         4000
       ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ (() => {\n  let _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {} if (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\n  const chatId = (_vM.chatId || '').replace(/'/g, \"''\");\n  const reportType = _vM.reportType || 'diario';\n  let dateFilter;\n  if (reportType === 'mensal') {\n    dateFilter = \"data_hora >= NOW() - INTERVAL '30 days'\";\n  } else if (reportType === 'semanal') {\n    dateFilter = \"data_hora >= NOW() - INTERVAL '7 days'\";\n  } else {\n    dateFilter = \"DATE(data_hora) = CURRENT_DATE\";\n  }\n  return `SELECT * FROM mensagens WHERE chat_id = '${chatId}' AND ${dateFilter} ORDER BY id ASC`;\n})() }}",
+        "options": {}
+      },
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
@@ -402,11 +406,6 @@
       }
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "{{ (() => { let _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {} if (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; } const chatId = (_vM.chatId || '').replace(/'/g, \"''\"); return `SELECT * FROM (SELECT * FROM mensagens WHERE chat_id = '${chatId}' ORDER BY id DESC LIMIT 10) sub ORDER BY id ASC`; })() }}",
-        "options": {}
-      },
       "id": "c59b4db7-8f08-427a-a64c-35f78f1bd7af",
       "name": "Busca Histórico 10",
       "type": "n8n-nodes-base.postgres",
@@ -415,6 +414,11 @@
         15808,
         4224
       ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ (() => { let _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {} if (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; } const chatId = (_vM.chatId || '').replace(/'/g, \"''\"); return `SELECT * FROM (SELECT * FROM mensagens WHERE chat_id = '${chatId}' ORDER BY id DESC LIMIT 10) sub ORDER BY id ASC`; })() }}",
+        "options": {}
+      },
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
@@ -423,9 +427,6 @@
       }
     },
     {
-      "parameters": {
-        "jsCode": "const rulesData = $('Busca Regras').all();\nconst rules = rulesData.map(r => r.json.regra).filter(Boolean).join('\\n- ');\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst reportType = _vM.reportType || 'diario';\nconst dbResults = $input.all().map(e => e.json);\n\nconst periodoLabel = reportType === 'mensal'\n  ? 'DO MÊS (últimos 30 dias)'\n  : reportType === 'semanal'\n  ? 'DA SEMANA (últimos 7 dias)'\n  : 'DE HOJE';\n\nlet historico = '';\nfor (const msg of dbResults) {\n  let hora = '??:??';\n  let data = '??/??';\n  try {\n    const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n    hora = d.toISOString().substring(11, 16);\n    data = d.toISOString().substring(8, 10) + '/' + d.toISOString().substring(5, 7);\n  } catch(e) {}\n\n  const prefixo = (reportType === 'semanal' || reportType === 'mensal') ? `[${data} ${hora}]` : `[${hora}]`;\n  historico += `${prefixo} ${msg.remetente}: ${msg.mensagem}\\n`;\n}\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nreturn [{\n  json: {\n    chatId: chatId,\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: 4096,\n      system: ` ${rulesPrompt}\\nVocê é Maluco da IA 👽🍀. DATA ATUAL: ${dia}/${mes}/${ano}.\\nO usuário solicitou um RELATÓRIO ${periodoLabel} com base nas mensagens do grupo.\\nLeia o histórico de conversas do grupo abaixo e crie um resumo profissional e claro.\\nListe:\\n1. Serviços Solicitados e Concluídos\\n2. Serviços que ficaram Pendentes (se houver)\\n3. Principais destaques do período\\n${reportType !== 'diario' ? '4. Tendências ou padrões observados no período\\n' : ''}\\nFormatação WhatsApp: *negrito*, _itálico_, emojis 🟢🟡🔴. NÃO use ## ou **.\\n\\nHISTÓRICO DO GRUPO ${periodoLabel}:\\n${historico.substring(0, 20000)}\\n`,\n      messages: [{\"role\": \"user\", \"content\": `Gere o relatório ${periodoLabel.toLowerCase()} por favor!`}]\n    }\n  }\n}];"
-      },
       "id": "02b7ff69-e018-48ad-976b-99dcab96aed5",
       "name": "Monta Prompt Relatório",
       "type": "n8n-nodes-base.code",
@@ -433,14 +434,12 @@
       "position": [
         15984,
         4000
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const rulesData = $('Busca Regras').all();\nconst rules = rulesData.map(r => r.json.regra).filter(Boolean).join('\\n- ');\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst reportType = _vM.reportType || 'diario';\nconst dbResults = $input.all().map(e => e.json);\n\nconst periodoLabel = reportType === 'mensal'\n  ? 'DO MÊS (últimos 30 dias)'\n  : reportType === 'semanal'\n  ? 'DA SEMANA (últimos 7 dias)'\n  : 'DE HOJE';\n\nlet historico = '';\nfor (const msg of dbResults) {\n  let hora = '??:??';\n  let data = '??/??';\n  try {\n    const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n    hora = d.toISOString().substring(11, 16);\n    data = d.toISOString().substring(8, 10) + '/' + d.toISOString().substring(5, 7);\n  } catch(e) {}\n\n  const prefixo = (reportType === 'semanal' || reportType === 'mensal') ? `[${data} ${hora}]` : `[${hora}]`;\n  historico += `${prefixo} ${msg.remetente}: ${msg.mensagem}\\n`;\n}\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nreturn [{\n  json: {\n    chatId: chatId,\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: 4096,\n      system: ` ${rulesPrompt}\\nVocê é Maluco da IA 👽🍀. DATA ATUAL: ${dia}/${mes}/${ano}.\\nO usuário solicitou um RELATÓRIO ${periodoLabel} com base nas mensagens do grupo.\\nLeia o histórico de conversas do grupo abaixo e crie um resumo profissional e claro.\\nListe:\\n1. Serviços Solicitados e Concluídos\\n2. Serviços que ficaram Pendentes (se houver)\\n3. Principais destaques do período\\n${reportType !== 'diario' ? '4. Tendências ou padrões observados no período\\n' : ''}\\nFormatação WhatsApp: *negrito*, _itálico_, emojis 🟢🟡🔴. NÃO use ## ou **.\\n\\nHISTÓRICO DO GRUPO ${periodoLabel}:\\n${historico.substring(0, 20000)}\\n`,\n      messages: [{\"role\": \"user\", \"content\": `Gere o relatório ${periodoLabel.toLowerCase()} por favor!`}]\n    }\n  }\n}];"
+      }
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "CREATE TABLE IF NOT EXISTS mensagens (\n  id SERIAL PRIMARY KEY,\n  data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  message_id VARCHAR(100) UNIQUE,\n  remetente VARCHAR(100),\n  mensagem TEXT,\n  chat_id VARCHAR(100)\n);\nALTER TABLE mensagens ADD COLUMN IF NOT EXISTS message_id VARCHAR(100);\nALTER TABLE mensagens ADD COLUMN IF NOT EXISTS chat_id VARCHAR(100);\nCREATE INDEX IF NOT EXISTS idx_mensagens_chat_id ON mensagens(chat_id);\nCREATE INDEX IF NOT EXISTS idx_mensagens_data_hora ON mensagens(data_hora);\nDO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'mensagens_message_id_key') THEN ALTER TABLE mensagens ADD CONSTRAINT mensagens_message_id_key UNIQUE (message_id); END IF; END $$;\nCREATE TABLE IF NOT EXISTS regras (\n  id SERIAL PRIMARY KEY,\n  regra TEXT NOT NULL\n);",
-        "options": {}
-      },
       "id": "992e38c2-40d4-4b37-8aa4-6134dd67cf99",
       "name": "SETUP: Criar Tabela (CLIQUE AQUI 1 VEZ)",
       "type": "n8n-nodes-base.postgres",
@@ -449,6 +448,11 @@
         13376,
         3568
       ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS mensagens (\n  id SERIAL PRIMARY KEY,\n  data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  message_id VARCHAR(100) UNIQUE,\n  remetente VARCHAR(100),\n  mensagem TEXT,\n  chat_id VARCHAR(100)\n);\nALTER TABLE mensagens ADD COLUMN IF NOT EXISTS message_id VARCHAR(100);\nALTER TABLE mensagens ADD COLUMN IF NOT EXISTS chat_id VARCHAR(100);\nCREATE INDEX IF NOT EXISTS idx_mensagens_chat_id ON mensagens(chat_id);\nCREATE INDEX IF NOT EXISTS idx_mensagens_data_hora ON mensagens(data_hora);\nDO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'mensagens_message_id_key') THEN ALTER TABLE mensagens ADD CONSTRAINT mensagens_message_id_key UNIQUE (message_id); END IF; END $$;\nCREATE TABLE IF NOT EXISTS regras (\n  id SERIAL PRIMARY KEY,\n  regra TEXT NOT NULL\n);",
+        "options": {}
+      },
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
@@ -457,6 +461,14 @@
       }
     },
     {
+      "id": "47a8bd0a-3861-453a-8461-40ed158162da",
+      "name": "É Treinamento?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        15168,
+        4032
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -480,17 +492,17 @@
         },
         "looseTypeValidation": true,
         "options": {}
-      },
-      "id": "47a8bd0a-3861-453a-8461-40ed158162da",
-      "name": "É Treinamento?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        15168,
-        4032
-      ]
+      }
     },
     {
+      "id": "f91f02e7-952f-41fb-8319-60eb421c39be",
+      "name": "Salva Regra",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        15344,
+        3952
+      ],
       "parameters": {
         "schema": {
           "__rl": true,
@@ -521,14 +533,6 @@
         },
         "options": {}
       },
-      "id": "f91f02e7-952f-41fb-8319-60eb421c39be",
-      "name": "Salva Regra",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "position": [
-        15344,
-        3952
-      ],
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
@@ -537,6 +541,14 @@
       }
     },
     {
+      "id": "ee39ccc7-ff9d-4305-bc1e-c7f491d6f180",
+      "name": "Confirma Aprendizado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        15552,
+        3952
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://lanlunar-evolution.cloudfy.live/message/sendText/ZazzClaude",
@@ -557,31 +569,22 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ number: (() => { try { const v = $('Verifica Menção').first().json; if (v.chatId) return v.chatId; } catch(e) {} try { return $('Formata Transcrição').first().json.chatId; } catch(e) {} return ''; })(), text: '💚 Entendido! Acabei de aprender essa nova regra e vou aplicá-la nas próximas conversas.' }) }}",
         "options": {}
-      },
-      "id": "ee39ccc7-ff9d-4305-bc1e-c7f491d6f180",
-      "name": "Confirma Aprendizado",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        15552,
-        3952
-      ]
+      }
     },
     {
+      "id": "febefb2d-9036-428d-aad9-728c0ded5d25",
+      "name": "Busca Regras",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        15344,
+        4112
+      ],
       "parameters": {
         "operation": "executeQuery",
         "query": "SELECT regra FROM regras ORDER BY id ASC",
         "options": {}
       },
-      "id": "febefb2d-9036-428d-aad9-728c0ded5d25",
-      "name": "Busca Regras",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "alwaysOutputData": true,
-      "position": [
-        15344,
-        4112
-      ],
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
@@ -590,6 +593,14 @@
       }
     },
     {
+      "id": "e374d538-3742-4e0e-8354-78f660c1997d",
+      "name": "Filter1",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        13744,
+        3936
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -612,20 +623,9 @@
           "combinator": "and"
         },
         "options": {}
-      },
-      "id": "e374d538-3742-4e0e-8354-78f660c1997d",
-      "name": "Filter1",
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.3,
-      "position": [
-        13744,
-        3936
-      ]
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const body = $input.first().json;\nconst b = body.body || {};\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst isAudio = !!(eMsg.audioMessage || eMsg.pttMessage);\nif (!isAudio) return [];\n\nconst eMsgId = eData.key?.id || '';\nconst eChat = eData.key?.remoteJid || '';\nconst fromMe = eData.key?.fromMe || false;\nconst eSender = eData.pushName || 'Alguém';\nconst msgTimestamp = eData.messageTimestamp || 0;\nconst nowTimestamp = Math.floor(Date.now() / 1000);\nif (msgTimestamp && (nowTimestamp - msgTimestamp) > 120) return [];\n\nreturn [{ json: { msgKey: { id: eMsgId, remoteJid: eChat, fromMe }, chatId: eChat, sender: eSender, messageId: eMsgId }}];"
-      },
       "id": "audio-detecta-01",
       "name": "Detecta Áudio",
       "type": "n8n-nodes-base.code",
@@ -633,9 +633,20 @@
       "position": [
         13872,
         4352
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst b = body.body || {};\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst isAudio = !!(eMsg.audioMessage || eMsg.pttMessage);\nif (!isAudio) return [];\n\nconst eMsgId = eData.key?.id || '';\nconst eChat = eData.key?.remoteJid || '';\nconst fromMe = eData.key?.fromMe || false;\nconst eSender = eData.pushName || 'Alguém';\nconst msgTimestamp = eData.messageTimestamp || 0;\nconst nowTimestamp = Math.floor(Date.now() / 1000);\nif (msgTimestamp && (nowTimestamp - msgTimestamp) > 120) return [];\n\nreturn [{ json: { msgKey: { id: eMsgId, remoteJid: eChat, fromMe }, chatId: eChat, sender: eSender, messageId: eMsgId }}];"
+      }
     },
     {
+      "id": "audio-baixa-02",
+      "name": "Baixa Áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        14048,
+        4352
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://lanlunar-evolution.cloudfy.live/chat/getBase64FromMediaMessage/ZazzClaude",
@@ -652,20 +663,9 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ message: { key: $json.msgKey }, convertToMp4: false }) }}",
         "options": {}
-      },
-      "id": "audio-baixa-02",
-      "name": "Baixa Áudio",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        14048,
-        4352
-      ]
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const base64 = $json.base64;\nif (!base64) return [];\nconst mimetypeFull = $json.mimetype || 'audio/ogg';\nconst mimetype = mimetypeFull.split(';')[0].trim();\nconst ext = mimetype.includes('mp4') ? 'mp4' : mimetype.includes('mpeg') ? 'mp3' : 'ogg';\nconst detecta = $('Detecta Áudio').first().json;\nconst binaryData = await this.helpers.prepareBinaryData(\n  Buffer.from(base64, 'base64'),\n  'audio.' + ext,\n  mimetype\n);\nreturn [{\n  json: { chatId: detecta.chatId, sender: detecta.sender, messageId: detecta.messageId },\n  binary: { audioFile: binaryData }\n}];"
-      },
       "id": "audio-converte-03",
       "name": "Converte p/ Whisper",
       "type": "n8n-nodes-base.code",
@@ -673,9 +673,20 @@
       "position": [
         14240,
         4352
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const base64 = $json.base64;\nif (!base64) return [];\nconst mimetypeFull = $json.mimetype || 'audio/ogg';\nconst mimetype = mimetypeFull.split(';')[0].trim();\nconst ext = mimetype.includes('mp4') ? 'mp4' : mimetype.includes('mpeg') ? 'mp3' : 'ogg';\nconst detecta = $('Detecta Áudio').first().json;\nconst binaryData = await this.helpers.prepareBinaryData(\n  Buffer.from(base64, 'base64'),\n  'audio.' + ext,\n  mimetype\n);\nreturn [{\n  json: { chatId: detecta.chatId, sender: detecta.sender, messageId: detecta.messageId },\n  binary: { audioFile: binaryData }\n}];"
+      }
     },
     {
+      "id": "audio-whisper-04",
+      "name": "Transcreve Áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        14384,
+        4352
+      ],
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/audio/transcriptions",
@@ -708,20 +719,9 @@
           ]
         },
         "options": {}
-      },
-      "id": "audio-whisper-04",
-      "name": "Transcreve Áudio",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        14384,
-        4352
-      ]
+      }
     },
     {
-      "parameters": {
-        "jsCode": "const transcription = $json.text || '';\nconst detecta = $('Detecta Áudio').first().json;\nif (!transcription) return [];\n\nconst botNumbers = ['554396543242', '235437994062039'];\nconst txtLower = transcription.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\nconst isMentionedText = botNumbers.some(n => transcription.includes('@' + n) || transcription.includes('@' + n.slice(2)));\nconst isMentionedName = txtLower.includes('maluco') || txtLower.includes('claude');\nconst isDirectMessage = detecta.chatId && !detecta.chatId.includes('@g.us');\nconst isMentioned = isMentionedText || isMentionedName || isDirectMessage;\n\nconst isReportMensal = txtLower.includes('mensal') || txtLower.includes('mes');\nconst isReportSemanal = !isReportMensal && (txtLower.includes('semanal') || txtLower.includes('semana'));\nconst isReport = txtLower.includes('relatorio') || txtLower.includes('resumo');\nconst reportType = isReportMensal ? 'mensal' : isReportSemanal ? 'semanal' : 'diario';\nconst isTraining = txtLower.includes('claude aprenda') || txtLower.includes('claude correcao');\n\nreturn [{\n  json: {\n    chatId: detecta.chatId,\n    textMessage: transcription,\n    dbRemetente: detecta.sender + ' 🎤',\n    dbMensagem: '🎤 ' + transcription,\n    messageId: detecta.messageId,\n    isReport, isTraining, reportType, isMentioned\n  }\n}];"
-      },
       "id": "audio-formata-05",
       "name": "Formata Transcrição",
       "type": "n8n-nodes-base.code",
@@ -729,14 +729,12 @@
       "position": [
         14528,
         4352
-      ]
+      ],
+      "parameters": {
+        "jsCode": "const transcription = $json.text || '';\nconst detecta = $('Detecta Áudio').first().json;\nif (!transcription) return [];\n\nconst botNumbers = ['554396543242', '235437994062039'];\nconst txtLower = transcription.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\nconst isMentionedText = botNumbers.some(n => transcription.includes('@' + n) || transcription.includes('@' + n.slice(2)));\nconst isMentionedName = txtLower.includes('maluco') || txtLower.includes('claude');\nconst isDirectMessage = detecta.chatId && !detecta.chatId.includes('@g.us');\nconst isMentioned = isMentionedText || isMentionedName || isDirectMessage;\n\nconst isReportMensal = txtLower.includes('mensal') || txtLower.includes('mes');\nconst isReportSemanal = !isReportMensal && (txtLower.includes('semanal') || txtLower.includes('semana'));\nconst isReport = txtLower.includes('relatorio') || txtLower.includes('resumo');\nconst reportType = isReportMensal ? 'mensal' : isReportSemanal ? 'semanal' : 'diario';\nconst isTraining = txtLower.includes('claude aprenda') || txtLower.includes('claude correcao');\n\nreturn [{\n  json: {\n    chatId: detecta.chatId,\n    textMessage: transcription,\n    dbRemetente: detecta.sender + ' 🎤',\n    dbMensagem: '🎤 ' + transcription,\n    messageId: detecta.messageId,\n    isReport, isTraining, reportType, isMentioned\n  }\n}];"
+      }
     },
     {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "{{ `INSERT INTO mensagens (message_id, remetente, mensagem, chat_id) VALUES ('${$json.messageId}', '${$json.dbRemetente.replace(/'/g, \"''\")}', '${$json.dbMensagem.substring(0,2000).replace(/'/g, \"''\")}', '${($json.chatId || '').replace(/'/g, \"''\")}') ON CONFLICT (message_id) DO NOTHING` }}",
-        "options": {}
-      },
       "id": "audio-salva-06",
       "name": "Salva Transcrição",
       "type": "n8n-nodes-base.postgres",
@@ -745,6 +743,11 @@
         14704,
         4352
       ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ `INSERT INTO mensagens (message_id, remetente, mensagem, chat_id) VALUES ('${$json.messageId}', '${$json.dbRemetente.replace(/'/g, \"''\")}', '${$json.dbMensagem.substring(0,2000).replace(/'/g, \"''\")}', '${($json.chatId || '').replace(/'/g, \"''\")}') ON CONFLICT (message_id) DO NOTHING` }}",
+        "options": {}
+      },
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
@@ -753,6 +756,14 @@
       }
     },
     {
+      "id": "audio-mencao-07",
+      "name": "Verifica Menção Áudio",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        14864,
+        4352
+      ],
       "parameters": {
         "conditions": {
           "options": {
@@ -776,83 +787,51 @@
         },
         "looseTypeValidation": true,
         "options": {}
-      },
-      "id": "audio-mencao-07",
-      "name": "Verifica Menção Áudio",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        14864,
-        4352
-      ]
+      }
     },
     {
+      "id": "1a4cd773-b73a-4a40-b635-c4b8271300e7",
+      "name": "Busca System Prompt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        15984,
+        4224
+      ],
       "parameters": {
         "operation": "executeQuery",
         "query": "SELECT valor FROM dashboard_config WHERE chave = 'system_prompt'",
         "options": {}
       },
-      "id": "1a4cd773-b73a-4a40-b635-c4b8271300e7",
-      "name": "Busca System Prompt",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
           "name": "postgres_cloudfy"
         }
-      },
-      "position": [
-        15984,
-        4224
-      ]
+      }
     },
     {
+      "id": "colab-node-001",
+      "name": "Busca Colaboradores",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        16144,
+        4344
+      ],
       "parameters": {
         "operation": "executeQuery",
         "query": "SELECT nome, cargo, funcoes FROM dashboard_colaboradores WHERE ativo = true ORDER BY nome",
         "options": {}
       },
-      "id": "colab-node-001",
-      "name": "Busca Colaboradores",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "alwaysOutputData": true,
       "credentials": {
         "postgres": {
           "id": "3jjT34yuXwgLE6ZN",
           "name": "postgres_cloudfy"
         }
-      },
-      "position": [
-        16144,
-        4344
-      ]
+      }
     }
   ],
-  "pinData": {
-    "Bom Dia Trigger": [
-      {
-        "json": {
-          "timestamp": "2026-03-21T07:30:00.014-03:00",
-          "Readable date": "March 21st 2026, 7:30:00 am",
-          "Readable time": "7:30:00 am",
-          "Day of week": "Saturday",
-          "Year": "2026",
-          "Month": "March",
-          "Day of month": "21",
-          "Hour": "07",
-          "Minute": "30",
-          "Second": "00",
-          "Timezone": "America/Sao_Paulo (UTC-03:00)"
-        },
-        "pairedItem": {
-          "item": 0
-        }
-      }
-    ]
-  },
   "connections": {
     "Webhook": {
       "main": [
@@ -1187,7 +1166,6 @@
       ]
     }
   },
-  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
@@ -1196,11 +1174,59 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "692b3f4f-4174-4c18-964c-a99f827cf029",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "a85b772e466345bb2d0c603168cf180046fbe30ab98325eeaeeeb4247ab8ba92"
+  "staticData": {
+    "node:Bom Dia Trigger": {
+      "recurrenceRules": []
+    }
   },
-  "id": "BhIJ7UrKM9uWhXHa",
-  "tags": []
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Bom Dia Trigger": [
+      {
+        "json": {
+          "timestamp": "2026-03-21T07:30:00.014-03:00",
+          "Readable date": "March 21st 2026, 7:30:00 am",
+          "Readable time": "7:30:00 am",
+          "Day of week": "Saturday",
+          "Year": "2026",
+          "Month": "March",
+          "Day of month": "21",
+          "Hour": "07",
+          "Minute": "30",
+          "Second": "00",
+          "Timezone": "America/Sao_Paulo (UTC-03:00)"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "4eea7b35-90e5-4280-a255-d45b17e58bb4",
+  "activeVersionId": null,
+  "versionCounter": 263,
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2026-03-20T00:40:24.326Z",
+      "createdAt": "2026-03-20T00:40:24.326Z",
+      "role": "workflow:owner",
+      "workflowId": "BhIJ7UrKM9uWhXHa",
+      "projectId": "EPiC5wfzU29iIQnU",
+      "project": {
+        "updatedAt": "2026-03-19T14:16:35.924Z",
+        "createdAt": "2026-03-19T14:12:37.846Z",
+        "id": "EPiC5wfzU29iIQnU",
+        "name": "CLAUDIVAL OLIVEIRA <lanlunardelli@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "a577d423-d1f7-429d-885e-9163e6f0c0c2"
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
 }
