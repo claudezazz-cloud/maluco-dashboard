@@ -66,52 +66,29 @@
     },
     {
       "parameters": {
-        "resource": "fileFolder",
-        "searchMethod": "query",
-        "queryString": "'1BLJNucIDU0jHmxJDWesOPkbXUnSSE60f' in parents and mimeType = 'application/vnd.google-apps.document'",
-        "returnAll": true,
-        "filter": {},
+        "operation": "executeQuery",
+        "query": "SELECT titulo, categoria, conteudo FROM dashboard_pops WHERE ativo = true ORDER BY categoria, titulo",
         "options": {}
       },
       "id": "9aca69e2-ca89-4b8e-a686-b7b5c7f7a05e",
       "name": "Busca POPs",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
       "position": [
         15984,
         4224
-      ],
-      "credentials": {
-        "googleDriveOAuth2Api": {
-          "id": "duxJTvLZC3RV8a13",
-          "name": "Google Drive account"
-        }
-      }
+      ]
     },
     {
       "parameters": {
-        "operation": "get",
-        "documentURL": "={{ $json.id }}"
-      },
-      "id": "ccd3afc3-0fcb-4d6a-b28e-e344d976512d",
-      "name": "Lê Documentos",
-      "type": "n8n-nodes-base.googleDocs",
-      "typeVersion": 2,
-      "position": [
-        16144,
-        4224
-      ],
-      "credentials": {
-        "googleDocsOAuth2Api": {
-          "id": "tCUTRrve6mJHyHbM",
-          "name": "Google Docs account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const rulesData = $('Busca Regras').all();\nconst rules = rulesData.map(r => r.json.regra).filter(Boolean).join('\\n- ');\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\n// Busca as últimas 10 mensagens do grupo para contexto\nlet historicoData = [];\ntry { historicoData = $('Busca Histórico 10').all(); } catch(e) {}\nlet historico = '';\nif (historicoData && historicoData.length > 0) {\n  const msgs = historicoData.map(e => e.json);\n  for (const msg of msgs) {\n    let hora = '??:??';\n    try {\n      const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n      hora = d.toISOString().substring(11, 16);\n    } catch(e) {}\n    historico += `[${hora}] ${msg.remetente}: ${msg.mensagem}\\n`;\n  }\n}\nconst historicoSection = historico ? `\\n\\nÚLTIMAS MENSAGENS DO GRUPO (use como contexto para entender o assunto em andamento):\\n${historico}` : '';\n\nconst docs = $input.all();\nlet pops = '';          // Apenas POPs e instruções (vai pro Claude)\nlet clientesContent = ''; // Apenas lista de clientes (só pra busca local)\n\nfor (const doc of docs) {\n  if (doc.json.content) {\n    const title = (doc.json.title || doc.json.documentId || '').toLowerCase();\n    const isClientDB = title.includes('banco') || title.includes('cliente');\n    if (isClientDB) {\n      // Usa só para busca local, NÃO envia ao Claude\n      clientesContent += doc.json.content + '\\n';\n    } else {\n      pops += '=== ' + (doc.json.title || doc.json.documentId || 'doc') + ' ===\\n';\n      pops += doc.json.content + '\\n\\n';\n    }\n  }\n}\n// Fallback: se não achou arquivo de clientes separado, usa pops\nconst fonteClientes = clientesContent || pops;\n\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst textMessage = _vM.textMessage || '';\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nconst msgLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\nconst palavrasMsg = msgLower.split(/\\s+/).filter(p => p.length > 2);\n\n// Parser robusto: suporta tab, múltiplos espaços, vírgula\nconst clientesDB = [];\nconst linhas = fonteClientes.split('\\n');\nfor (const linha of linhas) {\n  let nome = '', cod = '';\n  if (linha.includes('\\t')) {\n    const partes = linha.split('\\t').map(p => p.trim());\n    const ultimaParte = partes[partes.length - 1];\n    if (/^\\d+$/.test(ultimaParte)) {\n      cod = ultimaParte;\n      nome = partes[0];\n    }\n  }\n  if (!cod) {\n    const m = linha.match(/^(.+?)\\s{1,}(\\d{1,6})\\s*$/);\n    if (m) { nome = m[1].trim(); cod = m[2].trim(); }\n  }\n  if (nome && cod && !/^(nome|cód|cod|cliente|código)$/i.test(nome)) {\n    clientesDB.push({ nome, cod, nomeLower: nome.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') });\n  }\n}\n\nconst clientesEncontrados = [];\nconst idsAdicionados = new Set();\nfor (const cliente of clientesDB) {\n  for (const palavra of palavrasMsg) {\n    if (cliente.nomeLower.includes(palavra) && !idsAdicionados.has(cliente.cod)) {\n      clientesEncontrados.push(cliente.cod + ' - ' + cliente.nome);\n      idsAdicionados.add(cliente.cod);\n      break;\n    }\n  }\n}\n\nconst clienteInfo = clientesEncontrados.length > 0\n  ? 'CLIENTES ENCONTRADOS NA BUSCA: ' + clientesEncontrados.join(' | ')\n  : 'NENHUM CLIENTE ENCONTRADO COM ESSE NOME';\n\nreturn [{\n  json: {\n    chatId: chatId,\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: 2048,\n      system: ` ${rulesPrompt}\\nAVISO: O robô está em modo de economia de tokens. Você é o assistente interno da Zazz Internet, provedor de fibra óptica em Lunardelli-PR. Seu nome é Maluco da IA 👽🍀. Use o emoji 🍀 ocasionalmente.\\n\\nDATA ATUAL: ${dia}/${mes}/${ano} (${today}). O ANO ATUAL É ${ano}. Quando alguém disser \"amanhã\", calcule a partir de ${dia}/${mes}/${ano}. NUNCA use datas de 2024 ou 2025.\\n\\nFORMATAÇÃO OBRIGATÓRIA (WhatsApp):\\n- Negrito: use *texto* (UM asterisco de cada lado)\\n- Itálico: use _texto_ (underline de cada lado)\\n- PROIBIDO usar ** ## ### ou blocos de código\\n- Para passos, use números: 1. 2. 3.\\n- Use emojis: 📌 ✅ ⚠️\\n\\nRESPONSÁVEIS DA EQUIPE:\\n- Franquelin e Victor: agentes de relacionamento (internet)\\n- Russo: técnico de internet (visitas técnicas)\\n- Luiz: banners e serviços gráficos\\n- Nego: Gestor da unidade e dono da loja Nego´s Informática \\n- Claude: atendente (sempre)\\n\\n${clienteInfo}\\n\\n Demais informações sobre a equipe ou como salvar no notion ou outros POPs DEVEM ser consultados no google drive / Docs.⚠️ REGRA CRÍTICA DE CLIENTES (SIGA RIGOROSAMENTE - PRIORIDADE MÁXIMA):\\n- Analise a lista de CLIENTES ENCONTRADOS acima\\n- Se houver APENAS 1 cliente na lista, use esse cliente normalmente\\n- Se houver MAIS DE 1 cliente na lista, você é PROIBIDO de escolher um sozinho. Você DEVE listar TODOS os clientes encontrados numerados e PERGUNTAR ao colaborador qual é o correto\\n- Exemplo: \"Encontrei X clientes com esse nome:\\n1. 123 - José Carlos Silva\\n2. 456 - José Carlos Santos\\nQual deles você está se referindo?\"\\n- NÃO crie a tarefa no Notion até o colaborador confirmar qual cliente é o correto\\n- Se aparecer NENHUM CLIENTE ENCONTRADO, diga que não encontrou e peça o nome completo ou código\\n- NUNCA invente códigos ou nomes de clientes\\n\\nPROCEDIMENTOS OPERACIONAIS (resumo sem banco de clientes):\\n${pops.length > 50000 ? pops.substring(0, 15000) + '\\n[...truncado...]' : pops}\\n${historicoSection}\\n\\nCRIAÇÃO DE TAREFAS:\\nQuando pedirem para agendar/criar/registrar, responda com:\\n\\n|||NOTION|||\\n{\"descricao\": \"descrição da tarefa\", \"cliente\": \"código - nome completo\", \"tipo\": \"Internet\", \"status\": \"Parado\", \"responsavel\": \"nome do responsável informado\", \"data\": \"${today}\", \"entrega\": \"YYYY-MM-DD\", \"obs\": \"detalhes adicionais\", \"fone\": \"telefone ou vazio\"}\\n|||FIM|||\\n\\nDepois do JSON, confirme no WhatsApp. Se não for tarefa, responda normalmente.`,\n      messages: [{\"role\": \"user\", \"content\": textMessage}]\n    }\n  }\n}];"
+        "jsCode": "const rulesData = $('Busca Regras').all();\nconst rules = rulesData.map(r => r.json.regra).filter(Boolean).slice(0, 30).join('\\n- ');\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\n// Busca system prompt customizado do banco (cap at 40000 chars)\nlet systemPromptTemplate = null;\ntry {\n  const spData = $('Busca System Prompt').all();\n  let sp = spData[0]?.json?.valor || null;\n  if (sp && sp.length > 40000) sp = sp.substring(0, 40000) + '\\n[...truncado...]';\n  systemPromptTemplate = sp;\n} catch(e) {}\n\n// Busca as últimas mensagens do grupo para contexto\nlet historicoData = [];\ntry { historicoData = $('Busca Histórico 10').all(); } catch(e) {}\nlet historico = '';\nif (historicoData && historicoData.length > 0) {\n  const msgs = historicoData.map(e => e.json);\n  for (const msg of msgs) {\n    let hora = '??:??';\n    try {\n      const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n      hora = d.toISOString().substring(11, 16);\n    } catch(e) {}\n    const msgTxt = (msg.mensagem || '').substring(0, 300);\n    historico += `[${hora}] ${msg.remetente}: ${msgTxt}\\n`;\n  }\n  if (historico.length > 3000) historico = historico.substring(historico.length - 3000);\n}\nconst historicoSection = historico ? `\\n\\nÚLTIMAS MENSAGENS DO GRUPO (use como contexto para entender o assunto em andamento):\\n${historico}` : '';\n\n// Lê POPs direto do Postgres (múltiplos itens)\nconst popsArray = $input.all().map(i => i.json).filter(p => p.titulo && p.conteudo);\nlet colaboradoresArray = [];\ntry { colaboradoresArray = $('Busca Colaboradores').all().map(i => i.json).filter(c => c.nome); } catch(e) {}\n\nlet clientesContent = '';\nconst allNonClientPops = [];\n\nfor (const pop of popsArray) {\n  const cat = (pop.categoria || '').toLowerCase();\n  const isClientDB = cat.includes('cliente') || cat.includes('banco') || cat.includes('base') || cat.includes('crm');\n  if (isClientDB) {\n    clientesContent += pop.conteudo + '\\n';\n  } else {\n    allNonClientPops.push(pop);\n  }\n}\n\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst textMessage = _vM.textMessage || '';\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nconst msgLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\nconst palavrasMsg = msgLower.split(/\\s+/).filter(p => p.length > 2);\n\n// Smart POP selection: injeta apenas POPs relevantes à mensagem atual\nconst matchedPops = allNonClientPops.filter(pop => {\n  const titleNorm = pop.titulo.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  const contentPreview = (pop.conteudo || '').substring(0, 200).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  return palavrasMsg.some(w => w.length > 3 && (titleNorm.includes(w) || contentPreview.includes(w)));\n});\n\nconst isListingPops = msgLower.includes('pop') || msgLower.includes('procedimento') || msgLower.includes('quais') || msgLower.includes('lista');\nlet pops = '';\nif (matchedPops.length > 0 && !isListingPops) {\n  // Injeta conteúdo completo só dos POPs relevantes\n  for (const pop of matchedPops) {\n    pops += '=== ' + pop.titulo + ' ===\\n';\n    pops += pop.conteudo.substring(0, 5000) + '\\n\\n';\n  }\n} else {\n  // Apenas lista os títulos disponíveis\n  const titulos = allNonClientPops.map(p => `- ${p.titulo} (${p.categoria || 'Geral'})`).join('\\n');\n  if (titulos) pops = 'POPs disponíveis (peça pelo nome para ver o conteúdo completo):\\n' + titulos;\n}\n\n// Parser de clientes\nconst fonteClientes = clientesContent;\nconst clientesDB = [];\nconst linhas = fonteClientes.split('\\n');\nfor (const linha of linhas) {\n  let nome = '', cod = '';\n  if (linha.includes('\\t')) {\n    const partes = linha.split('\\t').map(p => p.trim());\n    const ultimaParte = partes[partes.length - 1];\n    if (/^\\d+$/.test(ultimaParte)) { cod = ultimaParte; nome = partes[0]; }\n  }\n  if (!cod) {\n    const m = linha.match(/^(.+?)\\s{1,}(\\d{1,6})\\s*$/);\n    if (m) { nome = m[1].trim(); cod = m[2].trim(); }\n  }\n  if (nome && cod && !/^(nome|cód|cod|cliente|código)$/i.test(nome)) {\n    clientesDB.push({ nome, cod, nomeLower: nome.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') });\n  }\n}\n\nconst clientesEncontrados = [];\nconst idsAdicionados = new Set();\nfor (const cliente of clientesDB) {\n  for (const palavra of palavrasMsg) {\n    if (cliente.nomeLower.includes(palavra) && !idsAdicionados.has(cliente.cod)) {\n      clientesEncontrados.push(cliente.cod + ' - ' + cliente.nome);\n      idsAdicionados.add(cliente.cod);\n      break;\n    }\n  }\n}\n\nconst clienteInfo = clientesEncontrados.length > 0\n  ? 'CLIENTES ENCONTRADOS NA BUSCA: ' + clientesEncontrados.join(' | ')\n  : 'NENHUM CLIENTE ENCONTRADO COM ESSE NOME';\n\nconst colaboradoresStr = colaboradoresArray.length > 0\n  ? 'COLABORADORES DA EQUIPE:\\n' + colaboradoresArray.map(c => `- ${c.nome}${c.cargo ? ' (' + c.cargo + ')' : ''}${c.funcoes ? ': ' + c.funcoes : ''}`).join('\\n')\n  : '';\n\nlet systemContent;\nif (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {\n  systemContent = systemPromptTemplate\n    .replace(/\\{\\{DATA\\}\\}/g, `${dia}/${mes}/${ano}`)\n    .replace(/\\{\\{ANO\\}\\}/g, String(ano))\n    .replace(/\\{\\{TODAY\\}\\}/g, today)\n    .replace(/\\{\\{COLABORADORES\\}\\}/g, colaboradoresStr)\n    .replace(/\\{\\{CLIENTES\\}\\}/g, clienteInfo)\n    .replace(/\\{\\{POPS\\}\\}/g, pops)\n    .replace(/\\{\\{HISTORICO\\}\\}/g, historicoSection);\n  systemContent = rulesPrompt + '\\n' + systemContent;\n} else {\n  systemContent = rulesPrompt + '\\nVocê é o assistente interno da Zazz Internet, provedor de fibra óptica em Lunardelli-PR. Seu nome é Maluco da IA 👽🍀. Use o emoji 🍀 ocasionalmente.\\n\\nDATA ATUAL: ' + dia + '/' + mes + '/' + ano + ' (' + today + '). O ANO ATUAL É ' + ano + '. Quando alguém disser \"amanhã\", calcule a partir de ' + dia + '/' + mes + '/' + ano + '. NUNCA use datas de 2024 ou 2025.\\n\\nFORMATAÇÃO OBRIGATÓRIA (WhatsApp):\\n- Negrito: use *texto* (UM asterisco de cada lado)\\n- Itálico: use _texto_ (underline de cada lado)\\n- PROIBIDO usar ** ## ### ou blocos de código\\n- Para passos, use números: 1. 2. 3.\\n- Use emojis: 📌 ✅ ⚠️\\n\\n' + colaboradoresStr + '\\n\\n' + clienteInfo + '\\n⚠️ REGRA CRÍTICA DE CLIENTES (SIGA RIGOROSAMENTE - PRIORIDADE MÁXIMA):\\n- Analise a lista de CLIENTES ENCONTRADOS acima\\n- Se houver APENAS 1 cliente na lista, use esse cliente normalmente\\n- Se houver MAIS DE 1 cliente na lista, você é PROIBIDO de escolher um sozinho. Você DEVE listar TODOS os clientes encontrados numerados e PERGUNTAR ao colaborador qual é o correto\\n- NÃO crie a tarefa no Notion até o colaborador confirmar qual cliente é o correto\\n- Se aparecer NENHUM CLIENTE ENCONTRADO, diga que não encontrou e peça o nome completo ou código\\n- NUNCA invente códigos ou nomes de clientes\\n\\nPROCEDIMENTOS OPERACIONAIS / POPs DA EMPRESA:\\n' + pops + '\\nSe perguntarem \"quais POPs você tem\" ou \"quais procedimentos existem\", liste os títulos acima.\\n' + historicoSection + '\\n\\nCRIAÇÃO DE TAREFAS:\\nQuando pedirem para agendar/criar/registrar, responda com:\\n\\n|||NOTION|||\\n{\"descricao\": \"descrição da tarefa\", \"cliente\": \"código - nome completo\", \"tipo\": \"Internet\", \"status\": \"Parado\", \"responsavel\": \"nome do responsável informado\", \"data\": \"' + today + '\", \"entrega\": \"YYYY-MM-DD\", \"obs\": \"detalhes adicionais\", \"fone\": \"telefone ou vazio\"}\\n|||FIM|||\\n\\nDepois do JSON, confirme no WhatsApp. Se não for tarefa, responda normalmente.';\n}\n\nreturn [{\n  json: {\n    chatId: chatId,\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: 2048,\n      system: systemContent,\n      messages: [{\"role\": \"user\", \"content\": textMessage}]\n    }\n  }\n}];\n"
       },
       "id": "aa8fefbc-dd1a-4383-bc64-1f81f58bf2a2",
       "name": "Monta Prompt",
@@ -600,6 +577,7 @@
       "name": "Busca Regras",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
+      "alwaysOutputData": true,
       "position": [
         15344,
         4112
@@ -807,6 +785,50 @@
         14864,
         4352
       ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT valor FROM dashboard_config WHERE chave = 'system_prompt'",
+        "options": {}
+      },
+      "id": "1a4cd773-b73a-4a40-b635-c4b8271300e7",
+      "name": "Busca System Prompt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "position": [
+        15984,
+        4224
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nome, cargo, funcoes FROM dashboard_colaboradores WHERE ativo = true ORDER BY nome",
+        "options": {}
+      },
+      "id": "colab-node-001",
+      "name": "Busca Colaboradores",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "position": [
+        16144,
+        4344
+      ]
     }
   ],
   "pinData": {
@@ -869,18 +891,7 @@
       "main": [
         [
           {
-            "node": "Lê Documentos",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Lê Documentos": {
-      "main": [
-        [
-          {
-            "node": "Monta Prompt",
+            "node": "Busca System Prompt",
             "type": "main",
             "index": 0
           }
@@ -1152,6 +1163,28 @@
         ],
         []
       ]
+    },
+    "Busca System Prompt": {
+      "main": [
+        [
+          {
+            "node": "Busca Colaboradores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Colaboradores": {
+      "main": [
+        [
+          {
+            "node": "Monta Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1170,5 +1203,4 @@
   },
   "id": "BhIJ7UrKM9uWhXHa",
   "tags": []
-} 
- 
+}
