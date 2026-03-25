@@ -36,6 +36,9 @@ export default function Navbar({ user }) {
                 <Link href="/conversas" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                   💬 Conversas
                 </Link>
+                <Link href="/chamados" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                  🎫 Chamados
+                </Link>
                 <Link href="/admin" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                   Admin
                 </Link>
