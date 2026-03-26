@@ -79,19 +79,23 @@ function buildSummary(chamados) {
     const tipo = c.tipo || 'Não informado'
     const sit = c.situacao || c.sit_atualizacao || 'Não informado'
     const bairro = c.bairro || 'Não informado'
-    const cliente = c.cliente || 'Não informado'
+    const clienteKey = c.cod_cliente || c.cliente || 'Não informado'
+    const clienteLabel = c.cod_cliente && c.cliente
+      ? `${c.cod_cliente} - ${c.cliente}`
+      : c.cliente || 'Não informado'
 
     porCidade[cidade] = (porCidade[cidade] || 0) + 1
     porTipo[tipo] = (porTipo[tipo] || 0) + 1
     porSituacao[sit] = (porSituacao[sit] || 0) + 1
     porBairro[bairro] = (porBairro[bairro] || 0) + 1
-    porCliente[cliente] = (porCliente[cliente] || 0) + 1
+    if (!porCliente[clienteKey]) porCliente[clienteKey] = { label: clienteLabel, count: 0 }
+    porCliente[clienteKey].count++
   }
 
   const sortDesc = obj => Object.entries(obj).sort((a, b) => b[1] - a[1])
 
   let resumo = `Total: ${total} chamados\n`
-  resumo += `Por cliente: ${sortDesc(porCliente).map(([k, v]) => `${k} (${v})`).join(', ')}\n`
+  resumo += `Por cliente: ${Object.values(porCliente).sort((a, b) => b.count - a.count).map(c => `${c.label} (${c.count})`).join(', ')}\n`
   resumo += `Por cidade: ${sortDesc(porCidade).map(([k, v]) => `${k} (${v})`).join(', ')}\n`
   resumo += `Por tipo: ${sortDesc(porTipo).map(([k, v]) => `${k} (${v})`).join(', ')}\n`
   resumo += `Por situacao: ${sortDesc(porSituacao).map(([k, v]) => `${k} (${v})`).join(', ')}\n`
@@ -125,12 +129,12 @@ function buildAIContext(chamados, importadoEm) {
     return `Aberto: ${dataStr} (${dias} dias atras)`
   }
 
-  // Agrupa chamados por cliente para facilitar contagem da IA
+  // Agrupa chamados por cod_cliente (código numérico = sem variação)
   const porCliente = {}
   for (const c of chamados) {
-    const nome = c.cliente || 'Sem cliente'
-    if (!porCliente[nome]) porCliente[nome] = { cod: c.cod_cliente, chamados: [] }
-    porCliente[nome].chamados.push(c)
+    const chave = c.cod_cliente || c.cliente || 'Sem cliente'
+    if (!porCliente[chave]) porCliente[chave] = { nome: c.cliente, cod: c.cod_cliente, chamados: [] }
+    porCliente[chave].chamados.push(c)
   }
 
   const grupos = Object.entries(porCliente)
@@ -138,8 +142,9 @@ function buildAIContext(chamados, importadoEm) {
 
   let detalhes = ''
   let count = 0
-  for (const [nome, { cod, chamados: lista }] of grupos) {
-    detalhes += `\n[${nome}${cod ? ' - cod ' + cod : ''}: ${lista.length} chamados]\n`
+  for (const [chave, { nome, cod, chamados: lista }] of grupos) {
+    const label = cod && nome ? `${cod} - ${nome}` : nome || chave
+    detalhes += `\n[${label}: ${lista.length} chamado${lista.length > 1 ? 's' : ''}]\n`
     for (const c of lista) {
       if (count >= 300) break
       const parts = [
