@@ -100,6 +100,27 @@ function buildAIContext(chamados, importadoEm) {
   const resumo = buildSummary(chamados)
 
   // Formato compacto: 1 linha por chamado
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+
+  function calcDiasAberto(dataStr) {
+    if (!dataStr) return ''
+    // Aceita DD/MM/YYYY ou YYYY-MM-DD
+    let d
+    if (dataStr.includes('/')) {
+      const [dd, mm, yyyy] = dataStr.split('/')
+      d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd))
+    } else {
+      d = new Date(dataStr)
+    }
+    if (isNaN(d.getTime())) return ''
+    const diffMs = hoje.getTime() - d.getTime()
+    const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    if (dias <= 0) return 'Aberto: hoje'
+    if (dias === 1) return 'Aberto: ontem (1 dia)'
+    return `Aberto: ${dataStr} (${dias} dias atras)`
+  }
+
   const linhas = chamados.slice(0, 300).map(c => {
     const parts = [
       c.numero ? `#${c.numero}` : '',
@@ -107,7 +128,7 @@ function buildAIContext(chamados, importadoEm) {
       [c.cidade, c.bairro].filter(Boolean).join(', '),
       [c.tipo, c.topico].filter(Boolean).join(' - '),
       c.situacao || c.sit_atualizacao || '',
-      c.data_abertura ? `Aberto: ${c.data_abertura}` : '',
+      calcDiasAberto(c.data_abertura) || (c.data_abertura ? `Aberto: ${c.data_abertura}` : ''),
       c.agendamento ? `Agendado: ${c.agendamento}` : '',
       c.endereco ? `End: ${c.endereco}${c.complemento ? ', ' + c.complemento : ''}` : '',
       c.tempo_restante ? `Tempo: ${c.tempo_restante}` : '',
