@@ -125,25 +125,41 @@ function buildAIContext(chamados, importadoEm) {
     return `Aberto: ${dataStr} (${dias} dias atras)`
   }
 
-  const linhas = chamados.slice(0, 300).map(c => {
-    const parts = [
-      c.numero ? `#${c.numero}` : '',
-      c.cliente ? `${c.cliente}${c.cod_cliente ? ' (' + c.cod_cliente + ')' : ''}` : '',
-      [c.cidade, c.bairro].filter(Boolean).join(', '),
-      [c.tipo, c.topico].filter(Boolean).join(' - '),
-      c.situacao || c.sit_atualizacao || '',
-      calcDiasAberto(c.data_abertura) || (c.data_abertura ? `Aberto: ${c.data_abertura}` : ''),
-      c.agendamento ? `Agendado: ${c.agendamento}` : '',
-      c.endereco ? `End: ${c.endereco}${c.complemento ? ', ' + c.complemento : ''}` : '',
-      c.tempo_restante ? `Tempo: ${c.tempo_restante}` : '',
-    ].filter(Boolean)
-    return parts.join(' | ')
-  })
+  // Agrupa chamados por cliente para facilitar contagem da IA
+  const porCliente = {}
+  for (const c of chamados) {
+    const nome = c.cliente || 'Sem cliente'
+    if (!porCliente[nome]) porCliente[nome] = { cod: c.cod_cliente, chamados: [] }
+    porCliente[nome].chamados.push(c)
+  }
+
+  const grupos = Object.entries(porCliente)
+    .sort((a, b) => b[1].chamados.length - a[1].chamados.length)
+
+  let detalhes = ''
+  let count = 0
+  for (const [nome, { cod, chamados: lista }] of grupos) {
+    detalhes += `\n[${nome}${cod ? ' - cod ' + cod : ''}: ${lista.length} chamados]\n`
+    for (const c of lista) {
+      if (count >= 300) break
+      const parts = [
+        c.numero ? `#${c.numero}` : '',
+        [c.cidade, c.bairro].filter(Boolean).join(', '),
+        [c.tipo, c.topico].filter(Boolean).join(' - '),
+        c.situacao || c.sit_atualizacao || '',
+        calcDiasAberto(c.data_abertura) || (c.data_abertura ? `Aberto: ${c.data_abertura}` : ''),
+        c.agendamento ? `Agendado: ${c.agendamento}` : '',
+        c.endereco ? `End: ${c.endereco}${c.complemento ? ', ' + c.complemento : ''}` : '',
+      ].filter(Boolean)
+      detalhes += '  ' + parts.join(' | ') + '\n'
+      count++
+    }
+  }
 
   let ctx = `CHAMADOS ABERTOS (importados em ${importadoEm}):\n`
   ctx += resumo + '\n\n'
-  ctx += 'Detalhes dos chamados:\n'
-  ctx += linhas.join('\n')
+  ctx += 'Detalhes por cliente:\n'
+  ctx += detalhes
 
   if (chamados.length > 300) {
     ctx += `\n... e mais ${chamados.length - 300} chamados (mostrando os 300 primeiros)`
