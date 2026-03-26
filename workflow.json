@@ -83,6 +83,9 @@
           "id": "3jjT34yuXwgLE6ZN",
           "name": "postgres_cloudfy"
         }
+      },
+      "settings": {
+        "executeOnce": true
       }
     },
     {
@@ -96,7 +99,10 @@
       "position": [
         3680,
         752
-      ]
+      ],
+      "settings": {
+        "executeOnce": true
+      }
     },
     {
       "parameters": {
@@ -419,6 +425,9 @@
           "id": "3jjT34yuXwgLE6ZN",
           "name": "postgres_cloudfy"
         }
+      },
+      "settings": {
+        "executeOnce": true
       }
     },
     {
@@ -803,6 +812,9 @@
           "id": "3jjT34yuXwgLE6ZN",
           "name": "postgres_cloudfy"
         }
+      },
+      "settings": {
+        "executeOnce": true
       }
     },
     {
@@ -824,6 +836,9 @@
           "id": "3jjT34yuXwgLE6ZN",
           "name": "postgres_cloudfy"
         }
+      },
+      "settings": {
+        "executeOnce": true
       }
     },
     {
@@ -846,7 +861,10 @@
           "name": "redis_cloudfy"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "settings": {
+        "executeOnce": true
+      }
     },
     {
       "parameters": {
@@ -969,7 +987,10 @@
           "name": "redis_cloudfy"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "settings": {
+        "executeOnce": true
+      }
     }
   ],
   "pinData": {
