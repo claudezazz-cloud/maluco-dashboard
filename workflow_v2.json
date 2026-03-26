@@ -1,5 +1,5 @@
 {
-  "name": "Maluco da IA v7.0 - CloudFy",
+  "name": "Maluco da IA v7.1 - Bom Dia com Chamados",
   "nodes": [
     {
       "parameters": {
@@ -1010,62 +1010,6 @@
           "name": "redis_cloudfy"
         }
       }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Passa apenas o primeiro item para evitar multiplicacao\nreturn [$input.first()];",
-        "mode": "runOnceForAllItems"
-      },
-      "id": "ffad16ac-6980-44ec-9a8d-42637cd47cb0",
-      "name": "Primeiro Item",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2272,
-        784
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Consolida para 1 item antes do Redis\nreturn [$input.first()];",
-        "mode": "runOnceForAllItems"
-      },
-      "id": "37b3098c-68d0-4da8-9d3e-ca627b51b546",
-      "name": "Consolida Items",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3040,
-        784
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "return [$input.first()];",
-        "mode": "runOnceForAllItems"
-      },
-      "id": "e1420e8b-11ef-4054-bf3b-89a8283d4435",
-      "name": "Consolida Hist",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2508,
-        784
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "return [$input.first()];",
-        "mode": "runOnceForAllItems"
-      },
-      "id": "fa7de30c-35a3-44c9-bb0a-31a46791c5c7",
-      "name": "Consolida POPs",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2700,
-        784
-      ]
     }
   ],
   "pinData": {
@@ -1128,7 +1072,7 @@
       "main": [
         [
           {
-            "node": "Consolida POPs",
+            "node": "Busca System Prompt",
             "type": "main",
             "index": 0
           }
@@ -1243,7 +1187,7 @@
         ],
         [
           {
-            "node": "Primeiro Item",
+            "node": "Busca Histórico 10",
             "type": "main",
             "index": 0
           }
@@ -1254,7 +1198,7 @@
       "main": [
         [
           {
-            "node": "Consolida Hist",
+            "node": "Busca POPs",
             "type": "main",
             "index": 0
           }
@@ -1430,7 +1374,7 @@
       "main": [
         [
           {
-            "node": "Consolida Items",
+            "node": "Busca Histórico Redis",
             "type": "main",
             "index": 0
           }
@@ -1475,50 +1419,6 @@
         [
           {
             "node": "Gera Bom Dia",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Primeiro Item": {
-      "main": [
-        [
-          {
-            "node": "Busca Histórico 10",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Consolida Items": {
-      "main": [
-        [
-          {
-            "node": "Busca Histórico Redis",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Consolida Hist": {
-      "main": [
-        [
-          {
-            "node": "Busca POPs",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Consolida POPs": {
-      "main": [
-        [
-          {
-            "node": "Busca System Prompt",
             "type": "main",
             "index": 0
           }
