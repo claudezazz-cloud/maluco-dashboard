@@ -11,6 +11,8 @@ export default function AdminPage() {
   const [tab, setTab] = useState('filiais')
   const [msg, setMsg] = useState('')
   const [deletingId, setDeletingId] = useState(null)
+  const [grupoId, setGrupoId] = useState('')
+  const [salvandoGrupo, setSalvandoGrupo] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => {
@@ -22,11 +24,45 @@ export default function AdminPage() {
       setUser(d)
     })
     fetchFiliais()
+    fetchConfig()
   }, [router])
 
   async function fetchFiliais() {
     const r = await fetch('/api/filiais')
     if (r.ok) setFiliais(await r.json())
+  }
+
+  async function fetchConfig() {
+    try {
+      const r = await fetch('/api/config/bom-dia')
+      if (r.ok) {
+        const d = await r.json()
+        setGrupoId(d.grupo || '')
+      }
+    } catch {}
+  }
+
+  async function salvarGrupo() {
+    if (!grupoId.trim()) return
+    setSalvandoGrupo(true)
+    try {
+      const r = await fetch('/api/config/bom-dia', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grupo: grupoId.trim() }),
+      })
+      const d = await r.json()
+      if (r.ok) {
+        setMsg('Grupo do Bom Dia salvo com sucesso!')
+        setTimeout(() => setMsg(''), 4000)
+      } else {
+        setMsg('Erro: ' + (d.error || r.status))
+      }
+    } catch (e) {
+      setMsg('Erro: ' + e.message)
+    } finally {
+      setSalvandoGrupo(false)
+    }
   }
 
   async function excluirFilial(id) {
@@ -46,13 +82,13 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-[#1a1a24] rounded-lg p-1 w-fit">
-          {['filiais'].map(t => (
+          {[['filiais', 'Filiais'], ['configuracoes', 'Configurações']].map(([key, label]) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-5 py-2 rounded-md text-sm font-medium transition capitalize ${tab === t ? 'bg-[#071DE3] text-white' : 'text-gray-400 hover:text-white'}`}
+              key={key}
+              onClick={() => setTab(key)}
+              className={`px-5 py-2 rounded-md text-sm font-medium transition ${tab === key ? 'bg-[#071DE3] text-white' : 'text-gray-400 hover:text-white'}`}
             >
-              {t === 'filiais' ? 'Filiais' : t}
+              {label}
             </button>
           ))}
         </div>
@@ -129,6 +165,49 @@ export default function AdminPage() {
                   </Link>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Configurações */}
+        {tab === 'configuracoes' && (
+          <div>
+            <h2 className="text-gray-300 font-medium mb-4">Configurações do Bot</h2>
+
+            {msg && (
+              <div className="mb-4 text-sm text-green-400 bg-green-900/20 border border-green-800 rounded-lg px-4 py-2">
+                {msg}
+              </div>
+            )}
+
+            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+              <div className="mb-1">
+                <label className="text-white font-medium text-sm">Grupo do Bom Dia (WhatsApp)</label>
+                <p className="text-gray-500 text-xs mt-0.5 mb-3">
+                  ID do grupo que recebe a mensagem de bom dia. Formato: numero@g.us (ex: 554384924456-1616013394@g.us)
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={grupoId}
+                  onChange={e => setGrupoId(e.target.value)}
+                  placeholder="554384924456-1616013394@g.us"
+                  className="flex-1 bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:border-[#071DE3] focus:outline-none transition"
+                />
+                <button
+                  onClick={salvarGrupo}
+                  disabled={salvandoGrupo || !grupoId.trim()}
+                  className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white text-sm px-6 py-2.5 rounded-lg transition font-medium shrink-0"
+                >
+                  {salvandoGrupo ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-800">
+                <p className="text-xs text-gray-500">
+                  Para encontrar o ID do grupo: abra a Evolution API ou verifique nos logs do webhook. O ID sempre termina com @g.us
+                </p>
+              </div>
             </div>
           </div>
         )}
