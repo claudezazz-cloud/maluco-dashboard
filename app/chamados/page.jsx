@@ -123,6 +123,21 @@ export default function ChamadosPage() {
     fetchStatus()
   }
 
+  async function limparHistorico() {
+    if (!confirm('Limpar todo o historico de conversas do bot? Isso apaga as mensagens anteriores de todas as conversas no Redis.')) return
+    try {
+      const r = await fetch('/api/historico', { method: 'DELETE' })
+      const d = await r.json()
+      if (r.ok) {
+        showMsg(`Historico limpo! ${d.removidas} conversas removidas.`)
+      } else {
+        showMsg('Erro: ' + (d.error || r.status), 'error')
+      }
+    } catch (e) {
+      showMsg('Erro: ' + e.message, 'error')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0f0f13]">
       <Navbar user={user} />
@@ -172,6 +187,24 @@ export default function ChamadosPage() {
             )}
           </div>
         )}
+
+        {/* Limpar histórico */}
+        <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-medium text-sm">Historico de conversas</p>
+              <p className="text-gray-500 text-xs mt-0.5">
+                Limpe o historico se o bot estiver repetindo respostas antigas ou contagens erradas
+              </p>
+            </div>
+            <button
+              onClick={limparHistorico}
+              className="text-xs text-yellow-400 hover:text-yellow-300 bg-yellow-900/20 hover:bg-yellow-900/30 px-3 py-1.5 rounded-lg transition"
+            >
+              Limpar Historico
+            </button>
+          </div>
+        </div>
 
         {/* Upload area */}
         <div
