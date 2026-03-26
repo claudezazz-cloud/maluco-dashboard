@@ -67,27 +67,31 @@ function buildSummary(chamados) {
   const total = chamados.length
   if (!total) return 'Nenhum chamado importado.'
 
-  // Contagem por cidade
+  // Contagem por cidade, tipo, situacao, bairro, cliente
   const porCidade = {}
   const porTipo = {}
   const porSituacao = {}
   const porBairro = {}
+  const porCliente = {}
 
   for (const c of chamados) {
     const cidade = c.cidade || 'Não informado'
     const tipo = c.tipo || 'Não informado'
     const sit = c.situacao || c.sit_atualizacao || 'Não informado'
     const bairro = c.bairro || 'Não informado'
+    const cliente = c.cliente || 'Não informado'
 
     porCidade[cidade] = (porCidade[cidade] || 0) + 1
     porTipo[tipo] = (porTipo[tipo] || 0) + 1
     porSituacao[sit] = (porSituacao[sit] || 0) + 1
     porBairro[bairro] = (porBairro[bairro] || 0) + 1
+    porCliente[cliente] = (porCliente[cliente] || 0) + 1
   }
 
   const sortDesc = obj => Object.entries(obj).sort((a, b) => b[1] - a[1])
 
   let resumo = `Total: ${total} chamados\n`
+  resumo += `Por cliente: ${sortDesc(porCliente).map(([k, v]) => `${k} (${v})`).join(', ')}\n`
   resumo += `Por cidade: ${sortDesc(porCidade).map(([k, v]) => `${k} (${v})`).join(', ')}\n`
   resumo += `Por tipo: ${sortDesc(porTipo).map(([k, v]) => `${k} (${v})`).join(', ')}\n`
   resumo += `Por situacao: ${sortDesc(porSituacao).map(([k, v]) => `${k} (${v})`).join(', ')}\n`
