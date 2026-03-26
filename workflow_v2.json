@@ -1,0 +1,1440 @@
+{
+  "name": "Maluco da IA v7.0 - CloudFy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp",
+        "options": {}
+      },
+      "id": "44b17508-0c6c-42bb-b1b2-d403ab976acd",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        160,
+        368
+      ],
+      "webhookId": "fbf70ed2-c2c7-4457-ae25-9cf2c9ed115f"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// EXTRAI DADOS E SALVA - roda para TODAS as mensagens do grupo\n// (independente de mencionar o bot)\n// ============================================================\nconst body = $input.first().json;\nconst b = body.body || {};\n\n// Green API\nconst gMsg = b.messageData || {};\nconst gText = gMsg.textMessageData?.textMessage || gMsg.extendedTextMessageData?.text || '';\nconst gSender = b.senderData?.senderName || b.senderData?.senderContactName || '';\nconst gMsgId = b.idMessage || gMsg.idMessage || '';\nconst gChat = b.senderData?.chatId || '';\n\n// Evolution API\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst eText = eMsg.conversation || eMsg.extendedTextMessage?.text || eMsg.imageMessage?.caption || '';\nconst eSender = eData.pushName || '';\nconst eMsgId = eData.key?.id || '';\nconst eChat = eData.key?.remoteJid || '';\n\nconst textMessage = gText || eText;\nconst sender = gSender || eSender || 'Alguém';\nconst messageId = gMsgId || eMsgId || ('tmp_' + Date.now());\nconst chatId = gChat || eChat;\n\n// Só salva se tiver texto\nif (!textMessage) {\n  return [];\n}\n\nreturn [{\n  json: {\n    dbRemetente: sender,\n    dbMensagem: textMessage,\n    messageId,\n    chatId\n  }\n}];"
+      },
+      "id": "d70e3fc7-3afc-44bc-be91-8f792e7d9295",
+      "name": "Extrai Dados Mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ `INSERT INTO mensagens (message_id, remetente, mensagem, chat_id) VALUES ('${$json.messageId}', '${$json.dbRemetente.replace(/'/g, \"''\")}', '${$json.dbMensagem.substring(0,2000).replace(/'/g, \"''\")}', '${($json.chatId || '').replace(/'/g, \"''\")}') ON CONFLICT (message_id) DO NOTHING` }}",
+        "options": {}
+      },
+      "id": "223d0940-2ca9-4c93-b0f9-ba96c09b4d78",
+      "name": "Salva no Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        944,
+        208
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// VERIFICA MENÇÃO - só continua se o bot foi mencionado\n// ============================================================\nconst body = $('Webhook').first().json;\nconst b = body.body || {};\n\n// Green API\nconst gMsg = b.messageData || {};\nconst gText = gMsg.textMessageData?.textMessage || gMsg.extendedTextMessageData?.text || '';\nconst gChat = b.senderData?.chatId || '';\n\n// Evolution API\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst eText = eMsg.conversation || eMsg.extendedTextMessage?.text || '';\nconst eChat = eData.key?.remoteJid || '';\n\nconst textMessage = gText || eText;\nconst chatId = gChat || eChat;\n// Ignora mensagens antigas (histórico de sincronização da Evolution API)\nconst msgTimestamp = eData.messageTimestamp || 0;\nconst nowTimestamp = Math.floor(Date.now() / 1000);\nif (msgTimestamp && (nowTimestamp - msgTimestamp) > 120) {\n  return []; // mensagem com mais de 2 minutos, ignora\n}\n\n// Verifica menção de forma precisa (não usa fullContent para evitar falsos positivos)\nconst botNumbers = ['554396543242', '235437994062039'];\n\n// 1. Checa mentionedJid (Evolution API)\nconst mentionedJids = eMsg.extendedTextMessage?.contextInfo?.mentionedJid ||\n  eMsg.imageMessage?.contextInfo?.mentionedJid || [];\nconst isMentionedJid = mentionedJids.some(jid => botNumbers.some(n => jid.includes(n)));\n\n// 2. Checa @menção no texto\nconst isMentionedText = botNumbers.some(n => textMessage.includes('@' + n) || textMessage.includes('@' + n.slice(2)));\n\n// 3. Checa se é mensagem direta (não grupo)\nconst isDirectMessage = chatId && !chatId.includes('@g.us');\n\nif (!isMentionedJid && !isMentionedText && !isDirectMessage) {\n  return [];\n}\n\nconst txtLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n// Detecta tipo de relatório\nconst isReportMensal = txtLower.includes('mensal') || txtLower.includes('mes') || txtLower.includes('mês');\nconst isReportSemanal = !isReportMensal && (txtLower.includes('semanal') || txtLower.includes('semana'));\nconst isReport = txtLower.includes('relatorio') || txtLower.includes('resumo');\nconst reportType = isReportMensal ? 'mensal' : isReportSemanal ? 'semanal' : 'diario';\n\nconst isTraining = txtLower.startsWith('claude aprenda') || txtLower.startsWith('claude correcao') ||\n  textMessage.toLowerCase().includes('claude aprenda') || textMessage.toLowerCase().includes('claude correcao');\n\nreturn [{ json: { chatId, textMessage, isReport, isTraining, reportType } }];"
+      },
+      "id": "feac8831-709a-4ca8-a18d-465c0d4951a3",
+      "name": "Verifica Menção",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ (() => {\n  try {\n    let msg = '';\n    try { msg = $('Verifica Menção').first().json.textMessage || ''; } catch(e) {}\n    try { if (!msg) msg = $('Verifica Mencao').first().json.textMessage || ''; } catch(e) {}\n    if (!msg) msg = '';\n    const clean = msg.toLowerCase().replace(/[^a-z0-9\\s]/g,'').trim();\n    if (!clean || clean.length < 3) {\n      return \"SELECT titulo, categoria, '' as conteudo FROM dashboard_pops WHERE ativo = true ORDER BY categoria, titulo\";\n    }\n    const safe = clean.replace(/'/g, \"''\").substring(0, 200);\n    return \"SELECT titulo, categoria, CASE WHEN to_tsvector('portuguese', titulo || ' ' || LEFT(conteudo,1000)) @@ plainto_tsquery('portuguese', '\" + safe + \"') THEN LEFT(conteudo, 5000) ELSE '' END as conteudo FROM dashboard_pops WHERE ativo = true ORDER BY ts_rank(to_tsvector('portuguese', titulo || ' ' || LEFT(conteudo,1000)), plainto_tsquery('portuguese', '\" + safe + \"')) DESC, categoria, titulo\";\n  } catch(err) {\n    return \"SELECT titulo, categoria, '' as conteudo FROM dashboard_pops WHERE ativo = true ORDER BY categoria, titulo\";\n  }\n})() }}",
+        "options": {}
+      },
+      "id": "7058c02e-44b0-4877-9a0b-d87e432b7389",
+      "name": "Busca POPs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2608,
+        784
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "settings": {
+        "executeOnce": true
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// MONTA PROMPT - COM DEDUPLICAÇÃO E TRAVA DE EXECUÇÃO\n// ============================================================\n\n\n// HISTORICO REDIS\nlet redisHistory = [];\ntry {\n  const rv = $('Busca Histórico Redis').first().json?.propertyName || $('Busca Histórico Redis').first().json?.value;\n  if (rv) redisHistory = JSON.parse(rv);\n} catch(e) {}\n\n// CHAMADOS (importados via dashboard, expira em 24h)\nlet chamadosContext = '';\ntry {\n  const cv = $('Busca Chamados Redis').first().json?.propertyName || $('Busca Chamados Redis').first().json?.value;\n  if (cv) {\n    const chamadosData = JSON.parse(cv);\n    if (chamadosData.ai_context) {\n      chamadosContext = String.fromCharCode(10,10) + '⚠️ CHAMADOS DO SISTEMA (ATUALIZADOS AGORA - DADOS OFICIAIS):' + String.fromCharCode(10) + 'REGRAS OBRIGATORIAS SOBRE CHAMADOS:' + String.fromCharCode(10) + '1. Os numeros no resumo abaixo sao EXATOS e PRE-CALCULADOS pelo sistema. NUNCA reconte manualmente.' + String.fromCharCode(10) + '2. Se o resumo diz um cliente tem X chamados, voce DEVE dizer X. Confie no resumo.' + String.fromCharCode(10) + '3. IGNORE qualquer contagem diferente que apareca no historico de mensagens anteriores.' + String.fromCharCode(10) + '4. NAO diga que precisa acessar routerbox ou outro sistema. Voce JA TEM os dados.' + String.fromCharCode(10,10) + chamadosData.ai_context;\n    }\n  }\n} catch(e) {}\n\n// REMETENTE\nlet remetente = '';\ntry { remetente = $('Extrai Dados Mensagem').first().json?.dbRemetente || ''; } catch(e) {}\n\n// 1. REGRAS (Deduplicar)\nlet rules = '';\ntry {\n  const rulesData = $('Busca Regras').all().map(r => r.json.regra).filter(Boolean);\n  const uniqueRules = [...new Set(rulesData)];\n  rules = uniqueRules.slice(0, 30).join('\\n- ');\n} catch(e) {}\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\n// 2. SYSTEM PROMPT (Primeiro disponível)\nlet systemPromptTemplate = null;\ntry {\n  const spData = $('Busca System Prompt').all().map(d => d.json?.valor).filter(Boolean);\n  systemPromptTemplate = spData[0] || null;\n  if (systemPromptTemplate && systemPromptTemplate.length > 40000) {\n    systemPromptTemplate = systemPromptTemplate.substring(0, 40000) + '\\n[...truncado...]';\n  }\n} catch(e) {}\n\n// 3. HISTÓRICO (Deduplicar por ID)\nlet historicoSection = '';\ntry {\n  const histRows = $('Busca Histórico 10').all().map(e => e.json);\n  const histMap = new Map();\n  for (const h of histRows) {\n    if (h.id) histMap.set(h.id, h);\n  }\n  const uniqueHist = Array.from(histMap.values()).sort((a,b) => a.id - b.id).slice(-10);\n  let historico = '';\n  for (const msg of uniqueHist) {\n    let hora = '??:??';\n    try {\n      const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n      hora = d.toISOString().substring(11, 16);\n    } catch(e) {}\n    historico += `[${hora}] ${msg.remetente}: ${(msg.mensagem || '').substring(0, 300)}\\n`;\n  }\n  if (historico) historicoSection = `\\n\\nÚLTIMAS MENSAGENS DO GRUPO:\\n${historico}`;\n} catch(e) {}\n\n// 4. POPs (Deduplicar por Título e Filtrar por Categoria)\nconst allPopsInputs = $(\"Busca POPs\").all().map(i => i.json).filter(p => p.titulo);\nconst popMap = new Map();\nfor (const p of allPopsInputs) {\n  if (p.conteudo || !popMap.has(p.titulo)) {\n    popMap.set(p.titulo, p);\n  }\n}\nconst uniquePops = Array.from(popMap.values());\n\nlet clientesContent = '';\nconst allNonClientTitles = [];\nconst relevantNonClientPops = [];\n\nfor (const pop of uniquePops) {\n  const cat = (pop.categoria || '').toLowerCase();\n  const isClientDB = cat.includes('cliente') || cat.includes('banco') || cat.includes('base') || cat.includes('crm');\n  if (isClientDB) {\n    if (pop.conteudo) clientesContent += pop.conteudo + '\\n';\n  } else {\n    allNonClientTitles.push(pop);\n    if (pop.conteudo) relevantNonClientPops.push(pop);\n  }\n}\n\n// 5. COLABORADORES (Deduplicar por Nome)\nlet colaboradoresArray = [];\ntry {\n  const colabRows = $('Busca Colaboradores').all().map(i => i.json).filter(c => c.nome);\n  const colabMap = new Map();\n  for (const c of colabRows) {\n    colabMap.set(c.nome, c);\n  }\n  colaboradoresArray = Array.from(colabMap.values());\n} catch(e) {}\n\n// 6. DADOS DA MENSAGEM ATUAL\nlet _vM; \ntry { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst textMessage = _vM.textMessage || '';\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nconst msgLower = textMessage.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n// 7. SELEÇÃO DE POPS NO PROMPT\nconst isListingPops = msgLower.includes('pop') || msgLower.includes('procedimento') || msgLower.includes('quais') || msgLower.includes('lista');\nlet pops = '';\nif (relevantNonClientPops.length > 0 && !isListingPops) {\n  for (const pop of relevantNonClientPops) {\n    pops += '=== ' + pop.titulo + ' ===\\n';\n    pops += pop.conteudo.substring(0, 5000) + '\\n\\n';\n  }\n} else {\n  const titulos = allNonClientTitles.map(p => `- ${p.titulo} (${p.categoria || 'Geral'})`).join('\\n');\n  if (titulos) pops = 'POPs disponíveis (peça pelo nome para ver o conteúdo completo):\\n' + titulos;\n}\n\n\n// Rastreia POPs usados no prompt\nconst popsUsados = (relevantNonClientPops.length > 0 && !isListingPops)\n  ? relevantNonClientPops.map(p => p.titulo).join(', ')\n  : '';\n\n// 8. PARSER DE CLIENTES (Manteve lógica original)\nconst fonteClientes = clientesContent;\nconst clientesDB = [];\nconst linhas = fonteClientes.split('\\n');\nfor (const linha of linhas) {\n  let nome = '', cod = '';\n  if (linha.includes('\\t')) {\n    const partes = linha.split('\\t').map(p => p.trim());\n    const ultimaParte = partes[partes.length - 1];\n    if (/^\\d+$/.test(ultimaParte)) { cod = ultimaParte; nome = partes[0]; }\n  }\n  if (!cod) {\n    const m = linha.match(/^(.+?)\\s{1,}(\\d{1,6})\\s*$/);\n    if (m) { nome = m[1].trim(); cod = m[2].trim(); }\n  }\n  if (nome && cod && !/^(nome|cód|cod|cliente|código)$/i.test(nome)) {\n    clientesDB.push({ nome, cod, nomeLower: nome.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') });\n  }\n}\n\nconst palavrasMsg = msgLower.split(/\\s+/).filter(p => p.length > 2);\nconst clientesEncontrados = [];\nconst idsAdicionados = new Set();\nfor (const cliente of clientesDB) {\n  for (const palavra of palavrasMsg) {\n    if (cliente.nomeLower.includes(palavra) && !idsAdicionados.has(cliente.cod)) {\n      clientesEncontrados.push(cliente.cod + ' - ' + cliente.nome);\n      idsAdicionados.add(cliente.cod);\n      break;\n    }\n  }\n}\n\nconst clienteInfo = clientesEncontrados.length > 0\n  ? 'CLIENTES ENCONTRADOS NA BUSCA: ' + clientesEncontrados.join(' | ')\n  : 'NENHUM CLIENTE ENCONTRADO COM ESSE NOME';\n\nconst colaboradoresStr = colaboradoresArray.length > 0\n  ? 'COLABORADORES DA EQUIPE:\\n' + colaboradoresArray.map(c => `- ${c.nome}${c.cargo ? ' (' + c.cargo + ')' : ''}${c.funcoes ? ': ' + c.funcoes : ''}`).join('\\n')\n  : '';\n\n// 9. MONTAGEM FINAL DO SYSTEM CONTENT\nlet systemContent;\nif (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {\n  systemContent = systemPromptTemplate\n    .replace(/\\{\\{DATA\\}\\}/g, `${dia}/${mes}/${ano}`)\n    .replace(/\\{\\{ANO\\}\\}/g, String(ano))\n    .replace(/\\{\\{TODAY\\}\\}/g, today)\n    .replace(/\\{\\{COLABORADORES\\}\\}/g, colaboradoresStr)\n    .replace(/\\{\\{CLIENTES\\}\\}/g, clienteInfo)\n    .replace(/\\{\\{POPS\\}\\}/g, pops)\n    .replace(/\\{\\{HISTORICO\\}\\}/g, historicoSection);\n  systemContent = rulesPrompt + chamadosContext + String.fromCharCode(10) + systemContent;\n} else {\n  systemContent = rulesPrompt + '\\nVocê é o assistente interno da Zazz Internet, provedor de fibra óptica em Lunardelli-PR. Seu nome é Maluco da IA 👽🍀. Use o emoji 🍀 ocasionalmente.\\n\\nDATA ATUAL: ' + dia + '/' + mes + '/' + ano + ' (' + today + '). O ANO ATUAL É ' + ano + '.\\n\\nFORMATAÇÃO OBRIGATÓRIA (WhatsApp):\\n- Negrito: use *texto*\\n- PROIBIDO usar ** ## ### ou blocos de código\\n\\n' + colaboradoresStr + '\\n\\n' + clienteInfo + '\\n\\nPOPs DA EMPRESA:\\n' + pops + historicoSection + chamadosContext;\n}\n\n// 10. TRAVA: só processa se tiver dados válidos\nif (!textMessage) return [];\n\nreturn [{\n  json: {\n    chatId: chatId,\n    remetente: remetente,\n    mensagemUsuario: textMessage,\n    popsUsados: popsUsados,\n    chamadosCarregados: chamadosContext.length > 0 ? 'SIM (' + chamadosContext.length + ' chars)' : 'NAO',\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: chamadosContext ? 4096 : 2048,\n      system: systemContent,\n      messages: [\n        ...redisHistory.slice(-8),\n        {\"role\": \"user\", \"content\": textMessage}\n      ]\n    }\n  }\n}];"
+      },
+      "id": "f3fea061-44fb-48ad-ae00-a108528c2dbd",
+      "name": "Monta Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        752
+      ],
+      "settings": {
+        "executeOnce": true
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "SUA_CHAVE_ANTHROPIC_AQUI"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.claudeBody) }}",
+        "options": {}
+      },
+      "id": "3b6ffe16-e17a-4476-86b8-b6e597a6f853",
+      "name": "Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3840,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\n// Tokens\nconst tokensInput = response.usage?.input_tokens || 0;\nconst tokensOutput = response.usage?.output_tokens || 0;\n\n// Erro da API\nif (response.error || !response.content) {\n  let _vME; try { _vME = $('Verifica Menção').first().json; } catch(e) { _vME = {}; }\n  const errMsg = response.error?.message || response.message || JSON.stringify(response).substring(0,300);\n  return [{ json: {\n    chatId: _vME.chatId || '',\n    message: '❌ Tive um probleminha técnico, tenta de novo em instantes 🍀',\n    hasNotion: false, isError: true,\n    errorMsg: errMsg,\n    mensagemUsuario: _vME.textMessage || '',\n    novoHistorico: '[]', tokensInput: 0, tokensOutput: 0, popsUsados: '', remetente: ''\n  }}];\n}\n\nconst fullText = response.content[0].text;\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\n\nconst responsavelMap = {\n  'junior': '60f09078-44d0-4a2e-9b56-b8917fdfd87e',\n  'franquelin': '826e94f5-aed7-4421-ae97-deee67c6f6af',\n  'luiz': 'f6b0bba1-309e-46a9-9b37-d5a18c150a16',\n  'negos': '7630461f-d189-4b51-a139-28043faae78f',\n  'nego': '7630461f-d189-4b51-a139-28043faae78f',\n  'gester': '7630461f-d189-4b51-a139-28043faae78f',\n  'victor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'vitor': 'f22c8443-ce89-49d6-94f4-3c6d391cf715',\n  'russo': '60f09078-44d0-4a2e-9b56-b8917fdfd87e'\n};\n\nlet notionData = null;\nlet whatsappMessage = fullText;\nlet notionBody = null;\n\nif (fullText.includes('|||NOTION|||')) {\n  const notionMatch = fullText.match(/\\|\\|\\|NOTION\\|\\|\\|([\\s\\S]*?)\\|\\|\\|FIM\\|\\|\\|/);\n  if (notionMatch) {\n    try {\n      notionData = JSON.parse(notionMatch[1].trim());\n\n      const respNome = (notionData.responsavel || 'franquelin, victor').toLowerCase()\n        .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n      let respPeople = [];\n      let addedIds = [];\n      for (const [key, id] of Object.entries(responsavelMap)) {\n        if (respNome.includes(key) && !addedIds.includes(id)) {\n          respPeople.push({\"id\": id});\n          addedIds.push(id);\n        }\n      }\n      if (respPeople.length === 0) {\n        respPeople = [{\"id\": \"826e94f5-aed7-4421-ae97-deee67c6f6af\"}];\n      }\n\n      notionBody = {\n        \"parent\": {\"database_id\": \"d54e5911e8af43dfaed8f2893e59f6ef\"},\n        \"properties\": {\n          \"Descrição\": {\"title\": [{\"text\": {\"content\": notionData.descricao || \"\"}}]},\n          \"Cliente\": {\"rich_text\": [{\"text\": {\"content\": notionData.cliente || \"\"}}]},\n          \"status\": {\"select\": {\"name\": notionData.status || \"Parado\"}},\n          \"Data\": {\"date\": {\"start\": notionData.data}},\n          \"Tipo\": {\"multi_select\": [{\"name\": notionData.tipo || \"Internet\"}]},\n          \"Entrega\": {\"date\": {\"start\": notionData.entrega || notionData.data}},\n          \"Obs\": {\"rich_text\": [{\"text\": {\"content\": notionData.obs || \"\"}}]},\n          \"Fone\": {\"phone_number\": notionData.fone || null},\n          \"Valor\": {\"number\": 0},\n          \"Atendente\": {\"people\": [{\"id\": \"325d872b-594c-81fe-a524-00029761e655\"}]},\n          \"Responsável\": {\"people\": respPeople}\n        }\n      };\n\n    } catch(e) {\n      notionData = null;\n    }\n    whatsappMessage = fullText.replace(/\\|\\|\\|NOTION\\|\\|\\|[\\s\\S]*?\\|\\|\\|FIM\\|\\|\\|/, '').trim();\n  }\n}\n\n// Monta histórico atualizado para Redis\nlet _prevHist = [];\ntry { const rv2 = $('Busca Histórico Redis').first().json?.value; if(rv2) _prevHist = JSON.parse(rv2); } catch(e) {}\nlet _msgUsr = ''; try { _msgUsr = $('Verifica Menção').first().json?.textMessage || $('Formata Transcrição').first().json?.textMessage || ''; } catch(e) {}\nlet _popsUsd = ''; try { _popsUsd = $('Monta Prompt').first().json?.popsUsados || ''; } catch(e) {}\nlet _rem = ''; try { _rem = $('Monta Prompt').first().json?.remetente || ''; } catch(e) {}\nconst novoHistorico = JSON.stringify([..._prevHist, {role:'user',content:_msgUsr.substring(0,500)}, {role:'assistant',content:whatsappMessage.substring(0,1000)}].slice(-20));\n\nreturn [{\n  json: {\n    chatId: chatId,\n    message: whatsappMessage,\n    notionData: notionData,\n    notionBody: notionBody,\n    hasNotion: notionBody !== null,\n    isError: false,\n    novoHistorico: novoHistorico,\n    mensagemUsuario: _msgUsr,\n    remetente: _rem,\n    popsUsados: _popsUsd,\n    tokensInput: tokensInput,\n    tokensOutput: tokensOutput\n  }\n}];\n"
+      },
+      "id": "8d69c14f-32b9-42c5-b058-39c5ced18b1a",
+      "name": "Parse Resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4016,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lanlunar-evolution.cloudfy.live/message/sendText/ZazzClaude",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "KGWUTIl4uXDVxFiJMhFgT1LzP8bHRcze"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $json.chatId, text: $json.message }) }}",
+        "options": {}
+      },
+      "id": "f2b9fa56-2df9-4a9c-92ee-902b063f6468",
+      "name": "Envia WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4688,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ab9f894a-8a63-4b88-8e61-caafaee1b526",
+              "leftValue": "={{ $json.hasNotion }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "433b236e-119d-4ed5-bd82-c7176dc6ec62",
+      "name": "Tem Notion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4688,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            },
+            {
+              "name": "Notion-Version",
+              "value": "2022-06-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.notionBody) }}",
+        "options": {}
+      },
+      "id": "c2d0e5ca-8d16-4fac-a8f8-1099ec02ee1a",
+      "name": "Cria no Notion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4928,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 7 * * 1-6"
+            }
+          ]
+        }
+      },
+      "id": "b779e654-5b41-4f32-ba1f-79bbdde81aa9",
+      "name": "Bom Dia Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "SUA_CHAVE_ANTHROPIC_AQUI"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  const hoje = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\n  const diaSemana = hoje.getDay();\n  const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];\n  const dia = hoje.getDate().toString().padStart(2,'0');\n  const mes = (hoje.getMonth()+1).toString().padStart(2,'0');\n  const ano = hoje.getFullYear();\n  const dataHoje = dias[diaSemana] + ', ' + dia + '/' + mes + '/' + ano;\n  const isSegunda = diaSemana === 1;\n  const avisoSegunda = isSegunda ? '\\n\\n⚠️ ATENÇÃO: Hoje é segunda-feira! Lembre a equipe da reunião semanal às 17:45 — deixe isso BEM destacado na mensagem.' : '';\n\n  // Lê os chamados do Redis\n  let chamadosBlock = '';\n  let temChamados = false;\n  try {\n    const cv = $('Busca Chamados Bom Dia').first().json?.propertyName || $('Busca Chamados Bom Dia').first().json?.value;\n    if (cv) {\n      const dados = JSON.parse(cv);\n      if (dados.ai_context) {\n        chamadosBlock = dados.ai_context;\n        temChamados = true;\n      }\n    }\n  } catch(e) {}\n\n  const systemPrompt = 'Você é o Maluco da IA 👽🍀, assistente interno da Zazz Internet de Lunardelli-PR.\\nFormatação OBRIGATÓRIA para WhatsApp: use *texto* para negrito. NUNCA use ** ou ## ou blocos de código.\\nUse emojis com moderação. Seja direto, prático e motivador.';\n\n  let userContent;\n\n  if (temChamados) {\n    userContent = 'Hoje é ' + dataHoje + '. Gere a mensagem de bom dia da equipe Zazz Internet com EXATAMENTE esta estrutura:\\n\\n1. *Bom dia, equipe!* — uma saudação motivacional criativa (1-2 linhas, varie o estilo: às vezes engraçada, às vezes inspiradora). Mencione o dia e a data.\\n\\n2. *📋 Chamados do dia* — com base nos dados abaixo, escreva um resumo CLARO e COMPLETO:\\n   - Total de chamados abertos\\n   - Distribuição por cidade e bairro (os mais relevantes)\\n   - Distribuição por tipo/tópico\\n   - Se houver agendamentos para hoje, destaque-os\\n\\n3. *🎯 Prioridades para hoje* — analise os chamados e sugira uma ordem de atendimento inteligente. Leve em conta:\\n   - Chamados com maior tempo em aberto (data de abertura mais antiga)\\n   - Concentração geográfica (otimizar deslocamento)\\n   - Tipo de problema (sem conexão > lentidão > instalação nova, como regra geral)\\n   - Máximo 5 prioridades, numeradas\\n   - Se tiver agendamentos confirmados, coloque-os no topo\\n\\n4. *Maluco da IA 👽🍀* — assine assim\\n\\nDADOS REAIS DOS CHAMADOS:\\n' + chamadosBlock + avisoSegunda;\n  } else {\n    userContent = 'Hoje é ' + dataHoje + '. Gere a mensagem de bom dia da equipe Zazz Internet com esta estrutura:\\n\\n1. *Bom dia, equipe!* — uma saudação motivacional criativa (1-2 linhas). Mencione o dia e a data.\\n\\n2. *📋 Chamados do dia* — informe que os chamados ainda não foram importados no sistema. Peça para o responsável importar a planilha na dashboard para que o bot possa ajudar com as prioridades do dia.\\n\\n3. *Maluco da IA 👽🍀* — assine assim' + avisoSegunda;\n  }\n\n  return JSON.stringify({\n    model: 'claude-haiku-4-5-20251001',\n    max_tokens: 1024,\n    system: systemPrompt,\n    messages: [{ role: 'user', content: userContent }]\n  });\n})() }}",
+        "options": {}
+      },
+      "id": "c5133317-f3a9-40d7-a3e6-1aacbf607a35",
+      "name": "Gera Bom Dia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        604,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst message = response.content[0].text;\nreturn [{ json: { message } }];"
+      },
+      "id": "c2b99909-43e2-4ae6-9f73-ab6ea6a18ec6",
+      "name": "Extrai Mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        748,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lanlunar-evolution.cloudfy.live/message/sendText/ZazzClaude",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "KGWUTIl4uXDVxFiJMhFgT1LzP8bHRcze"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: '554384924456-1616013394@g.us', text: $json.message }) }}",
+        "options": {}
+      },
+      "id": "6c813d2c-94e5-402c-b4d1-bf5a580b94e2",
+      "name": "Envia Bom Dia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        908,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "abc-123",
+              "leftValue": "={{ $json.isReport }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "d103c5f5-f6c0-4863-acb4-e4c1281b4ce8",
+      "name": "É Relatório?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2176,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ (() => {\n  let _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {} if (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\n  const chatId = (_vM.chatId || '').replace(/'/g, \"''\");\n  const reportType = _vM.reportType || 'diario';\n  let dateFilter;\n  if (reportType === 'mensal') {\n    dateFilter = \"data_hora >= NOW() - INTERVAL '30 days'\";\n  } else if (reportType === 'semanal') {\n    dateFilter = \"data_hora >= NOW() - INTERVAL '7 days'\";\n  } else {\n    dateFilter = \"DATE(data_hora) = CURRENT_DATE\";\n  }\n  return `SELECT * FROM mensagens WHERE chat_id = '${chatId}' AND ${dateFilter} ORDER BY id ASC`;\n})() }}",
+        "options": {}
+      },
+      "id": "3be2a682-87ee-449d-ab0c-969a9a0aa902",
+      "name": "Busca Histórico Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2432,
+        432
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ (() => { let _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {} if (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; } const chatId = (_vM.chatId || '').replace(/'/g, \"''\"); return `SELECT * FROM (SELECT * FROM mensagens WHERE chat_id = '${chatId}' ORDER BY id DESC LIMIT 10) sub ORDER BY id ASC`; })() }}",
+        "options": {}
+      },
+      "id": "618a5869-2a35-4b7f-b032-3f00f2c8a0fd",
+      "name": "Busca Histórico 10",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2432,
+        784
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "settings": {
+        "executeOnce": true
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rulesData = $('Busca Regras').all();\nconst rules = rulesData.map(r => r.json.regra).filter(Boolean).join('\\n- ');\nconst rulesPrompt = rules ? '\\n\\n⚠️ REGRAS ADICIONAIS DE TREINAMENTO (Siga Rigorosamente):\\n- ' + rules : '';\n\nlet _vM; try { _vM = $('Verifica Menção').first().json; if (!_vM.chatId) _vM = null; } catch(e) {}\nif (!_vM) try { _vM = $('Formata Transcrição').first().json; } catch(e) { _vM = {}; }\nconst chatId = _vM.chatId || '';\nconst reportType = _vM.reportType || 'diario';\nconst dbResults = $input.all().map(e => e.json);\n\nconst periodoLabel = reportType === 'mensal'\n  ? 'DO MÊS (últimos 30 dias)'\n  : reportType === 'semanal'\n  ? 'DA SEMANA (últimos 7 dias)'\n  : 'DE HOJE';\n\nlet historico = '';\nfor (const msg of dbResults) {\n  let hora = '??:??';\n  let data = '??/??';\n  try {\n    const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);\n    hora = d.toISOString().substring(11, 16);\n    data = d.toISOString().substring(8, 10) + '/' + d.toISOString().substring(5, 7);\n  } catch(e) {}\n\n  const prefixo = (reportType === 'semanal' || reportType === 'mensal') ? `[${data} ${hora}]` : `[${hora}]`;\n  historico += `${prefixo} ${msg.remetente}: ${msg.mensagem}\\n`;\n}\n\nconst now = new Date();\nconst brt = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));\nconst dia = brt.getDate().toString().padStart(2,'0');\nconst mes = (brt.getMonth()+1).toString().padStart(2,'0');\nconst ano = brt.getFullYear();\nconst today = `${ano}-${mes}-${dia}`;\n\nreturn [{\n  json: {\n    chatId: chatId,\n    claudeBody: {\n      model: \"claude-haiku-4-5-20251001\",\n      max_tokens: 4096,\n      system: ` ${rulesPrompt}\\nVocê é Maluco da IA 👽🍀. DATA ATUAL: ${dia}/${mes}/${ano}.\\nO usuário solicitou um RELATÓRIO ${periodoLabel} com base nas mensagens do grupo.\\nLeia o histórico de conversas do grupo abaixo e crie um resumo profissional e claro.\\nListe:\\n1. Serviços Solicitados e Concluídos\\n2. Serviços que ficaram Pendentes (se houver)\\n3. Principais destaques do período\\n${reportType !== 'diario' ? '4. Tendências ou padrões observados no período\\n' : ''}\\nFormatação WhatsApp: *negrito*, _itálico_, emojis 🟢🟡🔴. NÃO use ## ou **.\\n\\nHISTÓRICO DO GRUPO ${periodoLabel}:\\n${historico.substring(0, 20000)}\\n`,\n      messages: [{\"role\": \"user\", \"content\": `Gere o relatório ${periodoLabel.toLowerCase()} por favor!`}]\n    }\n  }\n}];"
+      },
+      "id": "c3584b9c-9b3d-456e-982f-56868106086c",
+      "name": "Monta Prompt Relatório",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2608,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS mensagens (\n  id SERIAL PRIMARY KEY,\n  data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  message_id VARCHAR(100) UNIQUE,\n  remetente VARCHAR(100),\n  mensagem TEXT,\n  chat_id VARCHAR(100)\n);\nALTER TABLE mensagens ADD COLUMN IF NOT EXISTS message_id VARCHAR(100);\nALTER TABLE mensagens ADD COLUMN IF NOT EXISTS chat_id VARCHAR(100);\nCREATE INDEX IF NOT EXISTS idx_mensagens_chat_id ON mensagens(chat_id);\nCREATE INDEX IF NOT EXISTS idx_mensagens_data_hora ON mensagens(data_hora);\nDO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'mensagens_message_id_key') THEN ALTER TABLE mensagens ADD CONSTRAINT mensagens_message_id_key UNIQUE (message_id); END IF; END $$;\nCREATE TABLE IF NOT EXISTS regras (\n  id SERIAL PRIMARY KEY,\n  regra TEXT NOT NULL\n);",
+        "options": {}
+      },
+      "id": "f7fc87e0-0a80-4fae-b62c-d47ee885785f",
+      "name": "SETUP: Criar Tabela (CLIQUE AQUI 1 VEZ)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ec1ceedd-8ff3-4c1b-b185-7a56e047a51e",
+              "leftValue": "={{ $json.isTraining }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "40a79195-65f2-4388-94cb-22b067686842",
+      "name": "É Treinamento?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1792,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "regras",
+          "mode": "list",
+          "cachedResultName": "regras"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "regra": "={{ $json.textMessage.replace(/claude aprenda:?/i, '').replace(/claude correcao:?/i, '').trim() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "regra",
+              "displayName": "regra",
+              "required": false,
+              "default": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0fa34727-f0a9-48c7-b72c-e61fef3435e2",
+      "name": "Salva Regra",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1968,
+        384
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lanlunar-evolution.cloudfy.live/message/sendText/ZazzClaude",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "KGWUTIl4uXDVxFiJMhFgT1LzP8bHRcze"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: (() => { try { const v = $('Verifica Menção').first().json; if (v.chatId) return v.chatId; } catch(e) {} try { return $('Formata Transcrição').first().json.chatId; } catch(e) {} return ''; })(), text: '💚 Entendido! Acabei de aprender essa nova regra e vou aplicá-la nas próximas conversas.' }) }}",
+        "options": {}
+      },
+      "id": "e6384ae2-c9a0-4909-8b29-f444f53c6d4d",
+      "name": "Confirma Aprendizado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2176,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT regra FROM regras ORDER BY id ASC",
+        "options": {}
+      },
+      "id": "26d366df-bdc0-410d-b098-f9551fe4a362",
+      "name": "Busca Regras",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1968,
+        544
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "hybrid-filter-strict",
+              "leftValue": "={{ !!( ($json.body.typeWebhook === 'incomingMessageReceived') || ($json.body.event === 'messages.upsert' && $json.body.data && $json.body.data.key && $json.body.data.key.fromMe === false && $json.body.data.message) ) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1678b8a5-d6d6-407f-8028-00ca681d754c",
+      "name": "Filter1",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst b = body.body || {};\nconst eData = b.data || b || {};\nconst eMsg = eData.message || {};\nconst isAudio = !!(eMsg.audioMessage || eMsg.pttMessage);\nif (!isAudio) return [];\n\nconst eMsgId = eData.key?.id || '';\nconst eChat = eData.key?.remoteJid || '';\nconst fromMe = eData.key?.fromMe || false;\nconst eSender = eData.pushName || 'Alguém';\nconst msgTimestamp = eData.messageTimestamp || 0;\nconst nowTimestamp = Math.floor(Date.now() / 1000);\nif (msgTimestamp && (nowTimestamp - msgTimestamp) > 120) return [];\n\nreturn [{ json: { msgKey: { id: eMsgId, remoteJid: eChat, fromMe }, chatId: eChat, sender: eSender, messageId: eMsgId }}];"
+      },
+      "id": "e816f746-1668-4269-b47b-2198b8b7cad4",
+      "name": "Detecta Áudio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lanlunar-evolution.cloudfy.live/chat/getBase64FromMediaMessage/ZazzClaude",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "KGWUTIl4uXDVxFiJMhFgT1LzP8bHRcze"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: { key: $json.msgKey }, convertToMp4: false }) }}",
+        "options": {}
+      },
+      "id": "68083c07-3611-4741-b13d-d6e978b7b253",
+      "name": "Baixa Áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        768,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base64 = $json.base64;\nif (!base64) return [];\nconst mimetypeFull = $json.mimetype || 'audio/ogg';\nconst mimetype = mimetypeFull.split(';')[0].trim();\nconst ext = mimetype.includes('mp4') ? 'mp4' : mimetype.includes('mpeg') ? 'mp3' : 'ogg';\nconst detecta = $('Detecta Áudio').first().json;\nconst binaryData = await this.helpers.prepareBinaryData(\n  Buffer.from(base64, 'base64'),\n  'audio.' + ext,\n  mimetype\n);\nreturn [{\n  json: { chatId: detecta.chatId, sender: detecta.sender, messageId: detecta.messageId },\n  binary: { audioFile: binaryData }\n}];"
+      },
+      "id": "680bd717-ccd1-4816-bd40-4829c035a5e1",
+      "name": "Converte p/ Whisper",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "audioFile"
+            },
+            {
+              "name": "model",
+              "value": "whisper-1"
+            },
+            {
+              "name": "language",
+              "value": "pt"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1008379a-c480-4bbb-9214-fb2182ee6c64",
+      "name": "Transcreve Áudio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1104,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const transcription = $json.text || '';\nconst detecta = $('Detecta Áudio').first().json;\nif (!transcription) return [];\n\nconst botNumbers = ['554396543242', '235437994062039'];\nconst txtLower = transcription.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\nconst isMentionedText = botNumbers.some(n => transcription.includes('@' + n) || transcription.includes('@' + n.slice(2)));\nconst isMentionedName = txtLower.includes('maluco') || txtLower.includes('claude');\nconst isDirectMessage = detecta.chatId && !detecta.chatId.includes('@g.us');\nconst isMentioned = isMentionedText || isMentionedName || isDirectMessage;\n\nconst isReportMensal = txtLower.includes('mensal') || txtLower.includes('mes');\nconst isReportSemanal = !isReportMensal && (txtLower.includes('semanal') || txtLower.includes('semana'));\nconst isReport = txtLower.includes('relatorio') || txtLower.includes('resumo');\nconst reportType = isReportMensal ? 'mensal' : isReportSemanal ? 'semanal' : 'diario';\nconst isTraining = txtLower.includes('claude aprenda') || txtLower.includes('claude correcao');\n\nreturn [{\n  json: {\n    chatId: detecta.chatId,\n    textMessage: transcription,\n    dbRemetente: detecta.sender + ' 🎤',\n    dbMensagem: '🎤 ' + transcription,\n    messageId: detecta.messageId,\n    isReport, isTraining, reportType, isMentioned\n  }\n}];"
+      },
+      "id": "465da03b-2a31-4997-8c54-0f2b6648eec7",
+      "name": "Formata Transcrição",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ `INSERT INTO mensagens (message_id, remetente, mensagem, chat_id) VALUES ('${$json.messageId}', '${$json.dbRemetente.replace(/'/g, \"''\")}', '${$json.dbMensagem.substring(0,2000).replace(/'/g, \"''\")}', '${($json.chatId || '').replace(/'/g, \"''\")}') ON CONFLICT (message_id) DO NOTHING` }}",
+        "options": {}
+      },
+      "id": "4e3d4986-ce78-49ba-ace3-cf3cc3daaf31",
+      "name": "Salva Transcrição",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        1456,
+        768
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "audio-mention-chk",
+              "leftValue": "={{ $json.isMentioned }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "9dbdbe28-4ca1-4db1-b049-cd446abdd082",
+      "name": "Verifica Menção Áudio",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1648,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT valor FROM dashboard_config WHERE chave = 'system_prompt'",
+        "options": {}
+      },
+      "id": "31b03374-f4c7-4846-8b66-390d3264a75b",
+      "name": "Busca System Prompt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2800,
+        784
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "settings": {
+        "executeOnce": true
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nome, cargo, funcoes FROM dashboard_colaboradores WHERE ativo = true ORDER BY nome",
+        "options": {}
+      },
+      "id": "9c2eddee-06d2-4909-863f-be09a9012ea1",
+      "name": "Busca Colaboradores",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        3008,
+        784
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "settings": {
+        "executeOnce": true
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "key": "={{ 'conv:' + ($('Verifica Menção').first().json.chatId || '') }}",
+        "options": {}
+      },
+      "id": "b877176d-6c00-4d01-a4c7-c16c171d593d",
+      "name": "Busca Histórico Redis",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        3200,
+        784
+      ],
+      "credentials": {
+        "redis": {
+          "id": "XYsy0h9be9PkUPMP",
+          "name": "redis_cloudfy"
+        }
+      },
+      "settings": {
+        "executeOnce": true
+      }
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "={{ 'conv:' + ($json.chatId || '') }}",
+        "value": "={{ $json.novoHistorico }}",
+        "expire": true,
+        "ttl": 14400
+      },
+      "id": "0ff7408f-ba67-4ed0-9a97-de4766a4c07b",
+      "name": "Salva Histórico Redis",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        4688,
+        448
+      ],
+      "credentials": {
+        "redis": {
+          "id": "XYsy0h9be9PkUPMP",
+          "name": "redis_cloudfy"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ `INSERT INTO bot_conversas (chat_id, remetente, mensagem, resposta, pops_usados, tokens_input, tokens_output) VALUES ('${($json.chatId||'').replace(/'/g,\"''\")}','${($json.remetente||'').replace(/'/g,\"''\")}','${($json.mensagemUsuario||'').substring(0,2000).replace(/'/g,\"''\")}','${($json.message||'').substring(0,4000).replace(/'/g,\"''\")}','${($json.popsUsados||'').replace(/'/g,\"''\")}',${$json.tokensInput||0},${$json.tokensOutput||0})` }}",
+        "options": {}
+      },
+      "id": "1730404a-e0d7-452e-8167-30cf7390a934",
+      "name": "Salva Conversa",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        4688,
+        656
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "052dfd02-ed69-4db1-9b83-e83a868619f5",
+              "leftValue": "={{ $json.isError }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c8c3afa7-97d9-4c26-a788-c7eb42a236e6",
+      "name": "É Erro?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        4688,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ `INSERT INTO bot_erros (no_n8n, mensagem_erro, mensagem_usuario, chat_id) VALUES ('Claude API','${($json.errorMsg||'').substring(0,1000).replace(/'/g,\"''\")}','${($json.mensagemUsuario||'').substring(0,500).replace(/'/g,\"''\")}','${($json.chatId||'').replace(/'/g,\"''\")}')` }}",
+        "options": {}
+      },
+      "id": "f0acc83e-3426-4af4-9dde-94e7b6622f51",
+      "name": "Salva Erro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        4864,
+        80
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "3jjT34yuXwgLE6ZN",
+          "name": "postgres_cloudfy"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "key": "chamados:data",
+        "options": {}
+      },
+      "id": "2473df03-3c90-4081-b388-46f6f7823e8f",
+      "name": "Busca Chamados Redis",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        3440,
+        768
+      ],
+      "credentials": {
+        "redis": {
+          "id": "XYsy0h9be9PkUPMP",
+          "name": "redis_cloudfy"
+        }
+      },
+      "settings": {
+        "executeOnce": true
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "key": "chamados:data",
+        "options": {}
+      },
+      "id": "2e8b2a15-ded6-4401-b753-6e8fd67e5337",
+      "name": "Busca Chamados Bom Dia",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        384,
+        0
+      ],
+      "credentials": {
+        "redis": {
+          "id": "XYsy0h9be9PkUPMP",
+          "name": "redis_cloudfy"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Bom Dia Trigger": [
+      {
+        "json": {
+          "timestamp": "2026-03-21T07:30:00.014-03:00",
+          "Readable date": "March 21st 2026, 7:30:00 am",
+          "Readable time": "7:30:00 am",
+          "Day of week": "Saturday",
+          "Year": "2026",
+          "Month": "March",
+          "Day of month": "21",
+          "Hour": "07",
+          "Minute": "30",
+          "Second": "00",
+          "Timezone": "America/Sao_Paulo (UTC-03:00)"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrai Dados Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Salva no Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifica Menção": {
+      "main": [
+        [
+          {
+            "node": "É Treinamento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca POPs": {
+      "main": [
+        [
+          {
+            "node": "Busca System Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monta Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API": {
+      "main": [
+        [
+          {
+            "node": "Parse Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Resposta": {
+      "main": [
+        [
+          {
+            "node": "Envia WhatsApp",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tem Notion?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Salva Histórico Redis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Salva Conversa",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "É Erro?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Notion?": {
+      "main": [
+        [
+          {
+            "node": "Cria no Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bom Dia Trigger": {
+      "main": [
+        [
+          {
+            "node": "Busca Chamados Bom Dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gera Bom Dia": {
+      "main": [
+        [
+          {
+            "node": "Extrai Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrai Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Envia Bom Dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Relatório?": {
+      "main": [
+        [
+          {
+            "node": "Busca Histórico Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Busca Histórico 10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Histórico 10": {
+      "main": [
+        [
+          {
+            "node": "Busca POPs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monta Prompt Relatório": {
+      "main": [
+        [
+          {
+            "node": "Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Histórico Postgres": {
+      "main": [
+        [
+          {
+            "node": "Monta Prompt Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Treinamento?": {
+      "main": [
+        [
+          {
+            "node": "Salva Regra",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Busca Regras",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salva Regra": {
+      "main": [
+        [
+          {
+            "node": "Confirma Aprendizado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Regras": {
+      "main": [
+        [
+          {
+            "node": "É Relatório?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1": {
+      "main": [
+        [
+          {
+            "node": "Extrai Dados Mensagem",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Verifica Menção",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Detecta Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detecta Áudio": {
+      "main": [
+        [
+          {
+            "node": "Baixa Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixa Áudio": {
+      "main": [
+        [
+          {
+            "node": "Converte p/ Whisper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Converte p/ Whisper": {
+      "main": [
+        [
+          {
+            "node": "Transcreve Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcreve Áudio": {
+      "main": [
+        [
+          {
+            "node": "Formata Transcrição",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formata Transcrição": {
+      "main": [
+        [
+          {
+            "node": "Salva Transcrição",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Verifica Menção Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifica Menção Áudio": {
+      "main": [
+        [
+          {
+            "node": "É Treinamento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca System Prompt": {
+      "main": [
+        [
+          {
+            "node": "Busca Colaboradores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Colaboradores": {
+      "main": [
+        [
+          {
+            "node": "Busca Histórico Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Histórico Redis": {
+      "main": [
+        [
+          {
+            "node": "Busca Chamados Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Erro?": {
+      "main": [
+        [
+          {
+            "node": "Salva Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Chamados Redis": {
+      "main": [
+        [
+          {
+            "node": "Monta Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Chamados Bom Dia": {
+      "main": [
+        [
+          {
+            "node": "Gera Bom Dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b9f6d6f0-bb8f-42e8-bd7b-9ca83fc4c347",
+  "meta": {
+    "instanceId": "a85b772e466345bb2d0c603168cf180046fbe30ab98325eeaeeeb4247ab8ba92"
+  },
+  "id": "LNAKxwSG5XQ0Ckuk",
+  "tags": []
+}
