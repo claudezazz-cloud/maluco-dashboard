@@ -1038,6 +1038,34 @@
         3040,
         784
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [$input.first()];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "e1420e8b-11ef-4054-bf3b-89a8283d4435",
+      "name": "Consolida Hist",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2508,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [$input.first()];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "fa7de30c-35a3-44c9-bb0a-31a46791c5c7",
+      "name": "Consolida POPs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2700,
+        784
+      ]
     }
   ],
   "pinData": {
@@ -1100,7 +1128,7 @@
       "main": [
         [
           {
-            "node": "Busca System Prompt",
+            "node": "Consolida POPs",
             "type": "main",
             "index": 0
           }
@@ -1226,7 +1254,7 @@
       "main": [
         [
           {
-            "node": "Busca POPs",
+            "node": "Consolida Hist",
             "type": "main",
             "index": 0
           }
@@ -1469,6 +1497,28 @@
         [
           {
             "node": "Busca Histórico Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolida Hist": {
+      "main": [
+        [
+          {
+            "node": "Busca POPs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolida POPs": {
+      "main": [
+        [
+          {
+            "node": "Busca System Prompt",
             "type": "main",
             "index": 0
           }
