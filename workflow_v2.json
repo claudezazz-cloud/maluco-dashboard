@@ -1010,6 +1010,34 @@
           "name": "redis_cloudfy"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Passa apenas o primeiro item para evitar multiplicacao\nreturn [$input.first()];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "ffad16ac-6980-44ec-9a8d-42637cd47cb0",
+      "name": "Primeiro Item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Consolida para 1 item antes do Redis\nreturn [$input.first()];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "37b3098c-68d0-4da8-9d3e-ca627b51b546",
+      "name": "Consolida Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3040,
+        784
+      ]
     }
   ],
   "pinData": {
@@ -1187,7 +1215,7 @@
         ],
         [
           {
-            "node": "Busca Histórico 10",
+            "node": "Primeiro Item",
             "type": "main",
             "index": 0
           }
@@ -1374,7 +1402,7 @@
       "main": [
         [
           {
-            "node": "Busca Histórico Redis",
+            "node": "Consolida Items",
             "type": "main",
             "index": 0
           }
@@ -1419,6 +1447,28 @@
         [
           {
             "node": "Gera Bom Dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Primeiro Item": {
+      "main": [
+        [
+          {
+            "node": "Busca Histórico 10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolida Items": {
+      "main": [
+        [
+          {
+            "node": "Busca Histórico Redis",
             "type": "main",
             "index": 0
           }
