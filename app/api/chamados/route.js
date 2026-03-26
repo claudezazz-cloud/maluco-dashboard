@@ -230,12 +230,23 @@ export async function POST(req) {
     const redis = getRedis()
     await redis.set(REDIS_KEY, JSON.stringify(payload), 'EX', TTL)
 
+    // Debug: contagem por cod_cliente
+    const debugContagem = {}
+    for (const c of chamados) {
+      const key = c.cod_cliente || '(sem cod)'
+      const nome = c.cliente || '(sem nome)'
+      const label = `${key} - ${nome}`
+      debugContagem[label] = (debugContagem[label] || 0) + 1
+    }
+
     return NextResponse.json({
       ok: true,
       total: chamados.length,
       resumo: payload.resumo,
       importado_em: agora,
       expira_em: new Date(Date.now() + TTL * 1000).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+      debug_headers: mappedHeaders,
+      debug_contagem_por_cliente: debugContagem,
     })
   } catch (e) {
     console.error('POST /api/chamados:', e)
