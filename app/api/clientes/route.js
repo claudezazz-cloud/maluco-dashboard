@@ -116,13 +116,22 @@ export async function POST(req) {
       )
     }
 
-    // Salva timestamp de importacao
+    // Salva texto compacto para o N8N ler (1 unica linha no dashboard_config)
+    // Formato: "Nome\tCod\n" por linha — o Monta Prompt ja sabe parsear
+    const textoBot = clientes.map(c => `${c.nome}\t${c.cod}`).join('\n')
+
     const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     await query(
       `INSERT INTO dashboard_config (chave, valor, atualizado_em)
        VALUES ('clientes_importado_em', $1, NOW())
        ON CONFLICT (chave) DO UPDATE SET valor = $1, atualizado_em = NOW()`,
       [agora]
+    )
+    await query(
+      `INSERT INTO dashboard_config (chave, valor, atualizado_em)
+       VALUES ('clientes_texto', $1, NOW())
+       ON CONFLICT (chave) DO UPDATE SET valor = $1, atualizado_em = NOW()`,
+      [textoBot]
     )
 
     return NextResponse.json({
@@ -176,7 +185,7 @@ export async function DELETE() {
   try {
     await ensureTable()
     await query('DELETE FROM dashboard_clientes')
-    await query("DELETE FROM dashboard_config WHERE chave = 'clientes_importado_em'")
+    await query("DELETE FROM dashboard_config WHERE chave IN ('clientes_importado_em', 'clientes_texto')")
     return NextResponse.json({ ok: true })
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })
