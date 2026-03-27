@@ -28,7 +28,7 @@ export default function StatusCard({ filial, selected, onSelect }) {
   return (
     <div
       onClick={onSelect}
-      className={`bg-[#1a1a24] rounded-xl border p-5 cursor-pointer transition hover:border-[#071DE3] ${selected ? 'border-[#071DE3]' : 'border-gray-800'}`}
+      className={`bg-[#1a1a24] rounded-xl border p-5 cursor-pointer transition hover:border-[#008000] ${selected ? 'border-[#008000]' : 'border-gray-800'}`}
     >
       <div className="flex items-start justify-between mb-4">
         <div>

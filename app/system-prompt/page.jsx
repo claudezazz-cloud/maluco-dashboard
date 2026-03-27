@@ -131,7 +131,7 @@ export default function SystemPromptPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {PLACEHOLDERS.map(({ key, desc }) => (
               <div key={key} className="flex items-start gap-2 text-sm">
-                <code className="bg-[#0f0f13] border border-gray-700 text-blue-300 px-2 py-0.5 rounded font-mono text-xs shrink-0">
+                <code className="bg-[#0f0f13] border border-gray-700 text-green-300 px-2 py-0.5 rounded font-mono text-xs shrink-0">
                   {key}
                 </code>
                 <span className="text-gray-400 text-xs mt-0.5">{desc}</span>
@@ -184,7 +184,7 @@ export default function SystemPromptPage() {
               <button
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className="text-sm bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white px-5 py-2 rounded-lg transition font-medium"
+                className="text-sm bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white px-5 py-2 rounded-lg transition font-medium"
               >
                 {saving ? 'Salvando...' : 'Salvar'}
               </button>

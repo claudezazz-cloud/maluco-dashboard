@@ -86,7 +86,7 @@ export default function AdminPage() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`px-5 py-2 rounded-md text-sm font-medium transition ${tab === key ? 'bg-[#071DE3] text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`px-5 py-2 rounded-md text-sm font-medium transition ${tab === key ? 'bg-[#008000] text-white' : 'text-gray-400 hover:text-white'}`}
             >
               {label}
             </button>
@@ -100,7 +100,7 @@ export default function AdminPage() {
               <h2 className="text-gray-300 font-medium">Filiais cadastradas</h2>
               <Link
                 href="/admin/filiais"
-                className="bg-[#071DE3] hover:bg-[#0516B0] text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 + Nova Filial
               </Link>
@@ -159,7 +159,7 @@ export default function AdminPage() {
                   <p className="text-gray-500 text-sm mb-4">Nenhuma filial cadastrada.</p>
                   <Link
                     href="/admin/filiais"
-                    className="bg-[#071DE3] hover:bg-[#0516B0] text-white text-sm px-5 py-2 rounded-lg transition"
+                    className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-5 py-2 rounded-lg transition"
                   >
                     Criar primeira filial
                   </Link>
@@ -193,12 +193,12 @@ export default function AdminPage() {
                   value={grupoId}
                   onChange={e => setGrupoId(e.target.value)}
                   placeholder="554384924456-1616013394@g.us"
-                  className="flex-1 bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:border-[#071DE3] focus:outline-none transition"
+                  className="flex-1 bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none transition"
                 />
                 <button
                   onClick={salvarGrupo}
                   disabled={salvandoGrupo || !grupoId.trim()}
-                  className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white text-sm px-6 py-2.5 rounded-lg transition font-medium shrink-0"
+                  className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2.5 rounded-lg transition font-medium shrink-0"
                 >
                   {salvandoGrupo ? 'Salvando...' : 'Salvar'}
                 </button>

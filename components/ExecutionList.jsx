@@ -13,7 +13,7 @@ export default function ExecutionList({ executions }) {
       success: 'bg-green-900/40 text-green-400 border-green-800',
       error: 'bg-red-900/40 text-red-400 border-red-800',
       running: 'bg-yellow-900/40 text-yellow-400 border-yellow-800',
-      waiting: 'bg-blue-900/40 text-blue-400 border-blue-800',
+      waiting: 'bg-green-900/40 text-green-400 border-green-800',
     }
     const labels = { success: '✓ Sucesso', error: '✗ Erro', running: '⟳ Executando', waiting: '⏳ Aguardando' }
     const cls = map[status] || 'bg-gray-800 text-gray-400 border-gray-700'
