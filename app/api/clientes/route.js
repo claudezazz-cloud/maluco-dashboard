@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSession, requireAdmin } from '@/lib/auth'
-import { getRedis } from '@/lib/redis'
-
-const REDIS_KEY = 'clientes:data'
+import { query } from '@/lib/db'
 
 const COLUMN_MAP = {
   'cod': 'cod',
@@ -36,7 +34,27 @@ function mapColumns(headers) {
   })
 }
 
-// POST - Importar clientes
+async function ensureTable() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS dashboard_clientes (
+      id SERIAL PRIMARY KEY,
+      cod VARCHAR(50) NOT NULL,
+      nome VARCHAR(500) NOT NULL,
+      ativo BOOLEAN DEFAULT true,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `)
+  await query(`
+    CREATE TABLE IF NOT EXISTS dashboard_config (
+      id SERIAL PRIMARY KEY,
+      chave VARCHAR(255) UNIQUE NOT NULL,
+      valor TEXT,
+      atualizado_em TIMESTAMP DEFAULT NOW()
+    )
+  `)
+}
+
+// POST - Importar clientes (salva no Postgres)
 export async function POST(req) {
   const session = await getSession()
   if (!session || !requireAdmin(session)) {
@@ -51,7 +69,6 @@ export async function POST(req) {
 
     const mappedHeaders = rawHeaders ? mapColumns(rawHeaders) : null
 
-    // Converter rows para objetos { cod, nome }
     const clientes = rawRows.map(row => {
       if (mappedHeaders && Array.isArray(row)) {
         const obj = {}
@@ -77,21 +94,36 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Nenhum cliente valido encontrado. Verifique se a planilha tem colunas Cod e Nome.' }, { status: 400 })
     }
 
-    // Gera texto no formato que o Monta Prompt ja parseia (tab-separated)
-    const textoBot = clientes.map(c => `${c.nome}\t${c.cod}`).join('\n')
+    await ensureTable()
 
-    const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    // Limpa tabela antes de reimportar
+    await query('DELETE FROM dashboard_clientes')
 
-    const payload = {
-      importado_em: agora,
-      total: clientes.length,
-      clientes,
-      texto_bot: textoBot,
+    // Bulk insert em batches de 100
+    const BATCH_SIZE = 100
+    for (let i = 0; i < clientes.length; i += BATCH_SIZE) {
+      const batch = clientes.slice(i, i + BATCH_SIZE)
+      const values = []
+      const params = []
+      batch.forEach((c, idx) => {
+        const offset = idx * 2
+        values.push(`($${offset + 1}, $${offset + 2})`)
+        params.push(c.cod, c.nome)
+      })
+      await query(
+        `INSERT INTO dashboard_clientes (cod, nome) VALUES ${values.join(', ')}`,
+        params
+      )
     }
 
-    const redis = getRedis()
-    // Sem TTL - clientes ficam ate serem removidos ou substituidos
-    await redis.set(REDIS_KEY, JSON.stringify(payload))
+    // Salva timestamp de importacao
+    const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    await query(
+      `INSERT INTO dashboard_config (chave, valor, atualizado_em)
+       VALUES ('clientes_importado_em', $1, NOW())
+       ON CONFLICT (chave) DO UPDATE SET valor = $1, atualizado_em = NOW()`,
+      [agora]
+    )
 
     return NextResponse.json({
       ok: true,
@@ -112,16 +144,21 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Sem permissao' }, { status: 403 })
 
   try {
-    const redis = getRedis()
-    const data = await redis.get(REDIS_KEY)
-    if (!data) {
+    await ensureTable()
+    const countResult = await query('SELECT count(*)::int as total FROM dashboard_clientes WHERE ativo = true')
+    const total = countResult.rows[0]?.total || 0
+
+    if (total === 0) {
       return NextResponse.json({ ativo: false, total: 0 })
     }
-    const parsed = JSON.parse(data)
+
+    const tsResult = await query("SELECT valor FROM dashboard_config WHERE chave = 'clientes_importado_em'")
+    const importado_em = tsResult.rows[0]?.valor || ''
+
     return NextResponse.json({
       ativo: true,
-      total: parsed.total,
-      importado_em: parsed.importado_em,
+      total,
+      importado_em,
     })
   } catch (e) {
     console.error('GET /api/clientes:', e)
@@ -129,7 +166,7 @@ export async function GET() {
   }
 }
 
-// DELETE - Limpar clientes do Redis
+// DELETE - Limpar clientes
 export async function DELETE() {
   const session = await getSession()
   if (!session || !requireAdmin(session)) {
@@ -137,8 +174,9 @@ export async function DELETE() {
   }
 
   try {
-    const redis = getRedis()
-    await redis.del(REDIS_KEY)
+    await ensureTable()
+    await query('DELETE FROM dashboard_clientes')
+    await query("DELETE FROM dashboard_config WHERE chave = 'clientes_importado_em'")
     return NextResponse.json({ ok: true })
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 })
