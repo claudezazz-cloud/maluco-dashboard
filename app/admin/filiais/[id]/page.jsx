@@ -171,7 +171,7 @@ export default function FilialDetailPage() {
     return `${process.env.NEXT_PUBLIC_N8N_URL || '[N8N_URL]'}/webhook/${path}`
   }
 
-  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#071DE3]'
+  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000]'
   const labelCls = 'block text-xs text-gray-400 mb-1'
 
   if (loading) {
@@ -232,7 +232,7 @@ export default function FilialDetailPage() {
 
         {/* Edit form */}
         {editMode && (
-          <div className="bg-[#1a1a24] rounded-xl border border-blue-900 p-6 mb-6">
+          <div className="bg-[#1a1a24] rounded-xl border border-green-900 p-6 mb-6">
             <h2 className="text-white font-semibold mb-4">Editar configuração</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -277,7 +277,7 @@ export default function FilialDetailPage() {
               </div>
             </div>
             <div className="flex gap-3 mt-4">
-              <button onClick={salvar} disabled={actionLoading} className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition">
+              <button onClick={salvar} disabled={actionLoading} className="bg-[#008000] hover:bg-[#006600] disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition">
                 {actionLoading ? 'Salvando...' : 'Salvar'}
               </button>
               <button onClick={() => setEditMode(false)} className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-5 py-2 rounded-lg transition">
@@ -294,7 +294,7 @@ export default function FilialDetailPage() {
             <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">URL do Webhook</h3>
             {webhookUrl ? (
               <div className="flex items-center gap-2">
-                <code className="text-blue-400 text-sm flex-1 break-all">{webhookUrl}</code>
+                <code className="text-green-400 text-sm flex-1 break-all">{webhookUrl}</code>
                 <button
                   onClick={copyWebhook}
                   className="shrink-0 bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition"
@@ -368,7 +368,7 @@ export default function FilialDetailPage() {
               <button
                 onClick={testarConexoes}
                 disabled={actionLoading}
-                className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-[#008000] hover:bg-[#006600] disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 {actionLoading ? 'Aguarde...' : 'Testar todas as conexões'}
               </button>

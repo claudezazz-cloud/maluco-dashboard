@@ -66,7 +66,7 @@ export default function DashboardPage() {
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
               <div
                 onClick={() => setAutoRefresh(v => !v)}
-                className={`w-10 h-5 rounded-full transition-colors ${autoRefresh ? 'bg-[#071DE3]' : 'bg-gray-700'} relative cursor-pointer`}
+                className={`w-10 h-5 rounded-full transition-colors ${autoRefresh ? 'bg-[#008000]' : 'bg-gray-700'} relative cursor-pointer`}
               >
                 <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${autoRefresh ? 'translate-x-5' : 'translate-x-0.5'}`} />
               </div>
@@ -124,7 +124,7 @@ export default function DashboardPage() {
             <h2 className="font-medium text-white">
               Execuções Recentes
               {selectedFilial && (
-                <span className="ml-2 text-sm text-blue-400">
+                <span className="ml-2 text-sm text-green-400">
                   — {filiais.find(f => f.id === selectedFilial)?.nome}
                 </span>
               )}

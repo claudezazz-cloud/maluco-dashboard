@@ -210,7 +210,7 @@ export default function ChamadosPage() {
         <div
           className={`bg-[#1a1a24] rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
             dragOver
-              ? 'border-[#071DE3] bg-[#071DE3]/5'
+              ? 'border-[#008000] bg-[#008000]/5'
               : 'border-gray-700 hover:border-gray-600'
           }`}
           onClick={() => fileRef.current?.click()}
@@ -252,7 +252,7 @@ export default function ChamadosPage() {
                 <button
                   onClick={enviarParaBot}
                   disabled={uploading}
-                  className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium"
+                  className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium"
                 >
                   {uploading ? 'Enviando...' : `Enviar ${preview.totalRows} chamados para o Bot`}
                 </button>
@@ -304,10 +304,10 @@ export default function ChamadosPage() {
         <div className="mt-8 bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
           <h3 className="text-white font-medium mb-3">Como funciona</h3>
           <div className="space-y-2 text-sm text-gray-400">
-            <p><span className="text-blue-400">1.</span> Exporte a planilha de chamados do seu sistema (IXC, SGP, etc) em formato <strong className="text-white">.xlsx</strong></p>
-            <p><span className="text-blue-400">2.</span> Importe aqui — a planilha sera processada e enviada para o bot</p>
-            <p><span className="text-blue-400">3.</span> Pergunte no WhatsApp: <em className="text-gray-300">"quantos chamados abertos tem?", "quais chamados do bairro Centro?", "tem algum chamado agendado pra hoje?"</em></p>
-            <p><span className="text-blue-400">4.</span> Os dados ficam disponiveis por <strong className="text-white">24 horas</strong>, depois expiram automaticamente</p>
+            <p><span className="text-green-400">1.</span> Exporte a planilha de chamados do seu sistema (IXC, SGP, etc) em formato <strong className="text-white">.xlsx</strong></p>
+            <p><span className="text-green-400">2.</span> Importe aqui — a planilha sera processada e enviada para o bot</p>
+            <p><span className="text-green-400">3.</span> Pergunte no WhatsApp: <em className="text-gray-300">"quantos chamados abertos tem?", "quais chamados do bairro Centro?", "tem algum chamado agendado pra hoje?"</em></p>
+            <p><span className="text-green-400">4.</span> Os dados ficam disponiveis por <strong className="text-white">24 horas</strong>, depois expiram automaticamente</p>
           </div>
         </div>
 

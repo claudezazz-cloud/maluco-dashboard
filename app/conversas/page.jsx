@@ -27,7 +27,7 @@ function PopsBadges({ pops }) {
   return (
     <div className="flex flex-wrap gap-1 mt-1">
       {lista.map((p, i) => (
-        <span key={i} className="text-xs bg-blue-900/30 text-blue-400 border border-blue-900/40 px-2 py-0.5 rounded-full">
+        <span key={i} className="text-xs bg-green-900/30 text-green-400 border border-green-900/40 px-2 py-0.5 rounded-full">
           📋 {p}
         </span>
       ))}
@@ -150,7 +150,7 @@ export default function ConversasPage() {
   const abaBtn = (nome, label) => (
     <button
       onClick={() => { setAba(nome); setPage(1) }}
-      className={`px-4 py-2 text-sm rounded-lg transition font-medium ${aba === nome ? 'bg-[#071DE3] text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+      className={`px-4 py-2 text-sm rounded-lg transition font-medium ${aba === nome ? 'bg-[#008000] text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
     >
       {label}
     </button>
@@ -183,11 +183,11 @@ export default function ConversasPage() {
                 onChange={e => setBuscaInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && pesquisar()}
                 placeholder="Buscar em mensagens, respostas, remetente..."
-                className="flex-1 bg-[#1a1a24] border border-gray-800 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-[#071DE3] transition"
+                className="flex-1 bg-[#1a1a24] border border-gray-800 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-[#008000] transition"
               />
               <button
                 onClick={pesquisar}
-                className="bg-[#071DE3] hover:bg-[#0516B0] text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 Buscar
               </button>

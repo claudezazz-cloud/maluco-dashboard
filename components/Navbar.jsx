@@ -15,7 +15,7 @@ export default function Navbar({ user }) {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2 font-bold text-white">
-            <span className="text-xl">👽</span>
+            <img src="/logo-zazz.png" alt="Zazz" className="h-8 w-auto" />
             <span>Maluco da IA</span>
           </Link>
           <div className="flex gap-1">
@@ -52,7 +52,7 @@ export default function Navbar({ user }) {
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-400">{user?.nome || user?.email}</span>
           {user?.role === 'admin' && (
-            <span className="text-xs bg-blue-900/50 text-blue-300 border border-blue-900 px-2 py-0.5 rounded">Admin</span>
+            <span className="text-xs bg-green-900/50 text-green-300 border border-green-900 px-2 py-0.5 rounded">Admin</span>
           )}
           <button onClick={logout} className="text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">
             Sair

@@ -162,7 +162,7 @@ export default function ClientesPage() {
         <div
           className={`bg-[#1a1a24] rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
             dragOver
-              ? 'border-[#071DE3] bg-[#071DE3]/5'
+              ? 'border-[#008000] bg-[#008000]/5'
               : 'border-gray-700 hover:border-gray-600'
           }`}
           onClick={() => fileRef.current?.click()}
@@ -204,7 +204,7 @@ export default function ClientesPage() {
                 <button
                   onClick={enviarParaBot}
                   disabled={uploading}
-                  className="bg-[#071DE3] hover:bg-[#0516B0] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium"
+                  className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium"
                 >
                   {uploading ? 'Enviando...' : `Enviar ${preview.totalRows} clientes para o Bot`}
                 </button>
@@ -255,10 +255,10 @@ export default function ClientesPage() {
         <div className="mt-8 bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
           <h3 className="text-white font-medium mb-3">Como funciona</h3>
           <div className="space-y-2 text-sm text-gray-400">
-            <p><span className="text-blue-400">1.</span> Exporte a lista de clientes do seu sistema (IXC, SGP, etc) em formato <strong className="text-white">.xlsx</strong></p>
-            <p><span className="text-blue-400">2.</span> A planilha deve ter pelo menos as colunas <strong className="text-white">Cod</strong> (codigo) e <strong className="text-white">Nome</strong> (nome do cliente)</p>
-            <p><span className="text-blue-400">3.</span> Importe aqui — o bot passara a reconhecer os clientes quando mencionados no WhatsApp</p>
-            <p><span className="text-blue-400">4.</span> Os dados ficam disponiveis <strong className="text-white">permanentemente</strong> ate serem removidos ou substituidos por uma nova importacao</p>
+            <p><span className="text-green-400">1.</span> Exporte a lista de clientes do seu sistema (IXC, SGP, etc) em formato <strong className="text-white">.xlsx</strong></p>
+            <p><span className="text-green-400">2.</span> A planilha deve ter pelo menos as colunas <strong className="text-white">Cod</strong> (codigo) e <strong className="text-white">Nome</strong> (nome do cliente)</p>
+            <p><span className="text-green-400">3.</span> Importe aqui — o bot passara a reconhecer os clientes quando mencionados no WhatsApp</p>
+            <p><span className="text-green-400">4.</span> Os dados ficam disponiveis <strong className="text-white">permanentemente</strong> ate serem removidos ou substituidos por uma nova importacao</p>
           </div>
         </div>
 
