@@ -3,23 +3,41 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 
+const CATEGORIAS = ['Geral', 'Atendimento', 'Técnico', 'Financeiro', 'Comercial', 'RH', 'Outro']
+
 export default function TreinamentoPage() {
   const router = useRouter()
   const [user, setUser] = useState(null)
+  const [tab, setTab] = useState('regras')
+
+  // ===== REGRAS =====
   const [regras, setRegras] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loadingRegras, setLoadingRegras] = useState(true)
   const [novaRegra, setNovaRegra] = useState('')
   const [editandoId, setEditandoId] = useState(null)
   const [editandoTexto, setEditandoTexto] = useState('')
   const [msg, setMsg] = useState({ texto: '', tipo: '' })
   const [salvando, setSalvando] = useState(false)
 
-  // Colaboradores
+  // ===== COLABORADORES =====
   const [colaboradores, setColaboradores] = useState([])
   const [novoColab, setNovoColab] = useState({ nome: '', cargo: '', funcoes: '' })
   const [editandoColab, setEditandoColab] = useState(null)
   const [editColabForm, setEditColabForm] = useState({})
   const [msgColab, setMsgColab] = useState({ texto: '', tipo: '' })
+
+  // ===== POPs =====
+  const [pops, setPops] = useState([])
+  const [loadingPops, setLoadingPops] = useState(true)
+  const [expandido, setExpandido] = useState(null)
+  const [editandoPop, setEditandoPop] = useState(null)
+  const [editPopForm, setEditPopForm] = useState({})
+  const [novoPopForm, setNovoPopForm] = useState({ titulo: '', categoria: 'Geral', conteudo: '' })
+  const [mostraNovoPop, setMostraNovoPop] = useState(false)
+  const [buscaPop, setBuscaPop] = useState('')
+  const [categoriaFiltro, setCategoriaFiltro] = useState('Todas')
+  const [msgPop, setMsgPop] = useState({ texto: '', tipo: '' })
+  const [salvandoPop, setSalvandoPop] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => {
@@ -32,56 +50,15 @@ export default function TreinamentoPage() {
     })
     fetchRegras()
     fetchColaboradores()
+    fetchPops()
   }, [router])
 
-  async function fetchColaboradores() {
-    const r = await fetch('/api/colaboradores')
-    if (r.ok) setColaboradores(await r.json())
-  }
-
-  function showMsgColab(texto, tipo = 'success') {
-    setMsgColab({ texto, tipo })
-    setTimeout(() => setMsgColab({ texto: '', tipo: '' }), 3000)
-  }
-
-  async function adicionarColab() {
-    if (!novoColab.nome.trim()) return
-    const r = await fetch('/api/colaboradores', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(novoColab),
-    })
-    if (r.ok) {
-      setNovoColab({ nome: '', cargo: '', funcoes: '' })
-      showMsgColab('Colaborador adicionado!')
-      fetchColaboradores()
-    } else {
-      const d = await r.json().catch(() => ({}))
-      showMsgColab('Erro: ' + (d.error || r.status), 'error')
-    }
-  }
-
-  async function salvarColab(id) {
-    const r = await fetch(`/api/colaboradores/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editColabForm),
-    })
-    if (r.ok) { setEditandoColab(null); showMsgColab('Atualizado!'); fetchColaboradores() }
-    else showMsgColab('Erro ao salvar', 'error')
-  }
-
-  async function excluirColab(id, nome) {
-    if (!confirm(`Remover ${nome}?`)) return
-    await fetch(`/api/colaboradores/${id}`, { method: 'DELETE' })
-    fetchColaboradores()
-  }
-
+  // ===== REGRAS FUNCS =====
   async function fetchRegras() {
-    setLoading(true)
+    setLoadingRegras(true)
     const r = await fetch('/api/treinamento')
     if (r.ok) setRegras(await r.json())
-    setLoading(false)
+    setLoadingRegras(false)
   }
 
   function showMsg(texto, tipo = 'success') {
@@ -129,274 +106,524 @@ export default function TreinamentoPage() {
   async function excluirRegra(id, texto) {
     if (!confirm(`Excluir esta regra?\n\n"${texto}"`)) return
     const r = await fetch(`/api/treinamento/${id}`, { method: 'DELETE' })
+    if (r.ok) { showMsg('Regra removida.'); fetchRegras() }
+    else showMsg('Erro ao excluir', 'error')
+  }
+
+  // ===== COLABORADORES FUNCS =====
+  async function fetchColaboradores() {
+    const r = await fetch('/api/colaboradores')
+    if (r.ok) setColaboradores(await r.json())
+  }
+
+  function showMsgColab(texto, tipo = 'success') {
+    setMsgColab({ texto, tipo })
+    setTimeout(() => setMsgColab({ texto: '', tipo: '' }), 3000)
+  }
+
+  async function adicionarColab() {
+    if (!novoColab.nome.trim()) return
+    const r = await fetch('/api/colaboradores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(novoColab),
+    })
     if (r.ok) {
-      showMsg('Regra removida.')
-      fetchRegras()
+      setNovoColab({ nome: '', cargo: '', funcoes: '' })
+      showMsgColab('Colaborador adicionado!')
+      fetchColaboradores()
     } else {
-      showMsg('Erro ao excluir', 'error')
+      const d = await r.json().catch(() => ({}))
+      showMsgColab('Erro: ' + (d.error || r.status), 'error')
     }
   }
 
-  function iniciarEdicao(regra) {
-    setEditandoId(regra.id)
-    setEditandoTexto(regra.regra)
+  async function salvarColab(id) {
+    const r = await fetch(`/api/colaboradores/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editColabForm),
+    })
+    if (r.ok) { setEditandoColab(null); showMsgColab('Atualizado!'); fetchColaboradores() }
+    else showMsgColab('Erro ao salvar', 'error')
   }
 
-  function cancelarEdicao() {
-    setEditandoId(null)
-    setEditandoTexto('')
+  async function excluirColab(id, nome) {
+    if (!confirm(`Remover ${nome}?`)) return
+    await fetch(`/api/colaboradores/${id}`, { method: 'DELETE' })
+    fetchColaboradores()
   }
+
+  // ===== POPs FUNCS =====
+  async function fetchPops() {
+    setLoadingPops(true)
+    const r = await fetch('/api/pops')
+    if (r.ok) setPops(await r.json())
+    setLoadingPops(false)
+  }
+
+  function showMsgPop(texto, tipo = 'success') {
+    setMsgPop({ texto, tipo })
+    setTimeout(() => setMsgPop({ texto: '', tipo: '' }), 3000)
+  }
+
+  async function salvarNovoPop() {
+    if (!novoPopForm.titulo.trim() || !novoPopForm.conteudo.trim()) return
+    setSalvandoPop(true)
+    const r = await fetch('/api/pops', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(novoPopForm),
+    })
+    setSalvandoPop(false)
+    if (r.ok) {
+      setNovoPopForm({ titulo: '', categoria: 'Geral', conteudo: '' })
+      setMostraNovoPop(false)
+      showMsgPop('POP adicionado com sucesso!')
+      fetchPops()
+    } else {
+      const d = await r.json().catch(() => ({}))
+      showMsgPop('Erro: ' + (d.error || r.status), 'error')
+    }
+  }
+
+  async function salvarEdicaoPop() {
+    setSalvandoPop(true)
+    const r = await fetch(`/api/pops/${editandoPop}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editPopForm),
+    })
+    setSalvandoPop(false)
+    if (r.ok) {
+      setEditandoPop(null)
+      showMsgPop('POP atualizado!')
+      fetchPops()
+    } else {
+      showMsgPop('Erro ao salvar', 'error')
+    }
+  }
+
+  async function excluirPop(id, titulo) {
+    if (!confirm(`Arquivar "${titulo}"?`)) return
+    await fetch(`/api/pops/${id}`, { method: 'DELETE' })
+    showMsgPop('POP arquivado.')
+    fetchPops()
+  }
+
+  const categorias = ['Todas', ...new Set(pops.map(p => p.categoria).filter(Boolean))]
+  const popsFiltrados = pops.filter(p => {
+    const matchBusca = !buscaPop || p.titulo.toLowerCase().includes(buscaPop.toLowerCase()) || p.conteudo.toLowerCase().includes(buscaPop.toLowerCase())
+    const matchCat = categoriaFiltro === 'Todas' || p.categoria === categoriaFiltro
+    return matchBusca && matchCat
+  })
+
+  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000] transition'
+  const inputEditCls = 'w-full bg-[#0f0f13] border border-[#008000] rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition'
+
+  const tabs = [
+    { id: 'regras', label: '🧠 Regras', count: regras.length },
+    { id: 'pops', label: '📋 POPs', count: pops.length },
+    { id: 'colaboradores', label: '👥 Colaboradores', count: colaboradores.length },
+  ]
 
   return (
     <div className="min-h-screen bg-[#0f0f13]">
       <Navbar user={user} />
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Treinamento da IA 🧠</h1>
-            <p className="text-gray-400 text-sm mt-1">
-              Regras e instruções que o Maluco da IA segue em todas as respostas
-            </p>
-          </div>
-          <span className="bg-green-900/40 text-green-300 border border-green-900 text-sm px-3 py-1 rounded-full">
-            {regras.length} {regras.length === 1 ? 'regra' : 'regras'}
-          </span>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-white">Treinamento & POPs</h1>
+          <p className="text-gray-400 text-sm mt-1">Regras, procedimentos e equipe do Maluco da IA</p>
         </div>
 
-        {/* Info */}
-        <div className="bg-green-900/20 border border-green-800 rounded-xl px-5 py-3 mb-6 text-sm text-green-300">
-          💡 Essas regras são aplicadas em <strong>todas</strong> as respostas do bot. Use para definir comportamentos, proibições, formatos de resposta ou informações fixas da empresa. Os colaboradores também podem ensinar o bot via WhatsApp com <code className="bg-green-900/40 px-1 rounded">Claude aprenda: ...</code>
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 bg-[#1a1a24] p-1 rounded-xl border border-gray-800 w-fit">
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                tab === t.id
+                  ? 'bg-[#008000] text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+            >
+              {t.label}
+              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+                tab === t.id ? 'bg-green-700' : 'bg-gray-800'
+              }`}>{t.count}</span>
+            </button>
+          ))}
         </div>
 
-        {/* Mensagem de feedback */}
-        {msg.texto && (
-          <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${
-            msg.tipo === 'error'
-              ? 'bg-red-900/20 border-red-800 text-red-400'
-              : 'bg-green-900/20 border-green-800 text-green-400'
-          }`}>
-            {msg.texto}
-          </div>
+        {/* ==================== ABA REGRAS ==================== */}
+        {tab === 'regras' && (
+          <>
+            <div className="bg-green-900/20 border border-green-800 rounded-xl px-5 py-3 mb-6 text-sm text-green-300">
+              💡 Essas regras são aplicadas em <strong>todas</strong> as respostas do bot. Os colaboradores também podem ensinar via WhatsApp com <code className="bg-green-900/40 px-1 rounded">Claude aprenda: ...</code>
+            </div>
+
+            {msg.texto && (
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msg.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+                {msg.texto}
+              </div>
+            )}
+
+            {/* Adicionar nova regra */}
+            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
+              <h2 className="text-white font-medium mb-3">+ Adicionar nova regra</h2>
+              <textarea
+                value={novaRegra}
+                onChange={e => setNovaRegra(e.target.value)}
+                placeholder="Ex: Sempre responda em português formal. Nunca mencione preços sem consultar a tabela oficial."
+                rows={3}
+                className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#008000] resize-none transition"
+              />
+              <div className="flex justify-between items-center mt-3">
+                <span className="text-xs text-gray-500">{novaRegra.length} caracteres</span>
+                <button
+                  onClick={adicionarRegra}
+                  disabled={!novaRegra.trim() || salvando}
+                  className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
+                >
+                  {salvando ? 'Salvando...' : 'Adicionar Regra'}
+                </button>
+              </div>
+            </div>
+
+            {/* Lista de regras */}
+            <div className="bg-[#1a1a24] rounded-xl border border-gray-800">
+              <div className="px-5 py-4 border-b border-gray-800">
+                <h2 className="text-white font-medium">Regras ativas</h2>
+              </div>
+              {loadingRegras ? (
+                <div className="p-8 text-center text-gray-500">Carregando...</div>
+              ) : regras.length === 0 ? (
+                <div className="p-10 text-center">
+                  <div className="text-4xl mb-3">🤖</div>
+                  <p className="text-gray-400">Nenhuma regra cadastrada ainda.</p>
+                  <p className="text-gray-600 text-sm mt-1">Adicione regras para personalizar o comportamento do bot.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-800/60">
+                  {regras.map((r, i) => (
+                    <div key={r.id} className="px-5 py-4 group">
+                      {editandoId === r.id ? (
+                        <div>
+                          <div className="text-xs text-green-400 mb-2 font-medium">Editando regra #{i + 1}</div>
+                          <textarea
+                            value={editandoTexto}
+                            onChange={e => setEditandoTexto(e.target.value)}
+                            rows={3}
+                            className="w-full bg-[#0f0f13] border border-[#008000] rounded-lg px-4 py-3 text-white text-sm focus:outline-none resize-none"
+                            autoFocus
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <button onClick={() => salvarEdicao(r.id)} disabled={salvando}
+                              className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-xs px-4 py-1.5 rounded-lg transition">
+                              {salvando ? 'Salvando...' : 'Salvar'}
+                            </button>
+                            <button onClick={() => setEditandoId(null)}
+                              className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-4 py-1.5 rounded-lg transition">
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-4">
+                          <span className="text-xs text-gray-600 font-mono mt-0.5 w-6 text-right shrink-0">{i + 1}</span>
+                          <p className="text-gray-200 text-sm flex-1 leading-relaxed whitespace-pre-wrap">{r.regra}</p>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                            <button onClick={() => { setEditandoId(r.id); setEditandoTexto(r.regra) }}
+                              className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">
+                              Editar
+                            </button>
+                            <button onClick={() => excluirRegra(r.id, r.regra)}
+                              className="text-xs text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg transition">
+                              Excluir
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
 
-        {/* Adicionar nova regra */}
-        <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
-          <h2 className="text-white font-medium mb-3">+ Adicionar nova regra</h2>
-          <textarea
-            value={novaRegra}
-            onChange={e => setNovaRegra(e.target.value)}
-            placeholder="Ex: Sempre responda em português formal. Nunca mencione preços sem consultar a tabela oficial."
-            rows={3}
-            className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#008000] resize-none transition"
-          />
-          <div className="flex justify-between items-center mt-3">
-            <span className="text-xs text-gray-500">{novaRegra.length} caracteres</span>
-            <button
-              onClick={adicionarRegra}
-              disabled={!novaRegra.trim() || salvando}
-              className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
-            >
-              {salvando ? 'Salvando...' : 'Adicionar Regra'}
-            </button>
-          </div>
-        </div>
-
-        {/* Lista de regras */}
-        <div className="bg-[#1a1a24] rounded-xl border border-gray-800">
-          <div className="px-5 py-4 border-b border-gray-800">
-            <h2 className="text-white font-medium">Regras ativas</h2>
-          </div>
-
-          {loading ? (
-            <div className="p-8 text-center text-gray-500">Carregando...</div>
-          ) : regras.length === 0 ? (
-            <div className="p-10 text-center">
-              <div className="text-4xl mb-3">🤖</div>
-              <p className="text-gray-400">Nenhuma regra cadastrada ainda.</p>
-              <p className="text-gray-600 text-sm mt-1">Adicione regras para personalizar o comportamento do bot.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-800/60">
-              {regras.map((r, i) => (
-                <div key={r.id} className="px-5 py-4 group">
-                  {editandoId === r.id ? (
-                    /* Modo edição */
-                    <div>
-                      <div className="text-xs text-green-400 mb-2 font-medium">Editando regra #{i + 1}</div>
-                      <textarea
-                        value={editandoTexto}
-                        onChange={e => setEditandoTexto(e.target.value)}
-                        rows={3}
-                        className="w-full bg-[#0f0f13] border border-[#008000] rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-[#008000] resize-none"
-                        autoFocus
-                      />
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={() => salvarEdicao(r.id)}
-                          disabled={salvando}
-                          className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-xs px-4 py-1.5 rounded-lg transition"
-                        >
-                          {salvando ? 'Salvando...' : 'Salvar'}
-                        </button>
-                        <button
-                          onClick={cancelarEdicao}
-                          className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-4 py-1.5 rounded-lg transition"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Modo visualização */
-                    <div className="flex items-start gap-4">
-                      <span className="text-xs text-gray-600 font-mono mt-0.5 w-6 text-right shrink-0">{i + 1}</span>
-                      <p className="text-gray-200 text-sm flex-1 leading-relaxed whitespace-pre-wrap">{r.regra}</p>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
-                        <button
-                          onClick={() => iniciarEdicao(r)}
-                          className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => excluirRegra(r.id, r.regra)}
-                          className="text-xs text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg transition"
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* ===== COLABORADORES ===== */}
-        <div className="mt-10">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h1 className="text-2xl font-bold text-white">Colaboradores 👥</h1>
-              <p className="text-gray-400 text-sm mt-1">Cargo e funções de cada membro da equipe</p>
-            </div>
-            <span className="bg-green-900/40 text-green-300 border border-green-900 text-sm px-3 py-1 rounded-full">
-              {colaboradores.length} {colaboradores.length === 1 ? 'colaborador' : 'colaboradores'}
-            </span>
-          </div>
-
-          {msgColab.texto && (
-            <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgColab.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
-              {msgColab.texto}
-            </div>
-          )}
-
-          {/* Adicionar colaborador */}
-          <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
-            <h2 className="text-white font-medium mb-3">+ Adicionar colaborador</h2>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Nome *</label>
-                <input
-                  value={novoColab.nome}
-                  onChange={e => setNovoColab({...novoColab, nome: e.target.value})}
-                  placeholder="Ex: Franquelin"
-                  className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000]"
-                />
+        {/* ==================== ABA POPs ==================== */}
+        {tab === 'pops' && (
+          <>
+            {msgPop.texto && (
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgPop.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+                {msgPop.texto}
               </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Cargo</label>
-                <input
-                  value={novoColab.cargo}
-                  onChange={e => setNovoColab({...novoColab, cargo: e.target.value})}
-                  placeholder="Ex: Agente de Relacionamento"
-                  className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000]"
-                />
-              </div>
-            </div>
-            <div className="mb-3">
-              <label className="block text-xs text-gray-400 mb-1">Funções e responsabilidades</label>
-              <textarea
-                value={novoColab.funcoes}
-                onChange={e => setNovoColab({...novoColab, funcoes: e.target.value})}
-                placeholder="Ex: Atende clientes, realiza visitas técnicas, gera ordens de serviço..."
-                rows={2}
-                className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000] resize-none"
-              />
-            </div>
-            <div className="flex justify-end">
+            )}
+
+            {/* Header + botão novo */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-gray-400 text-sm">Procedimentos Operacionais Padrão da empresa</p>
               <button
-                onClick={adicionarColab}
-                disabled={!novoColab.nome.trim()}
-                className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
+                onClick={() => { setMostraNovoPop(true); setExpandido(null); setEditandoPop(null) }}
+                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition font-medium"
               >
-                Adicionar
+                + Novo POP
               </button>
             </div>
-          </div>
 
-          {/* Lista colaboradores */}
-          <div className="bg-[#1a1a24] rounded-xl border border-gray-800">
-            <div className="px-5 py-4 border-b border-gray-800">
-              <h2 className="text-white font-medium">Equipe cadastrada</h2>
+            {/* Formulário novo POP */}
+            {mostraNovoPop && (
+              <div className="bg-[#1a1a24] rounded-xl border border-green-900 p-6 mb-6">
+                <h2 className="text-white font-medium mb-4">Novo POP</h2>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Título *</label>
+                    <input value={novoPopForm.titulo} onChange={e => setNovoPopForm({...novoPopForm, titulo: e.target.value})}
+                      placeholder="Ex: Como realizar ordem de serviço" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Categoria</label>
+                    <select value={novoPopForm.categoria} onChange={e => setNovoPopForm({...novoPopForm, categoria: e.target.value})}
+                      className={inputCls}>
+                      {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-xs text-gray-400 mb-1">Conteúdo *</label>
+                  <textarea
+                    value={novoPopForm.conteudo}
+                    onChange={e => setNovoPopForm({...novoPopForm, conteudo: e.target.value})}
+                    placeholder="Descreva o procedimento passo a passo..."
+                    rows={10}
+                    className={inputCls + ' resize-y'}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={salvarNovoPop} disabled={!novoPopForm.titulo.trim() || !novoPopForm.conteudo.trim() || salvandoPop}
+                    className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
+                    {salvandoPop ? 'Salvando...' : 'Salvar POP'}
+                  </button>
+                  <button onClick={() => setMostraNovoPop(false)}
+                    className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-6 py-2 rounded-lg transition">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Busca e filtros */}
+            <div className="flex gap-3 mb-4">
+              <input
+                value={buscaPop}
+                onChange={e => setBuscaPop(e.target.value)}
+                placeholder="Buscar por título ou conteúdo..."
+                className="flex-1 bg-[#1a1a24] border border-gray-800 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-[#008000] transition"
+              />
+              <select value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}
+                className="bg-[#1a1a24] border border-gray-800 rounded-lg px-3 py-2 text-gray-300 text-sm focus:outline-none focus:border-[#008000]">
+                {categorias.map(c => <option key={c}>{c}</option>)}
+              </select>
             </div>
-            {colaboradores.length === 0 ? (
-              <div className="p-10 text-center">
-                <div className="text-4xl mb-3">👥</div>
-                <p className="text-gray-400">Nenhum colaborador cadastrado.</p>
+
+            {/* Lista de POPs */}
+            {loadingPops ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <div key={i} className="bg-[#1a1a24] rounded-xl border border-gray-800 h-16 animate-pulse" />)}
+              </div>
+            ) : popsFiltrados.length === 0 ? (
+              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-12 text-center">
+                <div className="text-4xl mb-3">📋</div>
+                <p className="text-gray-400">{buscaPop || categoriaFiltro !== 'Todas' ? 'Nenhum POP encontrado com esses filtros.' : 'Nenhum POP cadastrado ainda.'}</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-800/60">
-                {colaboradores.map(c => (
-                  <div key={c.id} className="px-5 py-4 group">
-                    {editandoColab === c.id ? (
-                      <div>
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Nome</label>
-                            <input value={editColabForm.nome || ''} onChange={e => setEditColabForm({...editColabForm, nome: e.target.value})}
-                              className="w-full bg-[#0f0f13] border border-[#008000] rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
+              <div className="space-y-3">
+                {popsFiltrados.map(pop => (
+                  <div key={pop.id} className="bg-[#1a1a24] rounded-xl border border-gray-800 overflow-hidden">
+                    <div
+                      className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-800/30 transition"
+                      onClick={() => editandoPop !== pop.id && setExpandido(expandido === pop.id ? null : pop.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">📄</span>
+                        <div>
+                          <span className="text-white font-medium">{pop.titulo}</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {pop.categoria && (
+                              <span className="text-xs bg-green-900/30 text-green-400 border border-green-900/50 px-2 py-0.5 rounded-full">
+                                {pop.categoria}
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-600">
+                              {new Date(pop.atualizado_em).toLocaleDateString('pt-BR')}
+                            </span>
                           </div>
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Cargo</label>
-                            <input value={editColabForm.cargo || ''} onChange={e => setEditColabForm({...editColabForm, cargo: e.target.value})}
-                              className="w-full bg-[#0f0f13] border border-[#008000] rounded-lg px-3 py-2 text-white text-sm focus:outline-none" />
-                          </div>
-                        </div>
-                        <textarea value={editColabForm.funcoes || ''} onChange={e => setEditColabForm({...editColabForm, funcoes: e.target.value})}
-                          rows={2} className="w-full bg-[#0f0f13] border border-[#008000] rounded-lg px-3 py-2 text-white text-sm focus:outline-none resize-none mb-2" />
-                        <div className="flex gap-2">
-                          <button onClick={() => salvarColab(c.id)} className="bg-[#008000] hover:bg-[#006600] text-white text-xs px-4 py-1.5 rounded-lg">Salvar</button>
-                          <button onClick={() => setEditandoColab(null)} className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-4 py-1.5 rounded-lg">Cancelar</button>
                         </div>
                       </div>
-                    ) : (
-                      <div className="flex items-start gap-4">
-                        <div className="w-9 h-9 rounded-full bg-green-900/50 border border-green-900 flex items-center justify-center text-green-300 font-bold text-sm shrink-0">
-                          {c.nome.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-medium">{c.nome}</span>
-                            {c.cargo && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{c.cargo}</span>}
+                      <div className="flex items-center gap-2">
+                        <button onClick={e => { e.stopPropagation(); setEditandoPop(pop.id); setEditPopForm({ titulo: pop.titulo, categoria: pop.categoria, conteudo: pop.conteudo }); setExpandido(pop.id) }}
+                          className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">
+                          Editar
+                        </button>
+                        <button onClick={e => { e.stopPropagation(); excluirPop(pop.id, pop.titulo) }}
+                          className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg transition">
+                          Arquivar
+                        </button>
+                        <span className={`text-gray-400 transition-transform ${expandido === pop.id ? 'rotate-180' : ''}`}>▾</span>
+                      </div>
+                    </div>
+
+                    {expandido === pop.id && (
+                      <div className="border-t border-gray-800 px-5 py-4">
+                        {editandoPop === pop.id ? (
+                          <div>
+                            <div className="grid grid-cols-2 gap-3 mb-3">
+                              <div>
+                                <label className="block text-xs text-gray-400 mb-1">Título</label>
+                                <input value={editPopForm.titulo} onChange={e => setEditPopForm({...editPopForm, titulo: e.target.value})} className={inputEditCls} />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-400 mb-1">Categoria</label>
+                                <select value={editPopForm.categoria} onChange={e => setEditPopForm({...editPopForm, categoria: e.target.value})} className={inputEditCls}>
+                                  {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            <textarea
+                              value={editPopForm.conteudo}
+                              onChange={e => setEditPopForm({...editPopForm, conteudo: e.target.value})}
+                              rows={15}
+                              className={inputEditCls + ' resize-y mb-3'}
+                            />
+                            <div className="flex gap-3">
+                              <button onClick={salvarEdicaoPop} disabled={salvandoPop}
+                                className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition">
+                                {salvandoPop ? 'Salvando...' : 'Salvar'}
+                              </button>
+                              <button onClick={() => setEditandoPop(null)}
+                                className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-5 py-2 rounded-lg transition">
+                                Cancelar
+                              </button>
+                            </div>
                           </div>
-                          {c.funcoes && <p className="text-gray-400 text-sm mt-1 leading-relaxed">{c.funcoes}</p>}
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
-                          <button onClick={() => { setEditandoColab(c.id); setEditColabForm({nome: c.nome, cargo: c.cargo, funcoes: c.funcoes}) }}
-                            className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg">Editar</button>
-                          <button onClick={() => excluirColab(c.id, c.nome)}
-                            className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg">Remover</button>
-                        </div>
+                        ) : (
+                          <pre className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed font-sans">
+                            {pop.conteudo}
+                          </pre>
+                        )}
                       </div>
                     )}
                   </div>
                 ))}
               </div>
             )}
-          </div>
-        </div>
+          </>
+        )}
+
+        {/* ==================== ABA COLABORADORES ==================== */}
+        {tab === 'colaboradores' && (
+          <>
+            {msgColab.texto && (
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgColab.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+                {msgColab.texto}
+              </div>
+            )}
+
+            {/* Adicionar colaborador */}
+            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
+              <h2 className="text-white font-medium mb-3">+ Adicionar colaborador</h2>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Nome *</label>
+                  <input value={novoColab.nome} onChange={e => setNovoColab({...novoColab, nome: e.target.value})}
+                    placeholder="Ex: Franquelin" className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Cargo</label>
+                  <input value={novoColab.cargo} onChange={e => setNovoColab({...novoColab, cargo: e.target.value})}
+                    placeholder="Ex: Agente de Relacionamento" className={inputCls} />
+                </div>
+              </div>
+              <div className="mb-3">
+                <label className="block text-xs text-gray-400 mb-1">Funções e responsabilidades</label>
+                <textarea value={novoColab.funcoes} onChange={e => setNovoColab({...novoColab, funcoes: e.target.value})}
+                  placeholder="Ex: Atende clientes, realiza visitas técnicas..." rows={2}
+                  className={inputCls + ' resize-none'} />
+              </div>
+              <div className="flex justify-end">
+                <button onClick={adicionarColab} disabled={!novoColab.nome.trim()}
+                  className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium">
+                  Adicionar
+                </button>
+              </div>
+            </div>
+
+            {/* Lista colaboradores */}
+            <div className="bg-[#1a1a24] rounded-xl border border-gray-800">
+              <div className="px-5 py-4 border-b border-gray-800">
+                <h2 className="text-white font-medium">Equipe cadastrada</h2>
+              </div>
+              {colaboradores.length === 0 ? (
+                <div className="p-10 text-center">
+                  <div className="text-4xl mb-3">👥</div>
+                  <p className="text-gray-400">Nenhum colaborador cadastrado.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-800/60">
+                  {colaboradores.map(c => (
+                    <div key={c.id} className="px-5 py-4 group">
+                      {editandoColab === c.id ? (
+                        <div>
+                          <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Nome</label>
+                              <input value={editColabForm.nome || ''} onChange={e => setEditColabForm({...editColabForm, nome: e.target.value})}
+                                className={inputEditCls} />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Cargo</label>
+                              <input value={editColabForm.cargo || ''} onChange={e => setEditColabForm({...editColabForm, cargo: e.target.value})}
+                                className={inputEditCls} />
+                            </div>
+                          </div>
+                          <textarea value={editColabForm.funcoes || ''} onChange={e => setEditColabForm({...editColabForm, funcoes: e.target.value})}
+                            rows={2} className={inputEditCls + ' resize-none mb-2'} />
+                          <div className="flex gap-2">
+                            <button onClick={() => salvarColab(c.id)} className="bg-[#008000] hover:bg-[#006600] text-white text-xs px-4 py-1.5 rounded-lg">Salvar</button>
+                            <button onClick={() => setEditandoColab(null)} className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-4 py-1.5 rounded-lg">Cancelar</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-4">
+                          <div className="w-9 h-9 rounded-full bg-green-900/50 border border-green-900 flex items-center justify-center text-green-300 font-bold text-sm shrink-0">
+                            {c.nome.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-medium">{c.nome}</span>
+                              {c.cargo && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{c.cargo}</span>}
+                            </div>
+                            {c.funcoes && <p className="text-gray-400 text-sm mt-1 leading-relaxed">{c.funcoes}</p>}
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
+                            <button onClick={() => { setEditandoColab(c.id); setEditColabForm({nome: c.nome, cargo: c.cargo, funcoes: c.funcoes}) }}
+                              className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg">Editar</button>
+                            <button onClick={() => excluirColab(c.id, c.nome)}
+                              className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg">Remover</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
       </main>
     </div>

@@ -42,23 +42,17 @@ export default function Navbar({ user }) {
               </Link>
               {user?.role === 'admin' && (
                 <>
-                  <Link href="/pops" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    📋 POPs
-                  </Link>
                   <Link href="/treinamento" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    🧠 Treinamento
+                    🧠 Treinamento & POPs
+                  </Link>
+                  <Link href="/chamados" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                    🎫 Chamados & Clientes
                   </Link>
                   <Link href="/system-prompt" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                     ⚙️ System Prompt
                   </Link>
                   <Link href="/conversas" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                     💬 Conversas
-                  </Link>
-                  <Link href="/chamados" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    🎫 Chamados
-                  </Link>
-                  <Link href="/clientes" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    👥 Clientes
                   </Link>
                   <Link href="/admin" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                     Admin
