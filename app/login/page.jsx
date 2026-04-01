@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Bot } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -36,7 +37,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#0f0f13]">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">👽🍀</div>
+          <Bot className="w-12 h-12 text-[#2E4EF0] mx-auto mb-3" />
           <h1 className="text-2xl font-bold text-white">Maluco da IA</h1>
           <p className="text-gray-400 text-sm mt-1">Dashboard de Monitoramento</p>
         </div>

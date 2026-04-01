@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import { Ticket, Users, Loader2, FileSpreadsheet } from 'lucide-react'
 
 function formatTTL(seconds) {
   if (!seconds || seconds < 0) return 'Expirado'
@@ -238,8 +239,8 @@ export default function ChamadosPage() {
   }
 
   const tabs = [
-    { id: 'chamados', label: '🎫 Chamados', badge: chamadosStatus?.ativo ? chamadosStatus.total : null },
-    { id: 'clientes', label: '👥 Clientes', badge: clientesStatus?.ativo ? clientesStatus.total : null },
+    { id: 'chamados', label: <span className="flex items-center gap-1"><Ticket className="w-3.5 h-3.5" /> Chamados</span>, badge: chamadosStatus?.ativo ? chamadosStatus.total : null },
+    { id: 'clientes', label: <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Clientes</span>, badge: clientesStatus?.ativo ? clientesStatus.total : null },
   ]
 
   return (
@@ -340,7 +341,7 @@ export default function ChamadosPage() {
             >
               <input ref={chamadosFileRef} type="file" accept=".xlsx,.xls" className="hidden"
                 onChange={e => handleChamadosFile(e.target.files?.[0])} />
-              <div className="text-4xl mb-3">{uploadingChamados ? '⏳' : '📊'}</div>
+              <div className="mb-3">{uploadingChamados ? <Loader2 className="w-10 h-10 text-gray-600 mx-auto animate-spin" /> : <FileSpreadsheet className="w-10 h-10 text-gray-600 mx-auto" />}</div>
               <p className="text-white font-medium">
                 {uploadingChamados ? 'Lendo planilha...' : 'Clique ou arraste a planilha XLSX aqui'}
               </p>
@@ -422,7 +423,7 @@ export default function ChamadosPage() {
             >
               <input ref={clientesFileRef} type="file" accept=".xlsx,.xls" className="hidden"
                 onChange={e => handleClientesFile(e.target.files?.[0])} />
-              <div className="text-4xl mb-3">{uploadingClientes ? '⏳' : '👥'}</div>
+              <div className="mb-3">{uploadingClientes ? <Loader2 className="w-10 h-10 text-gray-600 mx-auto animate-spin" /> : <Users className="w-10 h-10 text-gray-600 mx-auto" />}</div>
               <p className="text-white font-medium">
                 {uploadingClientes ? 'Lendo planilha...' : 'Clique ou arraste a planilha XLSX aqui'}
               </p>

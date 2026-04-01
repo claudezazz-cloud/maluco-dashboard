@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import { Brain, Lightbulb, BotMessageSquare, Users, ClipboardList, FileText, ChevronDown } from 'lucide-react'
 
 const CATEGORIAS = ['Geral', 'Atendimento', 'Técnico', 'Financeiro', 'Comercial', 'RH', 'Outro']
 
@@ -222,9 +223,9 @@ export default function TreinamentoPage() {
   const inputEditCls = 'w-full bg-[#0f0f13] border border-[#008000] rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition'
 
   const tabs = [
-    { id: 'regras', label: '🧠 Regras', count: regras.length },
-    { id: 'pops', label: '📋 POPs', count: pops.length },
-    { id: 'colaboradores', label: '👥 Colaboradores', count: colaboradores.length },
+    { id: 'regras', label: <span className="flex items-center gap-1"><Brain className="w-3.5 h-3.5" /> Regras</span>, count: regras.length },
+    { id: 'pops', label: <span className="flex items-center gap-1"><ClipboardList className="w-3.5 h-3.5" /> POPs</span>, count: pops.length },
+    { id: 'colaboradores', label: <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Colaboradores</span>, count: colaboradores.length },
   ]
 
   return (
@@ -262,7 +263,7 @@ export default function TreinamentoPage() {
         {tab === 'regras' && (
           <>
             <div className="bg-green-900/20 border border-green-800 rounded-xl px-5 py-3 mb-6 text-sm text-green-300">
-              💡 Essas regras são aplicadas em <strong>todas</strong> as respostas do bot. Os colaboradores também podem ensinar via WhatsApp com <code className="bg-green-900/40 px-1 rounded">Claude aprenda: ...</code>
+              <Lightbulb className="w-4 h-4 inline shrink-0" /> Essas regras são aplicadas em <strong>todas</strong> as respostas do bot. Os colaboradores também podem ensinar via WhatsApp com <code className="bg-green-900/40 px-1 rounded">Claude aprenda: ...</code>
             </div>
 
             {msg.texto && (
@@ -302,7 +303,7 @@ export default function TreinamentoPage() {
                 <div className="p-8 text-center text-gray-500">Carregando...</div>
               ) : regras.length === 0 ? (
                 <div className="p-10 text-center">
-                  <div className="text-4xl mb-3">🤖</div>
+                  <BotMessageSquare className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-400">Nenhuma regra cadastrada ainda.</p>
                   <p className="text-gray-600 text-sm mt-1">Adicione regras para personalizar o comportamento do bot.</p>
                 </div>
@@ -437,7 +438,7 @@ export default function TreinamentoPage() {
               </div>
             ) : popsFiltrados.length === 0 ? (
               <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-12 text-center">
-                <div className="text-4xl mb-3">📋</div>
+                <ClipboardList className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                 <p className="text-gray-400">{buscaPop || categoriaFiltro !== 'Todas' ? 'Nenhum POP encontrado com esses filtros.' : 'Nenhum POP cadastrado ainda.'}</p>
               </div>
             ) : (
@@ -449,7 +450,7 @@ export default function TreinamentoPage() {
                       onClick={() => editandoPop !== pop.id && setExpandido(expandido === pop.id ? null : pop.id)}
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-lg">📄</span>
+                        <FileText className="w-5 h-5 text-gray-400 shrink-0" />
                         <div>
                           <span className="text-white font-medium">{pop.titulo}</span>
                           <div className="flex items-center gap-2 mt-0.5">
@@ -473,7 +474,7 @@ export default function TreinamentoPage() {
                           className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg transition">
                           Arquivar
                         </button>
-                        <span className={`text-gray-400 transition-transform ${expandido === pop.id ? 'rotate-180' : ''}`}>▾</span>
+                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandido === pop.id ? 'rotate-180' : ''}`} />
                       </div>
                     </div>
 
@@ -569,7 +570,7 @@ export default function TreinamentoPage() {
               </div>
               {colaboradores.length === 0 ? (
                 <div className="p-10 text-center">
-                  <div className="text-4xl mb-3">👥</div>
+                  <Users className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-400">Nenhum colaborador cadastrado.</p>
                 </div>
               ) : (

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Sidebar from './Sidebar'
+import { LayoutDashboard, Brain, Ticket, Settings, MessageSquare, Shield, LogOut, Menu } from 'lucide-react'
 
 export default function Navbar({ user }) {
   const router = useRouter()
@@ -25,11 +26,7 @@ export default function Navbar({ user }) {
                 className="flex items-center gap-2 hover:opacity-80 transition"
                 title="Menu — Sobre"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                  <line x1="3" y1="18" x2="21" y2="18" />
-                </svg>
+                <Menu className="w-5 h-5 text-gray-400" />
                 <img src="/logo-zazz.png" alt="Zazz" className="h-8 w-auto" />
               </button>
               <Link href="/dashboard">
@@ -37,25 +34,25 @@ export default function Navbar({ user }) {
               </Link>
             </div>
             <div className="flex gap-1">
-              <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                Dashboard
+              <Link href="/dashboard" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
               </Link>
               {user?.role === 'admin' && (
                 <>
-                  <Link href="/treinamento" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    🧠 Treinamento & POPs
+                  <Link href="/treinamento" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                    <Brain className="w-3.5 h-3.5" /> Treinamento & POPs
                   </Link>
-                  <Link href="/chamados" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    🎫 Chamados & Clientes
+                  <Link href="/chamados" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                    <Ticket className="w-3.5 h-3.5" /> Chamados & Clientes
                   </Link>
-                  <Link href="/system-prompt" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    ⚙️ System Prompt
+                  <Link href="/system-prompt" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                    <Settings className="w-3.5 h-3.5" /> System Prompt
                   </Link>
-                  <Link href="/conversas" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    💬 Conversas
+                  <Link href="/conversas" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                    <MessageSquare className="w-3.5 h-3.5" /> Conversas
                   </Link>
-                  <Link href="/admin" className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    Admin
+                  <Link href="/admin" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                    <Shield className="w-3.5 h-3.5" /> Admin
                   </Link>
                 </>
               )}
@@ -66,8 +63,8 @@ export default function Navbar({ user }) {
             {user?.role === 'admin' && (
               <span className="text-xs bg-green-900/50 text-green-300 border border-green-900 px-2 py-0.5 rounded">Admin</span>
             )}
-            <button onClick={logout} className="text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">
-              Sair
+            <button onClick={logout} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">
+              <LogOut className="w-3.5 h-3.5" /> Sair
             </button>
           </div>
         </div>

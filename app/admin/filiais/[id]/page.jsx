@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import { ArrowLeft, CheckCircle2, Square } from 'lucide-react'
 
 function maskKey(val) {
   if (!val || val.length <= 6) return val || '—'
@@ -202,7 +203,7 @@ export default function FilialDetailPage() {
               onClick={() => router.push('/admin')}
               className="text-gray-400 hover:text-white text-sm transition"
             >
-              ← Voltar
+              <ArrowLeft className="w-4 h-4 inline mr-1" />Voltar
             </button>
             <div>
               <h1 className="text-2xl font-bold text-white">{filial.nome}</h1>
@@ -414,7 +415,7 @@ function Row({ label, value, mono }) {
 function CheckItem({ ok, label, detail }) {
   return (
     <div className="flex items-start gap-2 text-sm">
-      <span className="shrink-0 mt-0.5 text-base">{ok ? '✅' : '⬜'}</span>
+      {ok ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" /> : <Square className="w-4 h-4 text-gray-600 shrink-0 mt-0.5" />}
       <div>
         <span className={ok ? 'text-white' : 'text-gray-400'}>{label}</span>
         {detail && <span className="text-gray-500 text-xs ml-2">{detail}</span>}

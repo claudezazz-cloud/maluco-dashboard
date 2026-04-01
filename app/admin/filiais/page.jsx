@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import { ArrowLeft, Check, CheckCircle2, XCircle } from 'lucide-react'
 
 const TOTAL_STEPS = 4
 
@@ -149,7 +150,7 @@ export default function NovaFilialPage() {
             onClick={() => router.push('/admin')}
             className="text-gray-400 hover:text-white text-sm flex items-center gap-1 transition"
           >
-            ← Voltar
+            <ArrowLeft className="w-4 h-4" /> Voltar
           </button>
           <div>
             <h1 className="text-2xl font-bold text-white">Nova Filial</h1>
@@ -167,7 +168,7 @@ export default function NovaFilialPage() {
               <div key={n} className="flex items-center gap-2 flex-1">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition
                   ${done ? 'bg-green-600 text-white' : active ? 'bg-[#008000] text-white' : 'bg-gray-800 text-gray-500'}`}>
-                  {done ? '✓' : n}
+                  {done ? <Check className="w-4 h-4" /> : n}
                 </div>
                 <span className={`text-xs hidden sm:block ${active ? 'text-white' : 'text-gray-500'}`}>{title}</span>
                 {i < TOTAL_STEPS - 1 && <div className={`h-px flex-1 ${done ? 'bg-green-700' : 'bg-gray-800'}`} />}
@@ -503,7 +504,7 @@ function Row({ label, value, mono }) {
 function StatusItem({ ok, label, detail }) {
   return (
     <div className="flex items-start gap-2 text-sm">
-      <span className="shrink-0 mt-0.5">{ok ? '✅' : '❌'}</span>
+      <span className="shrink-0 mt-0.5">{ok ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-red-500" />}</span>
       <div>
         <span className={ok ? 'text-green-400' : 'text-red-400'}>{label}</span>
         {detail && <span className="text-gray-500 text-xs ml-2">{detail}</span>}

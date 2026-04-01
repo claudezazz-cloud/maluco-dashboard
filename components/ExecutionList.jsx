@@ -1,3 +1,5 @@
+import { CheckCircle2, XCircle, RefreshCw, Clock } from 'lucide-react'
+
 export default function ExecutionList({ executions }) {
   if (!executions?.length) {
     return <p className="text-gray-500 text-sm text-center py-12">Nenhuma execução encontrada.</p>
@@ -15,11 +17,13 @@ export default function ExecutionList({ executions }) {
       running: 'bg-yellow-900/40 text-yellow-400 border-yellow-800',
       waiting: 'bg-green-900/40 text-green-400 border-green-800',
     }
-    const labels = { success: '✓ Sucesso', error: '✗ Erro', running: '⟳ Executando', waiting: '⏳ Aguardando' }
+    const icons = { success: CheckCircle2, error: XCircle, running: RefreshCw, waiting: Clock }
+    const labels = { success: 'Sucesso', error: 'Erro', running: 'Executando', waiting: 'Aguardando' }
+    const Icon = icons[status]
     const cls = map[status] || 'bg-gray-800 text-gray-400 border-gray-700'
     return (
       <span className={`text-xs border px-2 py-0.5 rounded-full font-medium ${cls}`}>
-        {labels[status] || status}
+        {Icon && <Icon className="w-3 h-3 inline mr-1" />}{labels[status] || status}
       </span>
     )
   }
