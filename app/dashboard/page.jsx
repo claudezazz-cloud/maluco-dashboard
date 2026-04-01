@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import StatusCard from '@/components/StatusCard'
 import ExecutionList from '@/components/ExecutionList'
+import { RefreshCw } from 'lucide-react'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -76,7 +77,8 @@ export default function DashboardPage() {
               onClick={fetchStatus}
               className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg transition"
             >
-              ↻ Atualizar
+              <RefreshCw className="w-3.5 h-3.5 inline mr-1.5" />
+              Atualizar
             </button>
           </div>
         </div>

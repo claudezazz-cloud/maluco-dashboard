@@ -1,3 +1,5 @@
+import { CheckCircle2, XCircle, RefreshCw } from 'lucide-react'
+
 export default function StatusCard({ filial, selected, onSelect }) {
   const { nome, online, workflowNome, ultimaExecucao, errosHoje, mensagensHoje } = filial
 
@@ -20,9 +22,14 @@ export default function StatusCard({ filial, selected, onSelect }) {
     : ultimaExecucao?.status === 'running' ? 'text-yellow-400'
     : 'text-gray-500'
 
-  const statusLabel = ultimaExecucao?.status === 'success' ? '✓ Sucesso'
-    : ultimaExecucao?.status === 'error' ? '✗ Erro'
-    : ultimaExecucao?.status === 'running' ? '⟳ Executando'
+  const StatusIcon = ultimaExecucao?.status === 'success' ? CheckCircle2
+    : ultimaExecucao?.status === 'error' ? XCircle
+    : ultimaExecucao?.status === 'running' ? RefreshCw
+    : null
+
+  const statusText = ultimaExecucao?.status === 'success' ? 'Sucesso'
+    : ultimaExecucao?.status === 'error' ? 'Erro'
+    : ultimaExecucao?.status === 'running' ? 'Executando'
     : '—'
 
   return (
@@ -57,7 +64,7 @@ export default function StatusCard({ filial, selected, onSelect }) {
       {ultimaExecucao && (
         <div className="mt-3 flex items-center justify-between text-xs">
           <span className="text-gray-500">{formatDate(ultimaExecucao.inicio)}</span>
-          <span className={`font-medium ${statusColor}`}>{statusLabel}</span>
+          <span className={`font-medium flex items-center gap-1 ${statusColor}`}>{StatusIcon && <StatusIcon className="w-3.5 h-3.5" />}{statusText}</span>
         </div>
       )}
     </div>

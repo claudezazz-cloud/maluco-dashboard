@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import { Settings } from 'lucide-react'
 
 const PLACEHOLDERS = [
   { key: '{{DATA}}', desc: 'data atual (ex: 23/03/2026)' },
@@ -108,7 +109,7 @@ export default function SystemPromptPage() {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">⚙️ System Prompt</h1>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Settings className="w-6 h-6 text-[#2E4EF0]" /> System Prompt</h1>
           <p className="text-gray-400 text-sm mt-1">
             Instruções base que o Maluco da IA segue em todas as respostas
           </p>

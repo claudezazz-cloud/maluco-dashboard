@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import { Hash, ClipboardList, ArrowDownToLine, ArrowUpFromLine, MessageSquare, AlertTriangle, X, ChevronLeft, ChevronRight, ChevronDown, Trash2, CheckCircle2 } from 'lucide-react'
 
 function fmtData(iso) {
   if (!iso) return '—'
@@ -15,7 +16,7 @@ function TokenBadge({ input, output }) {
   if (!total) return null
   return (
     <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">
-      🔢 {total.toLocaleString()} tokens
+      <Hash className="w-3 h-3 inline" /> {total.toLocaleString()} tokens
     </span>
   )
 }
@@ -28,7 +29,7 @@ function PopsBadges({ pops }) {
     <div className="flex flex-wrap gap-1 mt-1">
       {lista.map((p, i) => (
         <span key={i} className="text-xs bg-green-900/30 text-green-400 border border-green-900/40 px-2 py-0.5 rounded-full">
-          📋 {p}
+          <ClipboardList className="w-3 h-3 inline" /> {p}
         </span>
       ))}
     </div>
@@ -58,7 +59,7 @@ function ConversaCard({ conv }) {
             </p>
             <PopsBadges pops={conv.pops_usados} />
           </div>
-          <span className={`text-gray-600 text-xs mt-1 transition-transform flex-shrink-0 ${expandido ? 'rotate-180' : ''}`}>▾</span>
+          <ChevronDown className={`w-4 h-4 text-gray-600 mt-1 transition-transform flex-shrink-0 ${expandido ? 'rotate-180' : ''}`} />
         </div>
       </div>
 
@@ -79,9 +80,9 @@ function ConversaCard({ conv }) {
             </div>
           )}
           <div className="flex gap-4 text-xs text-gray-600">
-            <span>📥 Input: {(conv.tokens_input || 0).toLocaleString()} tokens</span>
-            <span>📤 Output: {(conv.tokens_output || 0).toLocaleString()} tokens</span>
-            <span>💬 Chat: {conv.chat_id}</span>
+            <span className="flex items-center gap-1"><ArrowDownToLine className="w-3 h-3" /> Input: {(conv.tokens_input || 0).toLocaleString()} tokens</span>
+            <span className="flex items-center gap-1"><ArrowUpFromLine className="w-3 h-3" /> Output: {(conv.tokens_output || 0).toLocaleString()} tokens</span>
+            <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Chat: {conv.chat_id}</span>
           </div>
         </div>
       )}
@@ -164,12 +165,12 @@ export default function ConversasPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white">💬 Conversas</h1>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2"><MessageSquare className="w-6 h-6 text-[#008000]" /> Conversas</h1>
             <p className="text-gray-400 text-sm mt-1">Histórico de interações e erros do bot</p>
           </div>
           <div className="flex gap-2">
-            {abaBtn('conversas', `💬 Conversas ${aba === 'conversas' ? `(${total})` : ''}`)}
-            {abaBtn('erros', `⚠️ Erros ${aba === 'erros' && erros.length ? `(${erros.length})` : ''}`)}
+            {abaBtn('conversas', <span className="flex items-center gap-1"><MessageSquare className="w-3.5 h-3.5" /> Conversas {aba === 'conversas' ? `(${total})` : ''}</span>)}
+            {abaBtn('erros', <span className="flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Erros {aba === 'erros' && erros.length ? `(${erros.length})` : ''}</span>)}
           </div>
         </div>
 
@@ -196,7 +197,7 @@ export default function ConversasPage() {
                   onClick={() => { setBusca(''); setBuscaInput(''); setPage(1) }}
                   className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-2 rounded-lg transition"
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -207,7 +208,7 @@ export default function ConversasPage() {
               </div>
             ) : conversas.length === 0 ? (
               <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-12 text-center">
-                <div className="text-4xl mb-3">💬</div>
+                <MessageSquare className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                 <p className="text-gray-400">{busca ? 'Nenhuma conversa encontrada.' : 'Nenhuma conversa registrada ainda.'}</p>
                 <p className="text-gray-600 text-sm mt-1">As conversas aparecem aqui após o workflow ser atualizado.</p>
               </div>
@@ -225,7 +226,7 @@ export default function ConversasPage() {
                   disabled={page === 1}
                   className="px-3 py-1.5 text-sm bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-white rounded-lg transition"
                 >
-                  ← Anterior
+                  <ChevronLeft className="w-4 h-4 inline" /> Anterior
                 </button>
                 <span className="text-gray-400 text-sm">Página {page} de {totalPages}</span>
                 <button
@@ -233,7 +234,7 @@ export default function ConversasPage() {
                   disabled={page === totalPages}
                   className="px-3 py-1.5 text-sm bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-white rounded-lg transition"
                 >
-                  Próxima →
+                  Próxima <ChevronRight className="w-4 h-4 inline" />
                 </button>
               </div>
             )}
@@ -249,13 +250,13 @@ export default function ConversasPage() {
                 disabled={limpando}
                 className="text-xs text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition disabled:opacity-40"
               >
-                {limpando ? 'Limpando...' : '🗑 Limpar erros antigos (+7 dias)'}
+                {limpando ? 'Limpando...' : <span className="flex items-center gap-1"><Trash2 className="w-3 h-3" /> Limpar erros antigos (+7 dias)</span>}
               </button>
             </div>
 
             {erros.length === 0 ? (
               <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-12 text-center">
-                <div className="text-4xl mb-3">✅</div>
+                <CheckCircle2 className="w-10 h-10 text-green-600 mx-auto mb-3" />
                 <p className="text-gray-400">Nenhum erro registrado.</p>
               </div>
             ) : (
@@ -265,7 +266,7 @@ export default function ConversasPage() {
                     <div className="px-5 py-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-red-400 text-sm font-medium">⚠️ {erro.no_n8n}</span>
+                          <span className="text-red-400 text-sm font-medium flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> {erro.no_n8n}</span>
                           <span className="text-xs text-gray-600">{fmtData(erro.criado_em)}</span>
                         </div>
                         {erro.chat_id && (
