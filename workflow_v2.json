@@ -1333,7 +1333,7 @@
           "conditions": [
             {
               "id": "menu-cond-1",
-              "leftValue": "={{ $json.skillName }}",
+              "leftValue": "={{ $('Verifica Menção').first().json.skillName }}",
               "rightValue": "/menu",
               "operator": {
                 "type": "string",
