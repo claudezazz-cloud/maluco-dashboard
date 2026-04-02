@@ -66,7 +66,8 @@ export default function ChamadosPage() {
     const XLSX = await import('xlsx')
     const buffer = await file.arrayBuffer()
     const wb = XLSX.read(buffer, { type: 'array' })
-    const sheet = wb.Sheets[wb.SheetNames[0]]
+    const sheetName = wb.SheetNames.length > 1 ? wb.SheetNames[1] : wb.SheetNames[0]
+    const sheet = wb.Sheets[sheetName]
     const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
     if (jsonData.length < 2) throw new Error('Planilha vazia ou sem dados')
     const headers = jsonData[0].map(h => String(h || '').trim())
