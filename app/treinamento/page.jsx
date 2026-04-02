@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { Brain, Lightbulb, BotMessageSquare, Users, ClipboardList, FileText, ChevronDown } from 'lucide-react'
+import { Brain, Lightbulb, BotMessageSquare, Users, ClipboardList, FileText, ChevronDown, Zap } from 'lucide-react'
 
 const CATEGORIAS = ['Geral', 'Atendimento', 'Técnico', 'Financeiro', 'Comercial', 'RH', 'Outro']
 
@@ -26,6 +26,16 @@ export default function TreinamentoPage() {
   const [editandoColab, setEditandoColab] = useState(null)
   const [editColabForm, setEditColabForm] = useState({})
   const [msgColab, setMsgColab] = useState({ texto: '', tipo: '' })
+
+  // ===== SKILLS =====
+  const [skills, setSkills] = useState([])
+  const [loadingSkills, setLoadingSkills] = useState(true)
+  const [novaSkill, setNovaSkill] = useState({ nome: '', descricao: '', prompt_base: '', parametros_opcionais: '[]' })
+  const [mostraNovaSkill, setMostraNovaSkill] = useState(false)
+  const [editandoSkill, setEditandoSkill] = useState(null)
+  const [editSkillForm, setEditSkillForm] = useState({})
+  const [msgSkill, setMsgSkill] = useState({ texto: '', tipo: '' })
+  const [salvandoSkill, setSalvandoSkill] = useState(false)
 
   // ===== POPs =====
   const [pops, setPops] = useState([])
@@ -52,6 +62,7 @@ export default function TreinamentoPage() {
     fetchRegras()
     fetchColaboradores()
     fetchPops()
+    fetchSkills()
   }, [router])
 
   // ===== REGRAS FUNCS =====
@@ -212,6 +223,73 @@ export default function TreinamentoPage() {
     fetchPops()
   }
 
+  // ===== SKILLS FUNCS =====
+  async function fetchSkills() {
+    setLoadingSkills(true)
+    const r = await fetch('/api/skills')
+    if (r.ok) setSkills(await r.json())
+    setLoadingSkills(false)
+  }
+
+  function showMsgSkill(texto, tipo = 'success') {
+    setMsgSkill({ texto, tipo })
+    setTimeout(() => setMsgSkill({ texto: '', tipo: '' }), 3000)
+  }
+
+  async function salvarNovaSkill() {
+    if (!novaSkill.nome.trim() || !novaSkill.prompt_base.trim()) return
+    setSalvandoSkill(true)
+    const r = await fetch('/api/skills', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(novaSkill),
+    })
+    setSalvandoSkill(false)
+    if (r.ok) {
+      setNovaSkill({ nome: '', descricao: '', prompt_base: '', parametros_opcionais: '[]' })
+      setMostraNovaSkill(false)
+      showMsgSkill('Skill adicionada com sucesso!')
+      fetchSkills()
+    } else {
+      const d = await r.json().catch(() => ({}))
+      showMsgSkill('Erro: ' + (d.error || r.status), 'error')
+    }
+  }
+
+  async function salvarEdicaoSkill() {
+    setSalvandoSkill(true)
+    const r = await fetch(`/api/skills/${editandoSkill}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editSkillForm),
+    })
+    setSalvandoSkill(false)
+    if (r.ok) {
+      setEditandoSkill(null)
+      showMsgSkill('Skill atualizada!')
+      fetchSkills()
+    } else {
+      const d = await r.json().catch(() => ({}))
+      showMsgSkill('Erro: ' + (d.error || r.status), 'error')
+    }
+  }
+
+  async function toggleSkillAtivo(sk) {
+    await fetch(`/api/skills/${sk.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sk, parametros_opcionais: JSON.stringify(sk.parametros_opcionais || []), ativo: !sk.ativo }),
+    })
+    fetchSkills()
+  }
+
+  async function excluirSkill(id, nome) {
+    if (!confirm(`Excluir a skill "${nome}"?`)) return
+    await fetch(`/api/skills/${id}`, { method: 'DELETE' })
+    showMsgSkill('Skill removida.')
+    fetchSkills()
+  }
+
   const categorias = ['Todas', ...new Set(pops.map(p => p.categoria).filter(Boolean))]
   const popsFiltrados = pops.filter(p => {
     const matchBusca = !buscaPop || p.titulo.toLowerCase().includes(buscaPop.toLowerCase()) || p.conteudo.toLowerCase().includes(buscaPop.toLowerCase())
@@ -226,6 +304,7 @@ export default function TreinamentoPage() {
     { id: 'regras', label: <span className="flex items-center gap-1"><Brain className="w-3.5 h-3.5" /> Regras</span>, count: regras.length },
     { id: 'pops', label: <span className="flex items-center gap-1"><ClipboardList className="w-3.5 h-3.5" /> POPs</span>, count: pops.length },
     { id: 'colaboradores', label: <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Colaboradores</span>, count: colaboradores.length },
+    { id: 'skills', label: <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Skills</span>, count: skills.length },
   ]
 
   return (
@@ -623,6 +702,198 @@ export default function TreinamentoPage() {
                 </div>
               )}
             </div>
+          </>
+        )}
+
+        {/* ==================== ABA SKILLS ==================== */}
+        {tab === 'skills' && (
+          <>
+            {msgSkill.texto && (
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgSkill.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+                {msgSkill.texto}
+              </div>
+            )}
+
+            <div className="bg-green-900/20 border border-green-800 rounded-xl px-5 py-3 mb-6 text-sm text-green-300">
+              <Zap className="w-4 h-4 inline shrink-0 mr-1" />
+              Skills são ativadas por comandos <code className="bg-green-900/40 px-1 rounded">/comando</code> no WhatsApp. O bot injeta o <strong>Prompt Base</strong> automaticamente quando detecta o comando.
+            </div>
+
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-gray-400 text-sm">Comandos especiais que modificam o comportamento do bot</p>
+              <button
+                onClick={() => { setMostraNovaSkill(true); setEditandoSkill(null) }}
+                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition font-medium"
+              >
+                + Nova Skill
+              </button>
+            </div>
+
+            {mostraNovaSkill && (
+              <div className="bg-[#1a1a24] rounded-xl border border-green-900 p-6 mb-6">
+                <h2 className="text-white font-medium mb-4">Nova Skill</h2>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Comando * <span className="text-gray-600">(ex: /dicas, /chamados)</span></label>
+                    <input
+                      value={novaSkill.nome}
+                      onChange={e => {
+                        let v = e.target.value
+                        if (v && !v.startsWith('/')) v = '/' + v
+                        setNovaSkill({ ...novaSkill, nome: v })
+                      }}
+                      placeholder="/meu-comando"
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Descrição</label>
+                    <input
+                      value={novaSkill.descricao}
+                      onChange={e => setNovaSkill({ ...novaSkill, descricao: e.target.value })}
+                      placeholder="O que essa skill faz?"
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-400 mb-1">Prompt Base * <span className="text-gray-600">(instruções injetadas quando a skill for ativada)</span></label>
+                  <textarea
+                    value={novaSkill.prompt_base}
+                    onChange={e => setNovaSkill({ ...novaSkill, prompt_base: e.target.value })}
+                    placeholder="Quando essa skill for ativada, você deve..."
+                    rows={6}
+                    className={inputCls + ' resize-y'}
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-xs text-gray-400 mb-1">Parâmetros opcionais <span className="text-gray-600">(JSON array, uso futuro)</span></label>
+                  <input
+                    value={novaSkill.parametros_opcionais}
+                    onChange={e => setNovaSkill({ ...novaSkill, parametros_opcionais: e.target.value })}
+                    placeholder='[]'
+                    className={inputCls}
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={salvarNovaSkill}
+                    disabled={!novaSkill.nome.trim() || !novaSkill.prompt_base.trim() || salvandoSkill}
+                    className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium"
+                  >
+                    {salvandoSkill ? 'Salvando...' : 'Salvar Skill'}
+                  </button>
+                  <button onClick={() => setMostraNovaSkill(false)} className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-6 py-2 rounded-lg transition">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loadingSkills ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => <div key={i} className="bg-[#1a1a24] rounded-xl border border-gray-800 h-16 animate-pulse" />)}
+              </div>
+            ) : skills.length === 0 ? (
+              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-12 text-center">
+                <Zap className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400">Nenhuma skill cadastrada ainda.</p>
+                <p className="text-gray-600 text-sm mt-1">Adicione skills para criar comandos especiais no WhatsApp.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {skills.map(sk => (
+                  <div key={sk.id} className="bg-[#1a1a24] rounded-xl border border-gray-800 overflow-hidden">
+                    {editandoSkill === sk.id ? (
+                      <div className="p-5">
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Comando</label>
+                            <input
+                              value={editSkillForm.nome || ''}
+                              onChange={e => {
+                                let v = e.target.value
+                                if (v && !v.startsWith('/')) v = '/' + v
+                                setEditSkillForm({ ...editSkillForm, nome: v })
+                              }}
+                              className={inputEditCls}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Descrição</label>
+                            <input
+                              value={editSkillForm.descricao || ''}
+                              onChange={e => setEditSkillForm({ ...editSkillForm, descricao: e.target.value })}
+                              className={inputEditCls}
+                            />
+                          </div>
+                        </div>
+                        <label className="block text-xs text-gray-400 mb-1">Prompt Base</label>
+                        <textarea
+                          value={editSkillForm.prompt_base || ''}
+                          onChange={e => setEditSkillForm({ ...editSkillForm, prompt_base: e.target.value })}
+                          rows={6}
+                          className={inputEditCls + ' resize-y mb-3'}
+                        />
+                        <label className="block text-xs text-gray-400 mb-1">Parâmetros opcionais (JSON)</label>
+                        <input
+                          value={typeof editSkillForm.parametros_opcionais === 'string' ? editSkillForm.parametros_opcionais : JSON.stringify(editSkillForm.parametros_opcionais || [])}
+                          onChange={e => setEditSkillForm({ ...editSkillForm, parametros_opcionais: e.target.value })}
+                          className={inputEditCls + ' mb-3'}
+                        />
+                        <div className="flex gap-3">
+                          <button onClick={salvarEdicaoSkill} disabled={salvandoSkill}
+                            className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition">
+                            {salvandoSkill ? 'Salvando...' : 'Salvar'}
+                          </button>
+                          <button onClick={() => setEditandoSkill(null)} className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-5 py-2 rounded-lg transition">
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-green-900/30 border border-green-900/50 flex items-center justify-center shrink-0">
+                            <Zap className="w-4 h-4 text-green-400" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <code className="text-green-400 font-mono font-medium">{sk.nome}</code>
+                              {!sk.ativo && <span className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">inativo</span>}
+                            </div>
+                            {sk.descricao && <p className="text-gray-400 text-sm mt-0.5">{sk.descricao}</p>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleSkillAtivo(sk)}
+                            className={`text-xs px-3 py-1.5 rounded-lg transition ${sk.ativo ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                          >
+                            {sk.ativo ? 'Ativo' : 'Inativo'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditandoSkill(sk.id)
+                              setEditSkillForm({ nome: sk.nome, descricao: sk.descricao || '', prompt_base: sk.prompt_base, parametros_opcionais: JSON.stringify(sk.parametros_opcionais || []), ativo: sk.ativo })
+                            }}
+                            className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => excluirSkill(sk.id, sk.nome)}
+                            className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg transition"
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
