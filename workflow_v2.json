@@ -1321,6 +1321,106 @@
           "name": "Postgres account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "menu-cond-1",
+              "leftValue": "={{ $json.skillName }}",
+              "rightValue": "/menu",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "menu-if-001",
+      "name": "É Menu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        12300,
+        -1300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nome, descricao FROM dashboard_skills WHERE ativo = true ORDER BY nome ASC",
+        "options": {}
+      },
+      "id": "menu-skills-001",
+      "name": "Busca Skills Menu",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        12650,
+        -1500
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "AErqeMtSVfS0MNsb",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const skills = $('Busca Skills Menu').all().map(s => s.json).filter(s => s.nome);\nconst chatId = $('Verifica Menção').first().json.chatId;\n\nlet msg = '*Menu de Comandos*\\n\\n';\n\nif (skills.length === 0) {\n  msg += '_Nenhum comando disponivel no momento._\\n\\n';\n  msg += 'Entre em contato com o administrador.';\n} else {\n  msg += 'Comandos disponiveis:\\n\\n';\n  for (const skill of skills) {\n    const desc = skill.descricao ? skill.descricao : 'Sem descricao';\n    msg += '*' + skill.nome + '*\\n' + desc + '\\n\\n';\n  }\n  msg = msg.trimEnd();\n  msg += '\\n\\n_Digite o comando para ativa-lo._';\n}\n\nreturn [{ json: { chatId, message: msg } }];"
+      },
+      "id": "menu-format-001",
+      "name": "Formata Menu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        13000,
+        -1500
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lanlunar-evolution.cloudfy.live/message/sendText/ZazzClaude",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "KGWUTIl4uXDVxFiJMhFgT1LzP8bHRcze"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $json.chatId, text: $json.message }) }}",
+        "options": {}
+      },
+      "id": "menu-send-001",
+      "name": "Envia Menu",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        13350,
+        -1500
+      ]
     }
   ],
   "pinData": {
@@ -1509,7 +1609,7 @@
         ],
         [
           {
-            "node": "Busca Histórico 10",
+            "node": "É Menu?",
             "type": "main",
             "index": 0
           }
@@ -1834,6 +1934,46 @@
         [
           {
             "node": "Monta Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Menu?": {
+      "main": [
+        [
+          {
+            "node": "Busca Skills Menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Busca Histórico 10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca Skills Menu": {
+      "main": [
+        [
+          {
+            "node": "Formata Menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formata Menu": {
+      "main": [
+        [
+          {
+            "node": "Envia Menu",
             "type": "main",
             "index": 0
           }
