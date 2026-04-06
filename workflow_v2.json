@@ -1543,9 +1543,9 @@
           ]
         },
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ \"id\": $json.id }) }}",
-        "options": {}
+        "specifyBody": "string",
+        "options": {},
+        "body": "={{ '{\"id\":' + String($('Prepara Body').first().json.id) + '}' }}"
       },
       "id": "sched-mark-001",
       "name": "Marca Executado",
