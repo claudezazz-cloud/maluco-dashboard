@@ -1543,9 +1543,16 @@
           ]
         },
         "sendBody": true,
-        "specifyBody": "string",
+        "specifyBody": "keypairs",
         "options": {},
-        "body": "={{ '{\"id\":' + String($('Prepara Body').first().json.id) + '}' }}"
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $('Prepara Body').first().json.id }}"
+            }
+          ]
+        }
       },
       "id": "sched-mark-001",
       "name": "Marca Executado",
