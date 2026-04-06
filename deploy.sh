@@ -17,9 +17,9 @@ ssh "$SERVER" "
   echo '==> npm run build...'
   npm run build
   echo '==> pm2 restart...'
-  pm2 restart dashboard --update-env
+  pm2 restart maluco-dashboard --update-env
   echo '==> Status:'
-  pm2 status dashboard
+  pm2 status maluco-dashboard
   echo ''
   echo 'Deploy concluido!'
 "
