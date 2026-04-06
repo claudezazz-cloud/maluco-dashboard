@@ -39,8 +39,17 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { id } = body
+  // Support both JSON body and query parameter
+  let id = null
+  const url = new URL(request.url)
+  id = url.searchParams.get('id')
+
+  if (!id) {
+    try {
+      const body = await request.json()
+      id = body.id
+    } catch (e) {}
+  }
 
   if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
 
