@@ -1500,20 +1500,6 @@
     },
     {
       "parameters": {
-        "batchSize": 1,
-        "options": {}
-      },
-      "id": "sched-loop-001",
-      "name": "Loop Tarefas",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        9950,
-        -500
-      ]
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "https://n8n.srv1537041.hstgr.cloud/webhook/whatsapp",
         "sendBody": true,
@@ -1535,7 +1521,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        10300,
+        10450,
         -500
       ]
     },
@@ -1566,7 +1552,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        10550,
+        10700,
         -500
       ]
     },
@@ -1579,7 +1565,20 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10050,
+        10200,
+        -500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $json.tasks.map(t => ({ json: t }));"
+      },
+      "id": "sched-extrai-001",
+      "name": "Extrai Tarefas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9950,
         -500
       ]
     }
@@ -2167,19 +2166,7 @@
       "main": [
         [
           {
-            "node": "Loop Tarefas",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
-    "Loop Tarefas": {
-      "main": [
-        [
-          {
-            "node": "Prepara Body",
+            "node": "Extrai Tarefas",
             "type": "main",
             "index": 0
           }
@@ -2200,13 +2187,7 @@
     },
     "Marca Executado": {
       "main": [
-        [
-          {
-            "node": "Loop Tarefas",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Prepara Body": {
@@ -2214,6 +2195,17 @@
         [
           {
             "node": "Injeta no Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrai Tarefas": {
+      "main": [
+        [
+          {
+            "node": "Prepara Body",
             "type": "main",
             "index": 0
           }
