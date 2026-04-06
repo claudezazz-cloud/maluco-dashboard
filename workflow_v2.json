@@ -1519,7 +1519,7 @@
         "sendBody": true,
         "specifyBody": "string",
         "options": {},
-        "body": "={{ JSON.stringify({\"event\": \"messages.upsert\",\"data\": {\"key\": {\"id\": \"scheduled-\" + String($json.id) + \"-\" + String(Date.now()),\"remoteJid\": $json.chat_id,\"fromMe\": false},\"message\": {\"extendedTextMessage\": {\"text\": $json.comando,\"contextInfo\": {\"mentionedJid\": [\"554396543242@s.whatsapp.net\"]}}},\"messageTimestamp\": Math.floor(Date.now() / 1000),\"pushName\": \"Agendamento\"}}) }}",
+        "body": "={{ $json.body }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1535,7 +1535,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        10200,
+        10300,
         -500
       ]
     },
@@ -1566,7 +1566,20 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        10450,
+        10550,
+        -500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const task = $input.first().json;\nconst body = JSON.stringify({\n  event: 'messages.upsert',\n  data: {\n    key: {\n      id: 'scheduled-' + String(task.id) + '-' + String(Date.now()),\n      remoteJid: task.chat_id,\n      fromMe: false\n    },\n    message: {\n      extendedTextMessage: {\n        text: task.comando,\n        contextInfo: {\n          mentionedJid: ['554396543242@s.whatsapp.net']\n        }\n      }\n    },\n    messageTimestamp: Math.floor(Date.now() / 1000),\n    pushName: 'Agendamento'\n  }\n});\nreturn [{ json: { id: task.id, body } }];"
+      },
+      "id": "sched-prepara-001",
+      "name": "Prepara Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10050,
         -500
       ]
     }
@@ -2166,7 +2179,7 @@
       "main": [
         [
           {
-            "node": "Injeta no Bot",
+            "node": "Prepara Body",
             "type": "main",
             "index": 0
           }
@@ -2190,6 +2203,17 @@
         [
           {
             "node": "Loop Tarefas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara Body": {
+      "main": [
+        [
+          {
+            "node": "Injeta no Bot",
             "type": "main",
             "index": 0
           }
