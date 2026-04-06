@@ -1517,9 +1517,18 @@
         "method": "POST",
         "url": "https://n8n.srv1537041.hstgr.cloud/webhook/whatsapp",
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\"event\": \"messages.upsert\",\"data\": {\"key\": {\"id\": \"scheduled-\" + $json.id + \"-\" + Date.now(),\"remoteJid\": $json.chat_id,\"fromMe\": false},\"message\": {\"extendedTextMessage\": {\"text\": $json.comando,\"contextInfo\": {\"mentionedJid\": [\"554396543242@s.whatsapp.net\"]}}},\"messageTimestamp\": Math.floor(Date.now() / 1000),\"pushName\": \"Agendamento\"}}) }}",
-        "options": {}
+        "specifyBody": "string",
+        "options": {},
+        "body": "={{ JSON.stringify({\"event\": \"messages.upsert\",\"data\": {\"key\": {\"id\": \"scheduled-\" + String($json.id) + \"-\" + String(Date.now()),\"remoteJid\": $json.chat_id,\"fromMe\": false},\"message\": {\"extendedTextMessage\": {\"text\": $json.comando,\"contextInfo\": {\"mentionedJid\": [\"554396543242@s.whatsapp.net\"]}}},\"messageTimestamp\": Math.floor(Date.now() / 1000),\"pushName\": \"Agendamento\"}}) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
       },
       "id": "sched-inject-001",
       "name": "Injeta no Bot",
