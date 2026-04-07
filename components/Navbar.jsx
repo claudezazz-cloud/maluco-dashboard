@@ -37,13 +37,13 @@ export default function Navbar({ user }) {
               <Link href="/dashboard" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                 <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
               </Link>
+              <Link href="/chamados" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                <Ticket className="w-3.5 h-3.5" /> Chamados & Clientes
+              </Link>
               {user?.role === 'admin' && (
                 <>
                   <Link href="/treinamento" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                     <Brain className="w-3.5 h-3.5" /> Treinamento & POPs
-                  </Link>
-                  <Link href="/chamados" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
-                    <Ticket className="w-3.5 h-3.5" /> Chamados & Clientes
                   </Link>
                   <Link href="/system-prompt" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                     <Settings className="w-3.5 h-3.5" /> System Prompt
@@ -60,8 +60,10 @@ export default function Navbar({ user }) {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-400">{user?.nome || user?.email}</span>
-            {user?.role === 'admin' && (
+            {user?.role === 'admin' ? (
               <span className="text-xs bg-green-900/50 text-green-300 border border-green-900 px-2 py-0.5 rounded">Admin</span>
+            ) : (
+              <span className="text-xs bg-blue-900/50 text-blue-300 border border-blue-900 px-2 py-0.5 rounded">Colaborador</span>
             )}
             <button onClick={logout} className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">
               <LogOut className="w-3.5 h-3.5" /> Sair

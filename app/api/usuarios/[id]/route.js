@@ -1,0 +1,50 @@
+import { NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
+import { query } from '@/lib/db'
+import { getSession, requireAdmin } from '@/lib/auth'
+
+export async function PUT(request, { params }) {
+  const session = await getSession()
+  if (!session || !requireAdmin(session)) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
+
+  const body = await request.json()
+  const { nome, email, role, ativo, senha } = body
+
+  try {
+    if (senha) {
+      const hash = await bcrypt.hash(senha, 10)
+      const result = await query(
+        'UPDATE dashboard_usuarios SET nome = $1, email = $2, role = $3, ativo = $4, senha_hash = $5 WHERE id = $6 RETURNING id, email, nome, role, ativo, criado_em',
+        [nome.trim(), email.toLowerCase().trim(), role, ativo, hash, params.id]
+      )
+      if (result.rows.length === 0) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
+      return NextResponse.json(result.rows[0])
+    }
+
+    const result = await query(
+      'UPDATE dashboard_usuarios SET nome = $1, email = $2, role = $3, ativo = $4 WHERE id = $5 RETURNING id, email, nome, role, ativo, criado_em',
+      [nome.trim(), email.toLowerCase().trim(), role, ativo, params.id]
+    )
+    if (result.rows.length === 0) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
+    return NextResponse.json(result.rows[0])
+  } catch (e) {
+    return NextResponse.json({ error: 'Erro ao atualizar: ' + e.message }, { status: 500 })
+  }
+}
+
+export async function DELETE(request, { params }) {
+  const session = await getSession()
+  if (!session || !requireAdmin(session)) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
+
+  // Não permite excluir o próprio usuário
+  if (String(session.id) === String(params.id)) {
+    return NextResponse.json({ error: 'Não é possível excluir seu próprio usuário' }, { status: 400 })
+  }
+
+  await query('UPDATE dashboard_usuarios SET ativo = false WHERE id = $1', [params.id])
+  return NextResponse.json({ ok: true })
+}
