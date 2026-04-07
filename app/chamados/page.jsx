@@ -40,7 +40,6 @@ export default function ChamadosPage() {
       return r.json()
     }).then(d => {
       if (!d) return
-      if (d.role !== 'admin') { router.push('/dashboard'); return }
       setUser(d)
     })
     fetchChamadosStatus()
@@ -300,10 +299,12 @@ export default function ChamadosPage() {
                       Importado em {chamadosStatus.importado_em} — {formatTTL(chamadosStatus.expira_em_segundos)}
                     </p>
                   </div>
-                  <button onClick={limparChamados}
-                    className="text-xs text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition">
-                    Remover
-                  </button>
+                  {user?.role === 'admin' && (
+                    <button onClick={limparChamados}
+                      className="text-xs text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition">
+                      Remover
+                    </button>
+                  )}
                 </div>
                 {chamadosStatus.resumo && (
                   <div className="mt-3 pt-3 border-t border-gray-800">
@@ -314,60 +315,66 @@ export default function ChamadosPage() {
               </div>
             )}
 
-            {/* Limpar histórico */}
-            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white font-medium text-sm">Historico de conversas</p>
-                  <p className="text-gray-500 text-xs mt-0.5">
-                    Limpe o historico se o bot estiver repetindo respostas antigas ou contagens erradas
-                  </p>
-                </div>
-                <button onClick={limparHistorico}
-                  className="text-xs text-yellow-400 hover:text-yellow-300 bg-yellow-900/20 hover:bg-yellow-900/30 px-3 py-1.5 rounded-lg transition">
-                  Limpar Historico
-                </button>
-              </div>
-            </div>
-
-            {/* Upload area */}
-            <div
-              className={`bg-[#1a1a24] rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
-                dragOverChamados ? 'border-[#008000] bg-[#008000]/5' : 'border-gray-700 hover:border-gray-600'
-              }`}
-              onClick={() => chamadosFileRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setDragOverChamados(true) }}
-              onDragLeave={() => setDragOverChamados(false)}
-              onDrop={e => { e.preventDefault(); setDragOverChamados(false); handleChamadosFile(e.dataTransfer?.files?.[0]) }}
-            >
-              <input ref={chamadosFileRef} type="file" accept=".xlsx,.xls" className="hidden"
-                onChange={e => handleChamadosFile(e.target.files?.[0])} />
-              <div className="mb-3">{uploadingChamados ? <Loader2 className="w-10 h-10 text-gray-600 mx-auto animate-spin" /> : <FileSpreadsheet className="w-10 h-10 text-gray-600 mx-auto" />}</div>
-              <p className="text-white font-medium">
-                {uploadingChamados ? 'Lendo planilha...' : 'Clique ou arraste a planilha XLSX aqui'}
-              </p>
-              <p className="text-gray-500 text-sm mt-1">Planilha de chamados exportada do sistema (IXC, SGP, etc)</p>
-            </div>
-
-            {/* Preview */}
-            {previewChamados && (
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-4">
+            {/* Limpar histórico — admin only */}
+            {user?.role === 'admin' && (
+              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-white font-medium">Preview da planilha</h2>
-                    <p className="text-gray-400 text-sm">{previewChamados.totalRows} chamados — {previewChamados.headers.length} colunas</p>
+                    <p className="text-white font-medium text-sm">Historico de conversas</p>
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      Limpe o historico se o bot estiver repetindo respostas antigas ou contagens erradas
+                    </p>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setPreviewChamados(null)}
-                      className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition">Cancelar</button>
-                    <button onClick={enviarChamados} disabled={uploadingChamados}
-                      className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
-                      {uploadingChamados ? 'Enviando...' : `Enviar ${previewChamados.totalRows} chamados`}
-                    </button>
-                  </div>
+                  <button onClick={limparHistorico}
+                    className="text-xs text-yellow-400 hover:text-yellow-300 bg-yellow-900/20 hover:bg-yellow-900/30 px-3 py-1.5 rounded-lg transition">
+                    Limpar Historico
+                  </button>
                 </div>
-                <PreviewTable preview={previewChamados} />
               </div>
+            )}
+
+            {/* Upload area — admin only */}
+            {user?.role === 'admin' && (
+              <>
+                <div
+                  className={`bg-[#1a1a24] rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
+                    dragOverChamados ? 'border-[#008000] bg-[#008000]/5' : 'border-gray-700 hover:border-gray-600'
+                  }`}
+                  onClick={() => chamadosFileRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setDragOverChamados(true) }}
+                  onDragLeave={() => setDragOverChamados(false)}
+                  onDrop={e => { e.preventDefault(); setDragOverChamados(false); handleChamadosFile(e.dataTransfer?.files?.[0]) }}
+                >
+                  <input ref={chamadosFileRef} type="file" accept=".xlsx,.xls" className="hidden"
+                    onChange={e => handleChamadosFile(e.target.files?.[0])} />
+                  <div className="mb-3">{uploadingChamados ? <Loader2 className="w-10 h-10 text-gray-600 mx-auto animate-spin" /> : <FileSpreadsheet className="w-10 h-10 text-gray-600 mx-auto" />}</div>
+                  <p className="text-white font-medium">
+                    {uploadingChamados ? 'Lendo planilha...' : 'Clique ou arraste a planilha XLSX aqui'}
+                  </p>
+                  <p className="text-gray-500 text-sm mt-1">Planilha de chamados exportada do sistema (IXC, SGP, etc)</p>
+                </div>
+
+                {/* Preview */}
+                {previewChamados && (
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-white font-medium">Preview da planilha</h2>
+                        <p className="text-gray-400 text-sm">{previewChamados.totalRows} chamados — {previewChamados.headers.length} colunas</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setPreviewChamados(null)}
+                          className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition">Cancelar</button>
+                        <button onClick={enviarChamados} disabled={uploadingChamados}
+                          className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
+                          {uploadingChamados ? 'Enviando...' : `Enviar ${previewChamados.totalRows} chamados`}
+                        </button>
+                      </div>
+                    </div>
+                    <PreviewTable preview={previewChamados} />
+                  </div>
+                )}
+              </>
             )}
 
             {/* Como funciona */}
@@ -404,52 +411,58 @@ export default function ChamadosPage() {
                     <p className="text-white text-lg font-bold">{clientesStatus.total} clientes</p>
                     <p className="text-gray-400 text-xs mt-1">Importado em {clientesStatus.importado_em}</p>
                   </div>
-                  <button onClick={limparClientes}
-                    className="text-xs text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition">
-                    Remover
-                  </button>
+                  {user?.role === 'admin' && (
+                    <button onClick={limparClientes}
+                      className="text-xs text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition">
+                      Remover
+                    </button>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Upload area */}
-            <div
-              className={`bg-[#1a1a24] rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
-                dragOverClientes ? 'border-[#008000] bg-[#008000]/5' : 'border-gray-700 hover:border-gray-600'
-              }`}
-              onClick={() => clientesFileRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setDragOverClientes(true) }}
-              onDragLeave={() => setDragOverClientes(false)}
-              onDrop={e => { e.preventDefault(); setDragOverClientes(false); handleClientesFile(e.dataTransfer?.files?.[0]) }}
-            >
-              <input ref={clientesFileRef} type="file" accept=".xlsx,.xls" className="hidden"
-                onChange={e => handleClientesFile(e.target.files?.[0])} />
-              <div className="mb-3">{uploadingClientes ? <Loader2 className="w-10 h-10 text-gray-600 mx-auto animate-spin" /> : <Users className="w-10 h-10 text-gray-600 mx-auto" />}</div>
-              <p className="text-white font-medium">
-                {uploadingClientes ? 'Lendo planilha...' : 'Clique ou arraste a planilha XLSX aqui'}
-              </p>
-              <p className="text-gray-500 text-sm mt-1">Planilha com colunas Cod e Nome (exportada do IXC, SGP, etc)</p>
-            </div>
-
-            {/* Preview */}
-            {previewClientes && (
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-white font-medium">Preview da planilha</h2>
-                    <p className="text-gray-400 text-sm">{previewClientes.totalRows} clientes — {previewClientes.headers.length} colunas</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => setPreviewClientes(null)}
-                      className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition">Cancelar</button>
-                    <button onClick={enviarClientes} disabled={uploadingClientes}
-                      className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
-                      {uploadingClientes ? 'Enviando...' : `Enviar ${previewClientes.totalRows} clientes`}
-                    </button>
-                  </div>
+            {/* Upload area — admin only */}
+            {user?.role === 'admin' && (
+              <>
+                <div
+                  className={`bg-[#1a1a24] rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
+                    dragOverClientes ? 'border-[#008000] bg-[#008000]/5' : 'border-gray-700 hover:border-gray-600'
+                  }`}
+                  onClick={() => clientesFileRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setDragOverClientes(true) }}
+                  onDragLeave={() => setDragOverClientes(false)}
+                  onDrop={e => { e.preventDefault(); setDragOverClientes(false); handleClientesFile(e.dataTransfer?.files?.[0]) }}
+                >
+                  <input ref={clientesFileRef} type="file" accept=".xlsx,.xls" className="hidden"
+                    onChange={e => handleClientesFile(e.target.files?.[0])} />
+                  <div className="mb-3">{uploadingClientes ? <Loader2 className="w-10 h-10 text-gray-600 mx-auto animate-spin" /> : <Users className="w-10 h-10 text-gray-600 mx-auto" />}</div>
+                  <p className="text-white font-medium">
+                    {uploadingClientes ? 'Lendo planilha...' : 'Clique ou arraste a planilha XLSX aqui'}
+                  </p>
+                  <p className="text-gray-500 text-sm mt-1">Planilha com colunas Cod e Nome (exportada do IXC, SGP, etc)</p>
                 </div>
-                <PreviewTable preview={previewClientes} />
-              </div>
+
+                {/* Preview */}
+                {previewClientes && (
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-white font-medium">Preview da planilha</h2>
+                        <p className="text-gray-400 text-sm">{previewClientes.totalRows} clientes — {previewClientes.headers.length} colunas</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => setPreviewClientes(null)}
+                          className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition">Cancelar</button>
+                        <button onClick={enviarClientes} disabled={uploadingClientes}
+                          className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
+                          {uploadingClientes ? 'Enviando...' : `Enviar ${previewClientes.totalRows} clientes`}
+                        </button>
+                      </div>
+                    </div>
+                    <PreviewTable preview={previewClientes} />
+                  </div>
+                )}
+              </>
             )}
 
             {/* Como funciona */}
