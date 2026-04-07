@@ -1,4 +1,4 @@
-# Maluco da IA 👽🍀
+# Maluco da IA
 
 **Assistente de IA interno para equipes da Zazz Internet** — provedor de fibra optica em Lunardelli-PR.
 
@@ -10,24 +10,39 @@ O Maluco da IA e um bot de WhatsApp com inteligencia artificial que funciona com
 
 O projeto surgiu da necessidade de centralizar o conhecimento operacional da empresa em um unico lugar acessivel a todos os colaboradores, sem precisar procurar em documentos espalhados ou perguntar para o gestor. O bot consulta automaticamente os procedimentos cadastrados, mantem contexto de conversa e entende tanto mensagens de texto quanto audio.
 
-Alem do bot, existe uma dashboard web completa para o administrador gerenciar tudo: POPs, regras de comportamento, system prompt, colaboradores, chamados, clientes, historico de conversas e log de erros.
+Alem do bot, existe uma dashboard web completa para o administrador gerenciar tudo: POPs, regras de comportamento, system prompt, colaboradores, filiais, historico de conversas e log de erros.
 
 ---
 
-## O que o bot ja faz hoje
+## O que o bot faz hoje
 
 ### Atendimento no WhatsApp
 - Responde mensagens de texto quando mencionado no grupo (ex: "@Claude como faco uma nova venda?")
 - Recebe e transcreve mensagens de audio usando a API do Whisper (OpenAI)
 - Busca semantica de POPs — quando o colaborador pergunta sobre um assunto, o bot carrega apenas os procedimentos relevantes usando full-text search do PostgreSQL (`to_tsvector`/`plainto_tsquery` com dicionario 'portuguese')
-- POPs marcados com "LEIA SEMPRE" no titulo sao incluidos em **todas** as respostas, independente da pergunta
-- Mantem historico de conversa com Redis — o bot lembra das ultimas 20 mensagens trocadas para manter contexto entre perguntas (TTL de 4 horas)
-- Busca clientes por nome na base de dados quando mencionados na conversa
+- Mantem historico de conversa com Redis — o bot lembra das ultimas mensagens trocadas para manter contexto entre perguntas
 - Cria tarefas automaticamente no Notion quando o colaborador pede (ex: "Claude agenda uma instalacao para o cliente Joao amanha")
 - Aprende novas regras em tempo real via WhatsApp (ex: "Claude aprenda: sempre pergunte o telefone do cliente")
-- Gera relatorios diarios, semanais e mensais com base no historico de mensagens do grupo
-- Envia mensagem de bom dia automatica de segunda a sabado as 7:30 com resumo dos chamados em aberto
-- Importa chamados via planilha XLSX na dashboard — o bot responde perguntas sobre chamados abertos, agendamentos e SLA
+- Gera relatorios completos com base no historico de mensagens do grupo — inclui todas as mensagens, estatisticas de solicitacoes/resolucoes, destaques e pendencias
+- Detecta automaticamente solicitacoes e resolucoes no chat, classificando mensagens como `solicitacao` ou `resolucao` na coluna `tipo_atendimento`
+- Importacao de chamados via planilha XLSX na dashboard — dados ficam disponiveis para o bot por 24h no Redis
+- Importacao de clientes via planilha XLSX na dashboard
+- Limpeza de historico de conversas do Redis via dashboard
+
+### Skills (Comandos com /)
+O bot suporta comandos de skill iniciados com `/`, cadastrados na dashboard:
+- `/menu` — lista todas as skills ativas com nome, descricao e exemplo de uso (responde direto sem chamar Claude)
+- `/relatorio` — gera relatorio de atendimentos do dia
+- Skills customizadas podem ser criadas pela dashboard com: nome do comando, descricao, prompt de contexto e exemplo de uso
+- Skills sao detectadas automaticamente pelo no "Verifica Mencao" e o contexto da skill e injetado no prompt do Claude
+
+### Solicitacoes Programadas (Agendamento)
+Execucoes automaticas de comandos em horarios definidos, gerenciadas pela dashboard:
+- Substitui os antigos triggers dedicados (Bom Dia, Pendentes) por um sistema unico e flexivel
+- Configuravel por horario (ex: 07:30, 17:00), dias da semana (seg-sab, todos, etc.) e chat de destino
+- O N8N verifica a cada minuto se ha tarefas pendentes e injeta uma mensagem sintetica no webhook, passando pelo fluxo normal do bot
+- Protecao contra duplicatas: tarefas ja executadas nao disparam novamente (intervalo minimo de 50 minutos)
+- Exemplos de uso: bom dia com resumo de chamados (07:30), relatorio de atendimentos (17:00)
 
 ### Tratamento de erros
 - Quando a API do Claude retorna erro, o bot responde com uma mensagem amigavel em vez de travar
@@ -45,43 +60,37 @@ Alem do bot, existe uma dashboard web completa para o administrador gerenciar tu
 
 | Componente | Tecnologia | Detalhes |
 |-----------|-----------|----------|
-| Servidor | **Hostinger VPS KVM 2** | 8GB RAM, Ubuntu 24.04, IP 195.200.7.239 |
-| Automacao | **N8N** (Docker) | Orquestra todo o fluxo do bot |
-| WhatsApp | **Evolution API v2** (Docker) | Instancia `ZazzClaude` |
+| Automacao | **N8N** (self-hosted) | Orquestra todo o fluxo do bot + agendamento de solicitacoes |
+| WhatsApp | **Evolution API v2** | Hospedada no VPS Hostinger |
 | Inteligencia Artificial | **Claude Haiku 4.5** (Anthropic) | Modelo `claude-haiku-4-5-20251001`, chamado via API REST |
 | Transcricao de audio | **OpenAI Whisper** | API `v1/audio/transcriptions` para converter audio em texto |
-| Banco de dados | **PostgreSQL** (Docker) | Container `n8n-postgres-1`, db `zazzdb`, user `zazz` |
-| Cache e historico | **Redis** (Docker) | Container `n8n-redis-1`, historico de conversa e chamados |
-| Tarefas | **Notion API** | Cria paginas automaticamente quando o colaborador solicita |
-| Dashboard | **Next.js 14** + Tailwind CSS | App Router, React 18, tema dark verde |
-| Dashboard deploy | **PM2** | Processo gerenciado em `/opt/zazz/dashboard/` |
-| Reverse proxy | **Traefik** | SSL automatico via Let's Encrypt |
+| Banco de dados | **PostgreSQL** | Docker no VPS, armazena mensagens, POPs, regras, conversas, erros, config |
+| Cache e historico | **Redis** | Docker no VPS, armazena historico de conversa, chamados importados e configuracoes |
+| Tarefas | **Notion API** | Cria paginas automaticamente quando o colaborador solicita uma tarefa ou quando ha pendentes ao fim do dia |
+| Dashboard | **Next.js 14** + Tailwind CSS + Lucide React | App Router, React 18, tema dark customizado |
+| Deploy dashboard | **PM2** no VPS Hostinger | Build Next.js, processo gerenciado pelo PM2 |
 | Repositorio | **GitHub** | `claudezazz-cloud/maluco-dashboard` |
 
 ---
 
-## Servidores e Links
+## Infraestrutura (Hostinger VPS KVM 2)
 
-| Servico | URL | Detalhes |
-|---------|-----|----------|
-| Dashboard | `https://dashboard.srv1537041.hstgr.cloud` | PM2 na porta 3001 |
-| N8N | `https://n8n.srv1537041.hstgr.cloud` | Docker na porta 5678 |
-| Evolution API | `https://evolution.srv1537041.hstgr.cloud` | Docker na porta 8080 |
-| PostgreSQL | interno | Container Docker, porta 5432 |
-| Redis | interno | Container Docker, porta 6379 |
-| Notion | API via `api.notion.com` | Criacao de tarefas |
+| Servico | URL / Endereco | Observacao |
+|---------|---------------|-----------|
+| Dashboard | `https://dashboard.srv1537041.hstgr.cloud` | PM2, porta 3001 |
+| N8N | `https://n8n.srv1537041.hstgr.cloud` | Docker, porta 5678 |
+| Evolution API | `https://evolution.srv1537041.hstgr.cloud` | Docker, porta 8080 |
+| PostgreSQL | `localhost:5432` (Docker) | Usuario: zazz, banco: zazzdb |
+| Redis | `localhost:6379` (Docker) | Auth: ZazzRedis2026! |
+| IP do servidor | `195.200.7.239` | SSH: root@195.200.7.239 |
 
-**Docker Compose:** `/docker/n8n/docker-compose.yml`
-**Dashboard (PM2):** `/opt/zazz/dashboard/`
+### Caminhos no servidor
+- **Docker Compose**: `/docker/n8n/docker-compose.yml`
+- **Dashboard (PM2)**: `/opt/zazz/dashboard/`
 
 ---
 
 ## Banco de Dados — Tabelas PostgreSQL
-
-Acesso ao banco:
-```bash
-docker exec -it n8n-postgres-1 psql -U zazz -d zazzdb
-```
 
 ### `mensagens`
 Armazena todas as mensagens do grupo de WhatsApp (independente de mencionar o bot).
@@ -93,39 +102,19 @@ Armazena todas as mensagens do grupo de WhatsApp (independente de mencionar o bo
 | `mensagem` | TEXT | Conteudo da mensagem (max 2000 chars) |
 | `chat_id` | VARCHAR | ID do grupo/chat |
 | `data_hora` | TIMESTAMPTZ | Quando foi enviada |
+| `tipo_atendimento` | VARCHAR(20) | `solicitacao`, `resolucao` ou NULL |
 
 ### `dashboard_pops`
 Procedimentos Operacionais Padrao da empresa, consultados pelo bot via busca semantica.
 | Coluna | Tipo | Descricao |
 |--------|------|-----------|
 | `id` | SERIAL PK | ID auto-incremento |
-| `titulo` | VARCHAR(255) | Nome do procedimento (se contem "LEIA SEMPRE", aparece em todas as respostas) |
+| `titulo` | VARCHAR(255) | Nome do procedimento |
 | `categoria` | VARCHAR(255) | Categoria (Geral, Atendimento, Tecnico, Financeiro, Comercial, RH, Outro) |
 | `conteudo` | TEXT | Conteudo completo do POP |
 | `ativo` | BOOLEAN | Se o POP esta ativo (soft delete) |
 | `criado_em` | TIMESTAMP | Data de criacao |
 | `atualizado_em` | TIMESTAMP | Ultima atualizacao |
-
-### `dashboard_clientes`
-Lista de clientes importada via planilha XLSX na dashboard.
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| `id` | SERIAL PK | ID auto-incremento |
-| `cod` | VARCHAR(50) | Codigo do cliente no sistema |
-| `nome` | VARCHAR(255) | Nome do cliente |
-| `ativo` | BOOLEAN | Se esta ativo |
-
-### `dashboard_usuarios`
-Usuarios da dashboard (login).
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| `id` | SERIAL PK | ID auto-incremento |
-| `email` | VARCHAR(255) UNIQUE | Email de login |
-| `senha_hash` | TEXT | Senha com bcrypt |
-| `nome` | VARCHAR(255) | Nome do usuario |
-| `role` | VARCHAR(50) | Role: `admin` ou `viewer` |
-| `ativo` | BOOLEAN | Se esta ativo |
-| `criado_em` | TIMESTAMP | Data de criacao |
 
 ### `regras`
 Regras de comportamento da IA, ensinadas via WhatsApp ou dashboard.
@@ -139,7 +128,7 @@ Configuracoes gerais, incluindo o system prompt customizado.
 | Coluna | Tipo | Descricao |
 |--------|------|-----------|
 | `id` | SERIAL PK | ID auto-incremento |
-| `chave` | VARCHAR(255) UNIQUE | Nome da configuracao (ex: `system_prompt`, `bom_dia_group_id`) |
+| `chave` | VARCHAR(255) UNIQUE | Nome da configuracao (ex: `system_prompt`) |
 | `valor` | TEXT | Valor da configuracao |
 | `atualizado_em` | TIMESTAMP | Ultima atualizacao |
 
@@ -164,6 +153,15 @@ Filiais da empresa, cada uma podendo ter seu proprio bot/workflow.
 | `group_chat_id` | VARCHAR | ID do grupo de WhatsApp |
 | `ativo` | BOOLEAN | Se esta ativa |
 
+### `dashboard_filiais_config`
+Configuracoes por filial (chaves de API, tokens, etc).
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| `id` | SERIAL PK | ID auto-incremento |
+| `filial_id` | INTEGER FK | Referencia `dashboard_filiais(id)` |
+| `chave` | VARCHAR(255) | Nome da config (evolution_url, anthropic_key, etc) |
+| `valor` | TEXT | Valor da config |
+
 ### `bot_conversas`
 Historico de todas as interacoes do bot (pergunta + resposta).
 | Coluna | Tipo | Descricao |
@@ -171,8 +169,8 @@ Historico de todas as interacoes do bot (pergunta + resposta).
 | `id` | SERIAL PK | ID auto-incremento |
 | `chat_id` | VARCHAR(255) | ID do grupo/chat |
 | `remetente` | VARCHAR(255) | Quem perguntou |
-| `mensagem` | TEXT | Pergunta do colaborador (max 2000 chars) |
-| `resposta` | TEXT | Resposta do bot (max 4000 chars) |
+| `mensagem` | TEXT | Pergunta do colaborador |
+| `resposta` | TEXT | Resposta do bot |
 | `pops_usados` | TEXT | POPs que foram incluidos no contexto |
 | `tokens_input` | INTEGER | Tokens de entrada consumidos |
 | `tokens_output` | INTEGER | Tokens de saida consumidos |
@@ -189,11 +187,47 @@ Log de erros do bot, registrados automaticamente quando algo falha.
 | `chat_id` | VARCHAR(255) | ID do grupo/chat |
 | `criado_em` | TIMESTAMPTZ | Quando o erro ocorreu |
 
+### `dashboard_clientes`
+Base de clientes importada via XLSX.
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| `cod` | VARCHAR PK | Codigo do cliente |
+| `nome` | VARCHAR | Nome do cliente |
+| `ativo` | BOOLEAN | Se esta ativo |
+
+### `dashboard_skills`
+Skills (comandos com /) disponiveis para o bot.
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| `id` | SERIAL PK | ID auto-incremento |
+| `nome` | VARCHAR(50) | Nome do comando (ex: `/relatorio`) |
+| `descricao` | VARCHAR(255) | Descricao curta da skill |
+| `prompt_contexto` | TEXT | Contexto injetado no prompt do Claude quando a skill e acionada |
+| `exemplo_uso` | VARCHAR(255) | Exemplo de como usar (ex: `/relatorio chamados`) |
+| `ativo` | BOOLEAN | Se esta ativa |
+| `criado_em` | TIMESTAMP | Data de criacao |
+
+### `dashboard_solicitacoes_programadas`
+Agendamento de execucoes automaticas de comandos.
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| `id` | SERIAL PK | ID auto-incremento |
+| `nome` | VARCHAR(100) | Nome descritivo (ex: "Bom Dia") |
+| `comando` | TEXT | Comando a executar (ex: "gere a mensagem de bom dia") |
+| `chat_id` | VARCHAR(100) | ID do grupo/chat de destino |
+| `hora` | VARCHAR(5) | Horario de execucao (ex: "07:30") |
+| `dias_semana` | VARCHAR(50) | Dias da semana (ex: "seg,ter,qua,qui,sex" ou "todos") |
+| `ativo` | BOOLEAN | Se esta ativo |
+| `ultimo_executado` | TIMESTAMP | Ultima execucao (protecao contra duplicatas) |
+| `criado_em` | TIMESTAMP | Data de criacao |
+
 ### Redis
-O Redis armazena dados temporarios:
-- **`conv:{chatId}`** — Historico de conversa (ultimas 20 mensagens, TTL 4h)
-- **`chamados:data`** — Chamados importados via planilha (TTL 24h)
-- **`config:bom_dia_grupo`** — ID do grupo que recebe o bom dia
+| Chave | Descricao | TTL |
+|-------|-----------|-----|
+| `conv:{chatId}` | Historico de conversa (JSON array role/content, ultimas 20 msgs) | Sem TTL |
+| `chamados:data` | Chamados importados via XLSX (JSON com ai_context) | 24h |
+| `clientes:data` | Clientes importados via XLSX | 24h |
+| `config:bom_dia_grupo` | ID do grupo WhatsApp para mensagem de bom dia | Sem TTL |
 
 ---
 
@@ -204,217 +238,159 @@ O Redis armazena dados temporarios:
 Webhook (WhatsApp via Evolution API)
   |
   v
-Filter1 (filtra mensagens validas)
+Extrai Dados Mensagem (Code)
+  - Extrai: messageId, remetente, mensagem, chatId, isFromMe
+  - Detecta tipo de midia: imagem, video, audio, figurinha, contato, localizacao, documento, reacao
+  - Captura contexto de mensagem citada (quoted message)
+  - Detecta tipo_atendimento: solicitacao / resolucao / NULL
   |
-  +---> Extrai Dados Mensagem ---> Salva no Postgres (todas as mensagens)
+  v
+Salva no Postgres (inclui tipo_atendimento)
+  |
+  +---> Filter1 (filtra mensagens do proprio bot)
   |
   +---> Detecta Audio ---> [Fluxo de Audio]
   |
   v
-Verifica Mencao (Code)
-  - Verifica se o bot foi mencionado
-  - Ignora mensagens com mais de 2 minutos
+Verifica Mencao
+  - Verifica se o bot foi mencionado (@Claude, @Maluco, etc)
+  - Detecta skills (comandos com /): isSkillCommand, skillName, skillArgs
   |
-  +---> E Treinamento? ---> Salva Regra ---> Confirma Aprendizado (WhatsApp)
+  +---> E Treinamento? ---> Salva Regra ---> Confirma Aprendizado
   |
-  v
-Busca Regras (Postgres)
+  +---> E Relatorio? ---> Busca Historico Postgres (AT TIME ZONE 'America/Sao_Paulo')
+  |                        ---> Monta Prompt Relatorio (max_tokens: 8192, historico: 60KB)
+  |                        ---> Claude API ---> Envia Relatorio WhatsApp
   |
-  v
-E Relatorio?
-  |--SIM--> Busca Historico Postgres (LIMIT 2000) ---> Monta Prompt Relatorio ---> Claude API
-  |
-  |--NAO--> Busca Historico 10 ---> Busca POPs (busca semantica + LEIA SEMPRE)
-              ---> Busca System Prompt ---> Busca Colaboradores
-              ---> Busca Historico Redis ---> Busca Chamados Redis
-              ---> Busca Clientes ---> Monta Prompt ---> Claude API
+  +---> E Menu? ---> Busca Skills Menu (Postgres) ---> Formata Menu (Code)
+  |                  ---> Envia Menu (WhatsApp) [responde direto, sem chamar Claude]
   |
   v
-Parse Resposta (Code)
-  - Extrai texto, detecta |||NOTION|||, trata erros
-  - Monta historico Redis (ultimas 20 msgs)
+Busca POPs / Busca System Prompt / Busca Colaboradores / Busca Regras
   |
-  +--> Envia WhatsApp (Evolution API)
-  +--> Salva Historico Redis (TTL 4h)
+  v
+Busca Historico Redis / Busca Chamados Redis / Busca Clientes
+  |
+  v
+Monta Prompt (inclui contexto de skill se aplicavel) ---> Claude API ---> Parse Resposta
+  |
+  +--> Envia WhatsApp
+  +--> Salva Historico Redis
   +--> Salva Conversa (Postgres)
   +--> E Erro? ---> Salva Erro (Postgres)
   +--> Tem Notion? ---> Cria no Notion
 ```
 
-### Fluxo de audio
+### Fluxo de Audio
 ```
-Detecta Audio ---> Baixa Audio (Evolution API)
-  ---> Converte p/ Whisper ---> Transcreve Audio (OpenAI Whisper)
-  ---> Formata Transcricao ---> Salva Transcricao (Postgres)
-  ---> Verifica Mencao Audio ---> [continua no fluxo principal]
+Detecta Audio --> Baixa Audio --> Converte p/ Whisper --> Transcreve Audio
+  --> Formata Transcricao --> Salva Transcricao --> Verifica Mencao Audio
+  --> [continua no fluxo principal a partir de Busca POPs]
 ```
 
-### Fluxo Bom Dia
+### Fluxo de Agendamento (Solicitacoes Programadas)
 ```
-Bom Dia Trigger (seg-sab 7:30 AM)
-  ---> Busca Chamados Bom Dia (Redis)
-  ---> Gera Bom Dia (Claude API - saudacao + resumo de chamados)
-  ---> Extrai Mensagem
-  ---> Busca Config Grupo (Redis)
-  ---> Envia Bom Dia (Evolution API)
+Agendamento Trigger (a cada minuto)
+  --> Busca Solicitacoes Due (HTTP GET /api/solicitacoes/n8n)
+  --> Tem Tarefas? (IF: tasks.length > 0)
+       |
+       true --> Extrai Tarefas (Code: split array em items individuais)
+            --> Prepara Body (Code: monta mensagem sintetica com mentionedJid do bot)
+            --> Injeta no Bot (HTTP POST no webhook — dispara o fluxo principal)
+            --> Marca Executado (HTTP POST /api/solicitacoes/n8n?id=X)
 ```
+A mensagem sintetica inclui: `event: messages.upsert`, `fromMe: false`, `mentionedJid` do bot e `messageTimestamp` atual — passando por Filter1 e Verifica Mencao normalmente.
 
 ---
 
 ## Dashboard Web
 
-**URL**: https://dashboard.srv1537041.hstgr.cloud
-
-### Autenticacao
-- Login com email + senha (bcryptjs para hash)
-- JWT token armazenado em cookie HTTP-only (`auth_token`)
-- Sessao valida por 7 dias
-- Tabela: `dashboard_usuarios` (coluna `senha_hash`, nao `password`)
-- Paginas protegidas: redireciona para `/login` se nao autenticado
-- Paginas admin-only: redireciona para `/dashboard` se nao for admin
-
-### Navegacao (Navbar)
-Links visiveis para admin:
-- **Dashboard** — Visao geral
-- **Treinamento & POPs** — Regras, POPs e Colaboradores (3 abas)
-- **Chamados & Clientes** — Importacao de dados (2 abas)
-- **System Prompt** — Editor do prompt base
-- **Conversas** — Historico e erros
-- **Admin** — Filiais
-
-Sidebar lateral (hamburger menu) exibe o README/Sobre.
+**URL**: `https://dashboard.srv1537041.hstgr.cloud`
 
 ### Paginas
 
-#### `/login` — Tela de Login
-Formulario simples com email e senha. Apos login, redireciona para `/dashboard`.
+| Pagina | Descricao |
+|--------|-----------|
+| `/login` | Login com email + senha |
+| `/dashboard` | Visao geral: metricas, cards por filial, execucoes recentes |
+| `/treinamento` | 5 abas: Regras, POPs, Colaboradores, Skills, Solicitacoes Programadas |
+| `/system-prompt` | Editor do system prompt com placeholders |
+| `/conversas` | Historico de interacoes + log de erros |
+| `/chamados` | Abas: importar chamados XLSX + importar clientes XLSX |
+| `/admin` | Gerenciar filiais e configuracoes |
 
-#### `/dashboard` — Visao Geral
-- Metricas globais: bots online, mensagens hoje, erros hoje
-- Cards por filial mostrando status, ultima execucao, erros do dia
-- Lista de execucoes recentes do N8N
-- Auto-refresh a cada 30 segundos
-
-#### `/treinamento` — Treinamento & POPs (admin)
-Pagina com 3 abas e contadores:
-
-**Aba Regras:**
-- Lista de regras que o bot deve seguir em todas as respostas
-- Adicionar, editar e excluir regras
-- Contador de caracteres
-- Info: colaboradores tambem podem ensinar via WhatsApp com `Claude aprenda: ...`
-
-**Aba POPs:**
-- Lista todos os POPs com titulo, categoria e data
-- Criar novo POP (titulo, categoria, conteudo)
-- Editar POP inline (expande o card)
-- Arquivar POP (soft delete)
-- Busca por titulo ou conteudo + filtro por categoria
-- Categorias: Geral, Atendimento, Tecnico, Financeiro, Comercial, RH, Outro
-- POPs com "LEIA SEMPRE" no titulo sao incluidos em todas as respostas do bot
-
-**Aba Colaboradores:**
-- Cadastro de membros da equipe: nome, cargo, funcoes
-- Editar e remover colaboradores
-- Avatar com inicial do nome
-
-#### `/chamados` — Chamados & Clientes (admin)
-Pagina com 2 abas e badges de quantidade:
-
-**Aba Chamados:**
-- Upload de planilha XLSX com chamados (drag-and-drop ou clique)
-- Preview da planilha antes de enviar (10 primeiras linhas)
-- Status: quantidade ativa, data de importacao, tempo restante (TTL 24h)
-- Botao para limpar chamados e limpar historico de conversas Redis
-- O bot usa os chamados para responder perguntas sobre SLA, agendamentos, etc.
-
-**Aba Clientes:**
-- Upload de planilha XLSX com clientes (colunas Cod e Nome)
-- Preview antes de enviar
-- Status: quantidade ativa, data de importacao
-- Dados permanentes (sem TTL) — ficam ate serem removidos ou substituidos
-- O bot busca clientes por nome quando mencionados na conversa
-
-#### `/system-prompt` — Instrucoes Base (admin)
-- Editor de texto completo para o system prompt do bot
-- Placeholders: `{{DATA}}`, `{{ANO}}`, `{{TODAY}}`, `{{COLABORADORES}}`, `{{CLIENTES}}`, `{{POPS}}`, `{{HISTORICO}}`, `{{REGRAS}}`
-- Botao de restaurar prompt padrao
-
-#### `/conversas` — Historico de Interacoes (admin)
-- Aba "Conversas": lista paginada (30/pagina) de todas as interacoes do bot
-  - Cards expansiveis: remetente, data, mensagem, resposta, tokens, POPs usados
-  - Busca por texto
-- Aba "Erros": ultimos 100 erros do bot
-  - Detalhes: no N8N, mensagem de erro, mensagem do usuario, chat_id, timestamp
-
-#### `/admin` — Gerenciamento (admin)
-- Lista de filiais com nome, workflow ID, instancia Evolution, chat_id
-- Criar nova filial (com opcao de duplicar workflow)
-- Configurar credenciais por filial
-- Configuracao do grupo do Bom Dia (salva em `config:bom_dia_grupo` no Redis)
-
-#### `/pops` e `/clientes` — Redirects
-Redirecionam automaticamente para `/treinamento` e `/chamados` respectivamente.
-
-### API Routes
+### API Routes principais
 
 | Rota | Metodo | Auth | Descricao |
 |------|--------|------|-----------|
-| `/api/auth/login` | POST | - | Login com email/senha, retorna cookie JWT |
-| `/api/auth/logout` | POST | - | Remove cookie de autenticacao |
-| `/api/auth/me` | GET | JWT | Retorna dados do usuario logado |
-| `/api/status` | GET | JWT | Status de todas as filiais |
-| `/api/executions` | GET | JWT | Execucoes recentes do N8N |
+| `/api/auth/login` | POST | - | Login, retorna cookie JWT |
+| `/api/auth/me` | GET | JWT | Dados do usuario logado |
 | `/api/pops` | GET/POST | Admin | Listar/criar POPs |
-| `/api/pops/[id]` | PUT/DELETE | Admin | Editar/arquivar POP |
 | `/api/pops-n8n` | GET | Token | Endpoint para o N8N buscar POPs |
 | `/api/treinamento` | GET/POST | Admin | Listar/criar regras |
-| `/api/treinamento/[id]` | PUT/DELETE | Admin | Editar/excluir regra |
 | `/api/system-prompt` | GET/PUT | Admin | Ler/atualizar system prompt |
 | `/api/colaboradores` | GET/POST | Admin | Listar/criar colaboradores |
-| `/api/colaboradores/[id]` | PUT/DELETE | Admin | Editar/excluir colaborador |
-| `/api/chamados` | GET/POST/DELETE | Admin | Status/importar/remover chamados |
-| `/api/clientes` | GET/POST/DELETE | Admin | Status/importar/remover clientes |
-| `/api/historico` | DELETE | Admin | Limpar historico de conversas Redis |
-| `/api/config/bom-dia` | GET/PUT | Admin | Config do grupo do bom dia |
 | `/api/filiais` | GET/POST | Admin | Listar/criar filiais |
-| `/api/filiais/[id]` | PUT/DELETE | Admin | Editar/excluir filial |
-| `/api/conversas` | GET/POST | GET=Admin, POST=aberto | Listar/salvar conversas |
+| `/api/conversas` | GET/POST | GET=Admin, POST=aberto | Listar conversas / N8N salva conversa |
 | `/api/erros` | GET/POST/DELETE | GET/DELETE=Admin, POST=aberto | Listar/salvar/limpar erros |
+| `/api/chamados` | GET/POST/DELETE | Admin | Importar/status/limpar chamados (Redis) |
+| `/api/clientes` | GET/POST/DELETE | Admin | Importar/status/limpar clientes (Redis) |
+| `/api/historico` | GET/DELETE | Admin | Status/limpar historico Redis |
+| `/api/skills` | GET/POST | Admin | Listar/criar skills |
+| `/api/skills/[id]` | PUT/DELETE | Admin | Atualizar/excluir skill |
+| `/api/skills/n8n` | GET | Token | Endpoint para N8N buscar skills ativas |
+| `/api/solicitacoes` | GET/POST | Admin | Listar/criar solicitacoes programadas |
+| `/api/solicitacoes/[id]` | PUT/DELETE | Admin | Atualizar/excluir solicitacao |
+| `/api/solicitacoes/n8n` | GET/POST | Token | N8N busca tarefas due / marca como executada |
+| `/api/status` | GET | JWT | Status de todas as filiais |
+| `/api/executions` | GET | JWT | Execucoes recentes do N8N |
 
 ---
 
 ## Variaveis de Ambiente (Dashboard)
 
-```
-PG_URL=postgresql://zazz:SENHA@localhost:5432/zazzdb
-JWT_SECRET=SeuSecretJWT
-N8N_URL=https://n8n.srv1537041.hstgr.cloud
-N8N_API_KEY=chave-gerada-no-painel-n8n
-N8N_POPS_TOKEN=MALUCO_POPS_2026
-REDIS_URL=redis://:SENHA@localhost:6379
-```
+| Variavel | Descricao |
+|----------|-----------|
+| `PG_URL` | Connection string do PostgreSQL |
+| `JWT_SECRET` | Secret para assinar tokens JWT |
+| `N8N_URL` | URL do N8N (ex: `https://n8n.srv1537041.hstgr.cloud`) |
+| `N8N_API_KEY` | Chave de API do N8N |
+| `N8N_POPS_TOKEN` | Token para o endpoint `/api/pops-n8n` (default: `MALUCO_POPS_2026`) |
+| `REDIS_URL` | Connection string do Redis |
 
 ---
 
 ## Deploy
 
-### Dashboard (manual via SSH)
+### Dashboard (automatizado)
+```bash
+bash deploy.sh           # Executa: git pull, npm install, build, pm2 restart
+```
+
+### Dashboard (manual)
 ```bash
 ssh root@195.200.7.239
 cd /opt/zazz/dashboard
 git pull origin main
+npm install
 npm run build
-pm2 restart dashboard --update-env
-pm2 save
+pm2 restart maluco-dashboard --update-env
 ```
 
 ### Workflow N8N (manual)
-1. Editar o arquivo `workflow_v2.json` na raiz do projeto
-2. No painel do N8N, ir em "Import from file"
-3. Selecionar o `workflow_v2.json` atualizado
-4. Conferir se as credentials (PostgreSQL, Redis) estao vinculadas
-5. Ativar o workflow
+1. Editar `workflow_v2.json`
+2. No N8N: **Import from file** → selecionar o arquivo
+3. Configurar credentials: PostgreSQL e Redis
+4. **Importante**: nos campos `x-api-key` dos nos HTTP que chamam a Anthropic, configurar via **Authentication > Generic Credential Type > Header Auth** (nao colocar a chave direto no campo, pois o GitHub bloqueia o push por seguranca)
+5. Executar o no **SETUP** uma vez para criar a coluna `tipo_atendimento`
+6. Ativar o workflow
+
+### Nodes com configuracoes obrigatorias
+Estes nos precisam de `executeOnce: true`:
+- Busca POPs, Busca System Prompt, Busca Colaboradores, Busca Historico 10
+- Busca Historico Redis, Busca Chamados Redis, Busca Clientes, Busca Regras
+
+**Busca Regras** tambem precisa de `alwaysOutputData: true`.
 
 ---
 
@@ -422,104 +398,48 @@ pm2 save
 
 ```
 /
-├── workflow_v2.json                    # Workflow principal do N8N
-├── deploy_workflow.json                # Copia de deploy
-├── ALTERACOES_PROJETO.md               # Historico completo de mudancas
-├── README.md                           # Este arquivo
+├── workflow_v2.json          # Workflow principal do N8N
+├── deploy.sh                 # Script de deploy automatizado (SSH + build + PM2)
+├── deploy_workflow.json      # Config de deploy do workflow
+├── README.md                 # Este arquivo
+├── CLAUDE.md                 # Instrucoes para Claude Code
+├── COMO_FUNCIONA_CHAMADOS.md # Documentacao do fluxo XLSX -> Redis -> Bot
 │
-├── dashboard/                          # Dashboard Next.js (repo separado)
-│   ├── package.json                    # Next.js 14, React 18, Tailwind CSS
-│   ├── tailwind.config.js
-│   ├── next.config.js
-│   │
-│   ├── app/                            # App Router (Next.js 14)
-│   │   ├── layout.js                   # Layout raiz
-│   │   ├── page.js                     # Redirect para /dashboard
-│   │   ├── globals.css                 # Estilos globais (Tailwind)
-│   │   ├── login/page.jsx              # Tela de login
-│   │   ├── dashboard/page.jsx          # Visao geral
-│   │   ├── treinamento/page.jsx        # Regras + POPs + Colaboradores (3 abas)
-│   │   ├── chamados/page.jsx           # Chamados + Clientes (2 abas)
-│   │   ├── pops/page.jsx               # Redirect → /treinamento
-│   │   ├── clientes/page.jsx           # Redirect → /chamados
-│   │   ├── system-prompt/page.jsx      # Editor de system prompt
-│   │   ├── conversas/page.jsx          # Historico de conversas + erros
-│   │   ├── admin/page.jsx              # Gerenciar filiais + config bom dia
-│   │   │
-│   │   └── api/                        # API Routes
-│   │       ├── auth/                   # Login, logout, me
-│   │       ├── pops/                   # CRUD POPs
-│   │       ├── pops-n8n/               # Endpoint para N8N
-│   │       ├── treinamento/            # CRUD regras
-│   │       ├── system-prompt/          # Ler/salvar system prompt
-│   │       ├── colaboradores/          # CRUD colaboradores
-│   │       ├── chamados/               # Importar/remover chamados
-│   │       ├── clientes/               # Importar/remover clientes
-│   │       ├── historico/              # Limpar historico Redis
-│   │       ├── config/                 # Config bom dia
-│   │       ├── filiais/                # CRUD filiais
-│   │       ├── status/                 # Status dos bots
-│   │       ├── executions/             # Execucoes N8N
-│   │       ├── conversas/              # Historico de conversas
-│   │       ├── erros/                  # Log de erros
-│   │       ├── n8n/                    # Proxy para API do N8N
-│   │       ├── setup/                  # Setup inicial do banco
-│   │       ├── readme/                 # Conteudo do README para Sidebar
-│   │       └── debug/                  # Debug/diagnostico
-│   │
-│   ├── components/                     # Componentes React
-│   │   ├── Navbar.jsx                  # Navegacao (5 links admin)
-│   │   ├── Sidebar.jsx                 # Painel lateral "Sobre" (README)
-│   │   ├── StatusCard.jsx              # Card de status por filial
-│   │   └── ExecutionList.jsx           # Lista de execucoes N8N
-│   │
-│   └── lib/                            # Bibliotecas compartilhadas
-│       ├── db.js                       # Pool PostgreSQL (pg) — usa PG_URL
-│       ├── auth.js                     # JWT sign/verify/getSession
-│       └── n8n.js                      # Client API do N8N
-│
-├── hostinger/                          # Configs de referencia para o VPS
-│   ├── docker-compose.yml
-│   ├── .env.example
-│   └── SETUP_HOSTINGER.md
+└── dashboard/                # Dashboard web (Next.js 14)
+    ├── app/
+    │   ├── dashboard/        # Visao geral
+    │   ├── treinamento/      # 5 abas: Regras, POPs, Colaboradores, Skills, Solicitacoes
+    │   ├── system-prompt/    # Editor system prompt
+    │   ├── conversas/        # Historico + erros
+    │   ├── chamados/         # Importar chamados + clientes (abas)
+    │   ├── admin/            # Filiais + configuracoes
+    │   └── api/
+    │       ├── auth/         # Login, logout, me
+    │       ├── pops/         # CRUD POPs
+    │       ├── pops-n8n/     # POPs para N8N (token auth)
+    │       ├── treinamento/  # CRUD regras
+    │       ├── skills/       # CRUD skills + endpoint N8N
+    │       ├── solicitacoes/ # CRUD solicitacoes programadas + endpoint N8N
+    │       ├── colaboradores/# CRUD colaboradores
+    │       ├── conversas/    # Historico de conversas
+    │       ├── erros/        # Log de erros
+    │       ├── chamados/     # Importar chamados (Redis)
+    │       └── ...           # filiais, status, executions, etc.
+    ├── components/
+    │   ├── Navbar.jsx        # Navegacao com icones Lucide React
+    │   ├── Sidebar.jsx       # Sidebar lateral (sobre o projeto)
+    │   ├── StatusCard.jsx    # Card de status por filial
+    │   └── ExecutionList.jsx # Lista de execucoes N8N
+    └── lib/
+        ├── db.js             # Pool PostgreSQL
+        ├── redis.js          # Singleton Redis
+        ├── auth.js           # JWT
+        └── n8n.js            # Client API N8N
 ```
 
 ---
 
-## Comandos Uteis no Servidor
-
-```bash
-# Ver todos os containers
-cd /docker/n8n && docker compose ps
-
-# Reiniciar tudo
-cd /docker/n8n && docker compose restart
-
-# Ver logs do N8N
-docker compose logs n8n -f --tail=50
-
-# Ver logs da Evolution
-docker compose logs evolution -f --tail=50
-
-# Acessar banco
-docker exec -it n8n-postgres-1 psql -U zazz -d zazzdb
-
-# Acessar Redis
-docker exec -it n8n-redis-1 redis-cli -a ZazzRedis2026!
-
-# Status da dashboard
-pm2 status
-
-# Logs da dashboard
-pm2 logs dashboard --lines 50
-
-# Reiniciar dashboard com novas variaveis
-pm2 restart dashboard --update-env && pm2 save
-```
-
----
-
-## Desenvolvimento por
+## Desenvolvido por
 
 **Franquelin Baldoria de Almeida**
 - Instagram: [@Frank_almeida5](https://instagram.com/Frank_almeida5)
