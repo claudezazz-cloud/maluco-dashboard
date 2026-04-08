@@ -9,10 +9,18 @@ async function ensureTable() {
       titulo VARCHAR(255) NOT NULL,
       categoria VARCHAR(255),
       conteudo TEXT NOT NULL,
+      prioridade VARCHAR(20) DEFAULT 'relevante',
       ativo BOOLEAN DEFAULT true,
       criado_em TIMESTAMP DEFAULT NOW(),
       atualizado_em TIMESTAMP DEFAULT NOW()
     )
+  `)
+  // Adiciona coluna prioridade se não existir (migração)
+  await query(`
+    DO $$ BEGIN
+      ALTER TABLE dashboard_pops ADD COLUMN IF NOT EXISTS prioridade VARCHAR(20) DEFAULT 'relevante';
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
   `)
 }
 
@@ -24,7 +32,7 @@ export async function GET() {
   try {
     await ensureTable()
     const result = await query(
-      'SELECT id, titulo, categoria, conteudo, ativo, criado_em, atualizado_em FROM dashboard_pops ORDER BY categoria, titulo'
+      "SELECT id, titulo, categoria, conteudo, COALESCE(prioridade, 'relevante') as prioridade, ativo, criado_em, atualizado_em FROM dashboard_pops ORDER BY categoria, titulo"
     )
     return NextResponse.json(result.rows)
   } catch (e) {
@@ -39,13 +47,16 @@ export async function POST(req) {
   }
   try {
     await ensureTable()
-    const { titulo, categoria, conteudo } = await req.json()
+    const { titulo, categoria, conteudo, prioridade } = await req.json()
     if (!titulo?.trim()) return NextResponse.json({ error: 'Título obrigatório' }, { status: 400 })
     if (!conteudo?.trim()) return NextResponse.json({ error: 'Conteúdo obrigatório' }, { status: 400 })
 
+    const validPrioridades = ['sempre', 'importante', 'relevante']
+    const prio = validPrioridades.includes(prioridade) ? prioridade : 'relevante'
+
     const result = await query(
-      'INSERT INTO dashboard_pops (titulo, categoria, conteudo) VALUES ($1, $2, $3) RETURNING *',
-      [titulo.trim(), categoria?.trim() || 'Geral', conteudo.trim()]
+      'INSERT INTO dashboard_pops (titulo, categoria, conteudo, prioridade) VALUES ($1, $2, $3, $4) RETURNING *',
+      [titulo.trim(), categoria?.trim() || 'Geral', conteudo.trim(), prio]
     )
     return NextResponse.json(result.rows[0], { status: 201 })
   } catch (e) {

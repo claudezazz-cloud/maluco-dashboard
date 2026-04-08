@@ -6,12 +6,15 @@ export async function PUT(req, { params }) {
   const session = await getSession()
   if (!session || !requireAdmin(session)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
-  const { titulo, categoria, conteudo, ativo } = await req.json()
+  const { titulo, categoria, conteudo, ativo, prioridade } = await req.json()
   if (!titulo?.trim() || !conteudo?.trim()) return NextResponse.json({ error: 'Título e conteúdo obrigatórios' }, { status: 400 })
 
+  const validPrioridades = ['sempre', 'importante', 'relevante']
+  const prio = validPrioridades.includes(prioridade) ? prioridade : 'relevante'
+
   await query(
-    `UPDATE dashboard_pops SET titulo=$1, categoria=$2, conteudo=$3, ativo=$4, atualizado_em=NOW() WHERE id=$5`,
-    [titulo.trim(), categoria?.trim() || 'Geral', conteudo.trim(), ativo ?? true, params.id]
+    `UPDATE dashboard_pops SET titulo=$1, categoria=$2, conteudo=$3, ativo=$4, prioridade=$5, atualizado_em=NOW() WHERE id=$6`,
+    [titulo.trim(), categoria?.trim() || 'Geral', conteudo.trim(), ativo ?? true, prio, params.id]
   )
   return NextResponse.json({ ok: true })
 }
