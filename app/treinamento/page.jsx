@@ -53,7 +53,7 @@ export default function TreinamentoPage() {
   const [expandido, setExpandido] = useState(null)
   const [editandoPop, setEditandoPop] = useState(null)
   const [editPopForm, setEditPopForm] = useState({})
-  const [novoPopForm, setNovoPopForm] = useState({ titulo: '', categoria: 'Geral', conteudo: '' })
+  const [novoPopForm, setNovoPopForm] = useState({ titulo: '', categoria: 'Geral', conteudo: '', prioridade: 'relevante' })
   const [mostraNovoPop, setMostraNovoPop] = useState(false)
   const [buscaPop, setBuscaPop] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('Todas')
@@ -200,7 +200,7 @@ export default function TreinamentoPage() {
     })
     setSalvandoPop(false)
     if (r.ok) {
-      setNovoPopForm({ titulo: '', categoria: 'Geral', conteudo: '' })
+      setNovoPopForm({ titulo: '', categoria: 'Geral', conteudo: '', prioridade: 'relevante' })
       setMostraNovoPop(false)
       showMsgPop('POP adicionado com sucesso!')
       fetchPops()
@@ -537,7 +537,7 @@ export default function TreinamentoPage() {
             {mostraNovoPop && (
               <div className="bg-[#1a1a24] rounded-xl border border-green-900 p-6 mb-6">
                 <h2 className="text-white font-medium mb-4">Novo POP</h2>
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">Título *</label>
                     <input value={novoPopForm.titulo} onChange={e => setNovoPopForm({...novoPopForm, titulo: e.target.value})}
@@ -548,6 +548,15 @@ export default function TreinamentoPage() {
                     <select value={novoPopForm.categoria} onChange={e => setNovoPopForm({...novoPopForm, categoria: e.target.value})}
                       className={inputCls}>
                       {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Prioridade</label>
+                    <select value={novoPopForm.prioridade} onChange={e => setNovoPopForm({...novoPopForm, prioridade: e.target.value})}
+                      className={inputCls}>
+                      <option value="sempre">Leia Sempre</option>
+                      <option value="importante">Importante</option>
+                      <option value="relevante">Relevante</option>
                     </select>
                   </div>
                 </div>
@@ -573,6 +582,15 @@ export default function TreinamentoPage() {
                 </div>
               </div>
             )}
+
+            {/* Info prioridades */}
+            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-4 mb-4">
+              <div className="flex flex-wrap gap-4 text-xs">
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400"></span> <strong className="text-red-400">Leia Sempre</strong> <span className="text-gray-500">— conteudo completo em TODAS as respostas</span></span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-yellow-400"></span> <strong className="text-yellow-400">Importante</strong> <span className="text-gray-500">— conteudo completo sempre que mencionado</span></span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-gray-400"></span> <strong className="text-gray-400">Relevante</strong> <span className="text-gray-500">— conteudo incluido apenas quando o assunto for relacionado</span></span>
+              </div>
+            </div>
 
             {/* Busca e filtros */}
             <div className="flex gap-3 mb-4">
@@ -616,6 +634,13 @@ export default function TreinamentoPage() {
                                 {pop.categoria}
                               </span>
                             )}
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              pop.prioridade === 'sempre' ? 'bg-red-900/30 text-red-400 border border-red-900/50' :
+                              pop.prioridade === 'importante' ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-900/50' :
+                              'bg-gray-800 text-gray-400 border border-gray-700'
+                            }`}>
+                              {pop.prioridade === 'sempre' ? 'Leia Sempre' : pop.prioridade === 'importante' ? 'Importante' : 'Relevante'}
+                            </span>
                             <span className="text-xs text-gray-600">
                               {new Date(pop.atualizado_em).toLocaleDateString('pt-BR')}
                             </span>
@@ -623,7 +648,7 @@ export default function TreinamentoPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={e => { e.stopPropagation(); setEditandoPop(pop.id); setEditPopForm({ titulo: pop.titulo, categoria: pop.categoria, conteudo: pop.conteudo }); setExpandido(pop.id) }}
+                        <button onClick={e => { e.stopPropagation(); setEditandoPop(pop.id); setEditPopForm({ titulo: pop.titulo, categoria: pop.categoria, conteudo: pop.conteudo, prioridade: pop.prioridade || 'relevante' }); setExpandido(pop.id) }}
                           className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">
                           Editar
                         </button>
@@ -639,7 +664,7 @@ export default function TreinamentoPage() {
                       <div className="border-t border-gray-800 px-5 py-4">
                         {editandoPop === pop.id ? (
                           <div>
-                            <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div className="grid grid-cols-3 gap-3 mb-3">
                               <div>
                                 <label className="block text-xs text-gray-400 mb-1">Título</label>
                                 <input value={editPopForm.titulo} onChange={e => setEditPopForm({...editPopForm, titulo: e.target.value})} className={inputEditCls} />
@@ -648,6 +673,14 @@ export default function TreinamentoPage() {
                                 <label className="block text-xs text-gray-400 mb-1">Categoria</label>
                                 <select value={editPopForm.categoria} onChange={e => setEditPopForm({...editPopForm, categoria: e.target.value})} className={inputEditCls}>
                                   {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-400 mb-1">Prioridade</label>
+                                <select value={editPopForm.prioridade || 'relevante'} onChange={e => setEditPopForm({...editPopForm, prioridade: e.target.value})} className={inputEditCls}>
+                                  <option value="sempre">Leia Sempre</option>
+                                  <option value="importante">Importante</option>
+                                  <option value="relevante">Relevante</option>
                                 </select>
                               </div>
                             </div>

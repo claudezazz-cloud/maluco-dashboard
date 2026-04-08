@@ -11,7 +11,7 @@ export async function GET(req) {
 
   try {
     const [popsResult, colabResult] = await Promise.all([
-      query(`SELECT titulo, categoria, conteudo FROM dashboard_pops WHERE ativo = true ORDER BY categoria, titulo`).catch(() => ({ rows: [] })),
+      query(`SELECT titulo, categoria, conteudo, COALESCE(prioridade, 'relevante') as prioridade FROM dashboard_pops WHERE ativo = true ORDER BY categoria, titulo`).catch(() => ({ rows: [] })),
       query(`SELECT nome, cargo, funcoes FROM dashboard_colaboradores WHERE ativo = true ORDER BY nome`).catch(() => ({ rows: [] }))
     ])
 
