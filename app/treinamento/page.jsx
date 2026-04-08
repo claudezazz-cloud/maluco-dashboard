@@ -300,6 +300,26 @@ export default function TreinamentoPage() {
     fetchSolicitacoes()
   }
 
+  async function executarAgora(s) {
+    showMsgSolicitacao('Executando...', 'info')
+    try {
+      const r = await fetch('/api/solicitacoes/executar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: s.id }),
+      })
+      const d = await r.json()
+      if (r.ok) {
+        showMsgSolicitacao(`"${s.nome}" executada com sucesso!`)
+        fetchSolicitacoes()
+      } else {
+        showMsgSolicitacao('Erro: ' + (d.error || r.status), 'error')
+      }
+    } catch (e) {
+      showMsgSolicitacao('Erro: ' + e.message, 'error')
+    }
+  }
+
   // ===== SKILLS FUNCS =====
   async function fetchSkills() {
     setLoadingSkills(true)
@@ -1195,6 +1215,8 @@ export default function TreinamentoPage() {
                           </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
+                          <button onClick={() => executarAgora(s)}
+                            className="text-xs text-blue-400 bg-blue-900/20 hover:bg-blue-900/40 px-3 py-1.5 rounded-lg transition">Executar Agora</button>
                           <button onClick={() => toggleSolicitacaoAtivo(s)} className={`text-xs px-3 py-1.5 rounded-lg transition ${s.ativo ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
                             {s.ativo ? 'Ativo' : 'Inativo'}
                           </button>
