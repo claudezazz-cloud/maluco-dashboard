@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Sidebar from './Sidebar'
-import { LayoutDashboard, Brain, Ticket, Settings, MessageSquare, Shield, LogOut, Menu } from 'lucide-react'
+import { LayoutDashboard, Brain, Ticket, Settings, MessageSquare, MessageCircle, Shield, LogOut, Menu } from 'lucide-react'
 
 export default function Navbar({ user }) {
   const router = useRouter()
@@ -39,6 +39,9 @@ export default function Navbar({ user }) {
               </Link>
               <Link href="/chamados" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                 <Ticket className="w-3.5 h-3.5" /> Chamados & Clientes
+              </Link>
+              <Link href="/chat" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
+                <MessageCircle className="w-3.5 h-3.5" /> Chat
               </Link>
               {user?.role === 'admin' && (
                 <>
