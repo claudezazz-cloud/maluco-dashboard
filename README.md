@@ -19,7 +19,7 @@ Alem do bot, existe uma dashboard web completa para o administrador gerenciar tu
 ### Atendimento no WhatsApp
 - Responde mensagens de texto quando mencionado no grupo (ex: "@Claude como faco uma nova venda?")
 - Recebe e transcreve mensagens de audio usando a API do Whisper (OpenAI)
-- Busca semantica de POPs — quando o colaborador pergunta sobre um assunto, o bot carrega apenas os procedimentos relevantes usando full-text search do PostgreSQL (`to_tsvector`/`plainto_tsquery` com dicionario 'portuguese')
+- Busca semantica de POPs com sistema de prioridade (`sempre` / `importante` / `relevante`) — POPs "sempre" sao injetados em toda resposta, "importante" sempre enviam conteudo completo, "relevante" sao filtrados por score de palavras-chave (top 5 mais proximos da mensagem)
 - Mantem historico de conversa com Redis — o bot lembra das ultimas mensagens trocadas para manter contexto entre perguntas
 - Cria tarefas automaticamente no Notion quando o colaborador pede (ex: "Claude agenda uma instalacao para o cliente Joao amanha")
 - Aprende novas regras em tempo real via WhatsApp (ex: "Claude aprenda: sempre pergunte o telefone do cliente")
@@ -34,7 +34,8 @@ O bot suporta comandos de skill iniciados com `/`, cadastrados na dashboard:
 - `/menu` — lista todas as skills ativas com nome, descricao e exemplo de uso (responde direto sem chamar Claude)
 - `/relatorio` — gera relatorio de atendimentos do dia
 - Skills customizadas podem ser criadas pela dashboard com: nome do comando, descricao, prompt de contexto e exemplo de uso
-- Skills sao detectadas automaticamente pelo no "Verifica Mencao" e o contexto da skill e injetado no prompt do Claude
+- Skills sao detectadas automaticamente pelo no "Verifica Mencao" via regex `/(?:^|\s)(\/\S+)/`, funcionando tanto em privado quanto em grupos com mencao ao bot
+- O contexto da skill e injetado no prompt do Claude, mantendo todas as outras funcoes ativas (POPs, historico, chamados)
 
 ### Solicitacoes Programadas (Agendamento)
 Execucoes automaticas de comandos em horarios definidos, gerenciadas pela dashboard:
@@ -42,6 +43,7 @@ Execucoes automaticas de comandos em horarios definidos, gerenciadas pela dashbo
 - Configuravel por horario (ex: 07:30, 17:00), dias da semana (seg-sab, todos, etc.) e chat de destino
 - O N8N verifica a cada minuto se ha tarefas pendentes e injeta uma mensagem sintetica no webhook, passando pelo fluxo normal do bot
 - Protecao contra duplicatas: tarefas ja executadas nao disparam novamente (intervalo minimo de 50 minutos)
+- Botao "Executar Agora" na dashboard para testar qualquer agendamento manualmente sem esperar o horario
 - Exemplos de uso: bom dia com resumo de chamados (07:30), relatorio de atendimentos (17:00)
 
 ### Tratamento de erros
@@ -105,13 +107,14 @@ Armazena todas as mensagens do grupo de WhatsApp (independente de mencionar o bo
 | `tipo_atendimento` | VARCHAR(20) | `solicitacao`, `resolucao` ou NULL |
 
 ### `dashboard_pops`
-Procedimentos Operacionais Padrao da empresa, consultados pelo bot via busca semantica.
+Procedimentos Operacionais Padrao da empresa, consultados pelo bot via busca semantica com prioridade.
 | Coluna | Tipo | Descricao |
 |--------|------|-----------|
 | `id` | SERIAL PK | ID auto-incremento |
 | `titulo` | VARCHAR(255) | Nome do procedimento |
 | `categoria` | VARCHAR(255) | Categoria (Geral, Atendimento, Tecnico, Financeiro, Comercial, RH, Outro) |
 | `conteudo` | TEXT | Conteudo completo do POP |
+| `prioridade` | VARCHAR(20) | `sempre` (enviado em toda resposta), `importante` (sempre enviado com conteudo completo), `relevante` (top 5 por palavras-chave) |
 | `ativo` | BOOLEAN | Se o POP esta ativo (soft delete) |
 | `criado_em` | TIMESTAMP | Data de criacao |
 | `atualizado_em` | TIMESTAMP | Ultima atualizacao |
@@ -194,6 +197,18 @@ Base de clientes importada via XLSX.
 | `cod` | VARCHAR PK | Codigo do cliente |
 | `nome` | VARCHAR | Nome do cliente |
 | `ativo` | BOOLEAN | Se esta ativo |
+
+### `dashboard_usuarios`
+Usuarios da dashboard (admin + colaboradores).
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| `id` | SERIAL PK | ID auto-incremento |
+| `nome` | VARCHAR | Nome do usuario |
+| `email` | VARCHAR UNIQUE | Email para login |
+| `senha_hash` | VARCHAR | Hash bcrypt da senha |
+| `role` | VARCHAR | `admin` (acesso total) ou `colaborador` (Dashboard + Chamados/Clientes, leitura) |
+| `ativo` | BOOLEAN | Se o usuario esta ativo |
+| `criado_em` | TIMESTAMP | Data de criacao |
 
 ### `dashboard_skills`
 Skills (comandos com /) disponiveis para o bot.
@@ -301,6 +316,8 @@ Agendamento Trigger (a cada minuto)
 ```
 A mensagem sintetica inclui: `event: messages.upsert`, `fromMe: false`, `mentionedJid` do bot e `messageTimestamp` atual — passando por Filter1 e Verifica Mencao normalmente.
 
+O botao "Executar Agora" da dashboard faz exatamente a mesma injecao sintetica (via `/api/solicitacoes/executar`), permitindo testar qualquer comando sem esperar o horario agendado.
+
 ---
 
 ## Dashboard Web
@@ -309,15 +326,15 @@ A mensagem sintetica inclui: `event: messages.upsert`, `fromMe: false`, `mention
 
 ### Paginas
 
-| Pagina | Descricao |
-|--------|-----------|
-| `/login` | Login com email + senha |
-| `/dashboard` | Visao geral: metricas, cards por filial, execucoes recentes |
-| `/treinamento` | 5 abas: Regras, POPs, Colaboradores, Skills, Solicitacoes Programadas |
-| `/system-prompt` | Editor do system prompt com placeholders |
-| `/conversas` | Historico de interacoes + log de erros |
-| `/chamados` | Abas: importar chamados XLSX + importar clientes XLSX |
-| `/admin` | Gerenciar filiais e configuracoes |
+| Pagina | Descricao | Acesso |
+|--------|-----------|--------|
+| `/login` | Login com email + senha | Publico |
+| `/dashboard` | Visao geral: metricas (mensagens/erros/online), cards por filial, execucoes recentes do N8N | Admin + Colaborador |
+| `/chamados` | Abas: importar chamados XLSX + importar clientes XLSX (colaborador ve sem botoes de upload/limpeza) | Admin + Colaborador |
+| `/treinamento` | 5 abas: Regras, POPs (com prioridade), Colaboradores, Skills, Solicitacoes Programadas | Admin |
+| `/system-prompt` | Editor do system prompt com placeholders | Admin |
+| `/conversas` | Historico de interacoes + log de erros | Admin |
+| `/admin` | 2 abas: Filiais + Usuarios (criar colaboradores, redefinir senhas) | Admin |
 
 ### API Routes principais
 
@@ -341,8 +358,11 @@ A mensagem sintetica inclui: `event: messages.upsert`, `fromMe: false`, `mention
 | `/api/skills/n8n` | GET | Token | Endpoint para N8N buscar skills ativas |
 | `/api/solicitacoes` | GET/POST | Admin | Listar/criar solicitacoes programadas |
 | `/api/solicitacoes/[id]` | PUT/DELETE | Admin | Atualizar/excluir solicitacao |
+| `/api/solicitacoes/executar` | POST | Admin | Executar uma solicitacao agora (injeta mensagem sintetica no webhook) |
 | `/api/solicitacoes/n8n` | GET/POST | Token | N8N busca tarefas due / marca como executada |
-| `/api/status` | GET | JWT | Status de todas as filiais |
+| `/api/usuarios` | GET/POST | Admin | Listar/criar usuarios da dashboard |
+| `/api/usuarios/[id]` | PUT/DELETE | Admin + self-edit | Atualizar/desativar (colaborador pode editar proprio nome/senha) |
+| `/api/status` | GET | JWT | Status de todas as filiais (mensagens/erros hoje, online, ultima execucao) |
 | `/api/executions` | GET | JWT | Execucoes recentes do N8N |
 
 ---

@@ -1,0 +1,18 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS mensagens (\\n  id SERIAL PRIMARY KEY,\\n  data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\\n  remetente VARCHAR(100),\\n  mensagem TEXT\\n);"
+      },
+      "name": "Cria Tabela Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        0,
+        0
+      ]
+    }
+  ],
+  "connections": {}
+}
