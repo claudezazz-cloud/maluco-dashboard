@@ -1,0 +1,3 @@
+systemContent = rulesPrompt + chamadosContext + '\n' + systemContent;
+} else {
+ 

@@ -54,7 +54,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Remove campos que a API do N8N não aceita no PUT\nconst wf = $json.body;\n\n// Limpa cada nó removendo campos extras\nconst cleanNodes = wf.nodes.map(node => {\n  const clean = {\n    id: node.id,\n    name: node.name,\n    type: node.type,\n    typeVersion: node.typeVersion,\n    position: node.position,\n    parameters: node.parameters\n  };\n  if (node.credentials) clean.credentials = node.credentials;\n  if (node.onError) clean.onError = node.onError;\n  return clean;\n});\n\nconst cleanWorkflow = {\n  name: wf.name,\n  nodes: cleanNodes,\n  connections: wf.connections,\n  settings: wf.settings || {}\n};\n\nreturn [{ json: { cleanWorkflow } }];"
+        "jsCode": "// Remove campos que a API do N8N não aceita no PUT\nconst wf = $json.body;\n\n// Limpa cada nó removendo campos extras\nconst cleanNodes = wf.nodes.map(node => {\n  const clean = {\n    id: node.id,\n    name: node.name,\n    type: node.type,\n    typeVersion: node.typeVersion,\n    position: node.position,\n    parameters: node.parameters\n  };\n  if (node.credentials) clean.credentials = node.credentials;\n  if (node.onError) clean.onError = node.onError;\n  if (node.webhookId) clean.webhookId = node.webhookId;\n  return clean;\n});\n\nconst cleanWorkflow = {\n  name: wf.name,\n  nodes: cleanNodes,\n  connections: wf.connections,\n  settings: wf.settings || {}\n};\n\nreturn [{ json: { cleanWorkflow } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
