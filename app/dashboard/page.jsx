@@ -51,10 +51,10 @@ export default function DashboardPage() {
   const botsOnline = filiais.filter(f => f.online).length
 
   return (
-    <div className="min-h-screen bg-[#0f0f13]">
+    <div className="min-h-screen bg-transparent">
       <Navbar user={user} />
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -85,17 +85,17 @@ export default function DashboardPage() {
 
         {/* Métricas globais */}
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-[#1a1a24] rounded-xl p-5 border border-gray-800">
-            <p className="text-gray-400 text-sm">Bots Online</p>
-            <p className="text-3xl font-bold text-white mt-1">{botsOnline}<span className="text-gray-500 text-lg">/{filiais.length}</span></p>
+          <div className="bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl p-6 border border-gray-800/50 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(0,128,0,0.1)] transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+            <p className="text-gray-400 text-sm font-medium tracking-wide uppercase">Bots Online</p>
+            <p className="text-4xl font-bold text-white mt-2 drop-shadow-md">{botsOnline}<span className="text-gray-500 text-xl font-normal ml-1">/{filiais.length}</span></p>
           </div>
-          <div className="bg-[#1a1a24] rounded-xl p-5 border border-gray-800">
-            <p className="text-gray-400 text-sm">Mensagens Hoje</p>
-            <p className="text-3xl font-bold text-green-400 mt-1">{totalMensagens}</p>
+          <div className="bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl p-6 border border-gray-800/50 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(0,128,0,0.1)] transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            <p className="text-gray-400 text-sm font-medium tracking-wide uppercase">Mensagens Hoje</p>
+            <p className="text-4xl font-bold text-green-400 mt-2 glow-sm">{totalMensagens}</p>
           </div>
-          <div className="bg-[#1a1a24] rounded-xl p-5 border border-gray-800">
-            <p className="text-gray-400 text-sm">Erros Hoje</p>
-            <p className={`text-3xl font-bold mt-1 ${totalErros > 0 ? 'text-red-400' : 'text-white'}`}>{totalErros}</p>
+          <div className="bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl p-6 border border-gray-800/50 hover:border-red-500/30 hover:shadow-[0_0_20px_rgba(248,113,113,0.1)] transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+            <p className="text-gray-400 text-sm font-medium tracking-wide uppercase">Erros Hoje</p>
+            <p className={`text-4xl font-bold mt-2 ${totalErros > 0 ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]' : 'text-white'}`}>{totalErros}</p>
           </div>
         </div>
 
@@ -121,23 +121,25 @@ export default function DashboardPage() {
         )}
 
         {/* Execuções recentes */}
-        <div className="bg-[#1a1a24] rounded-xl border border-gray-800">
-          <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
-            <h2 className="font-medium text-white">
+        <div className="bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl border border-gray-800/50 overflow-hidden shadow-lg animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
+          <div className="px-6 py-4 border-b border-gray-800/50 flex items-center justify-between bg-black/20">
+            <h2 className="font-medium text-white tracking-wide">
               Execuções Recentes
               {selectedFilial && (
-                <span className="ml-2 text-sm text-green-400">
+                <span className="ml-2 text-sm text-green-400 font-normal">
                   — {filiais.find(f => f.id === selectedFilial)?.nome}
                 </span>
               )}
             </h2>
             {selectedFilial && (
-              <button onClick={() => setSelectedFilial(null)} className="text-xs text-gray-400 hover:text-white">
+              <button onClick={() => setSelectedFilial(null)} className="text-xs text-gray-400 hover:text-green-400 hover:glow-sm transition-all duration-300">
                 Mostrar todas
               </button>
             )}
           </div>
-          <ExecutionList executions={executions} />
+          <div className="bg-black/10">
+            <ExecutionList executions={executions} />
+          </div>
         </div>
       </main>
     </div>

@@ -2,7 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .glow-sm {
+    text-shadow: 0 0 10px rgba(0, 128, 0, 0.4);
+  }
+  .glow-border {
+    box-shadow: 0 0 15px rgba(0, 128, 0, 0.2);
+  }
+}
+
 body {
-  background-color: #0f0f13;
+  /* background-color removido em favor do background dinâmico no layout.js */
   color: #e5e7eb;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(31, 41, 55, 0.6); /* gray-800 com opacidade */
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.8); /* gray-600 */
 }
