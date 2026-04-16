@@ -35,7 +35,7 @@ export default function StatusCard({ filial, selected, onSelect }) {
   return (
     <div
       onClick={onSelect}
-      className={`bg-[#1a1a24] rounded-xl border p-5 cursor-pointer transition hover:border-[#008000] ${selected ? 'border-[#008000]' : 'border-gray-800'}`}
+      className={`bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl border p-5 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(0,128,0,0.15)] ${selected ? 'border-green-500/80 shadow-[0_0_15px_rgba(0,128,0,0.2)]' : 'border-gray-800/50 hover:border-green-500/40'}`}
     >
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -51,13 +51,13 @@ export default function StatusCard({ filial, selected, onSelect }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#0f0f13] rounded-lg p-3">
-          <p className="text-xs text-gray-500 mb-1">Mensagens hoje</p>
-          <p className="text-xl font-bold text-white">{mensagensHoje}</p>
+        <div className="bg-black/30 border border-gray-800/30 rounded-xl p-3 hover:border-green-500/20 transition-colors">
+          <p className="text-[11px] text-gray-500 mb-1 uppercase tracking-wider font-semibold">Mensagens hoje</p>
+          <p className="text-xl font-bold text-white drop-shadow-sm">{mensagensHoje}</p>
         </div>
-        <div className="bg-[#0f0f13] rounded-lg p-3">
-          <p className="text-xs text-gray-500 mb-1">Erros hoje</p>
-          <p className={`text-xl font-bold ${errosHoje > 0 ? 'text-red-400' : 'text-white'}`}>{errosHoje}</p>
+        <div className="bg-black/30 border border-gray-800/30 rounded-xl p-3 hover:border-red-500/20 transition-colors">
+          <p className="text-[11px] text-gray-500 mb-1 uppercase tracking-wider font-semibold">Erros hoje</p>
+          <p className={`text-xl font-bold ${errosHoje > 0 ? 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.5)]' : 'text-white drop-shadow-sm'}`}>{errosHoje}</p>
         </div>
       </div>
 

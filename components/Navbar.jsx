@@ -16,7 +16,7 @@ export default function Navbar({ user }) {
 
   return (
     <>
-      <nav className="bg-[#1a1a24] border-b border-gray-800 px-6 py-3">
+      <nav className="bg-[#0f0f13]/70 backdrop-blur-md border-b border-gray-800/40 px-6 py-3 sticky top-0 z-40 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 font-bold text-white">

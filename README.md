@@ -19,6 +19,7 @@ Alem do bot, existe uma dashboard web completa para o administrador gerenciar tu
 ### Atendimento no WhatsApp
 - Responde mensagens de texto quando mencionado no grupo (ex: "@Claude como faco uma nova venda?")
 - Recebe e transcreve mensagens de audio usando a API do Whisper (OpenAI)
+- **Reconhecimento de imagens com Claude Vision** — toda imagem enviada no grupo e automaticamente analisada pelo Claude Haiku 4.5. A descricao substitui o placeholder `[imagem]` no banco, permitindo que relatorios incluam contexto visual. Quando a legenda menciona o bot, ele responde analisando a foto diretamente (Vision nativo no prompt principal)
 - Busca semantica de POPs com sistema de prioridade (`sempre` / `importante` / `relevante`) — POPs "sempre" sao injetados em toda resposta, "importante" sempre enviam conteudo completo, "relevante" sao filtrados por score de palavras-chave (top 5 mais proximos da mensagem)
 - Mantem historico de conversa com Redis — o bot lembra das ultimas mensagens trocadas para manter contexto entre perguntas
 - Cria tarefas automaticamente no Notion quando o colaborador pede (ex: "Claude agenda uma instalacao para o cliente Joao amanha")
@@ -303,6 +304,31 @@ Detecta Audio --> Baixa Audio --> Converte p/ Whisper --> Transcreve Audio
   --> [continua no fluxo principal a partir de Busca POPs]
 ```
 
+### Fluxo de Imagem (Claude Vision)
+```
+Detecta Imagem --> Imagem Preloaded? (IF)
+  |                   |
+  |  false            |  true (dashboard: base64 ja veio no payload)
+  v                   |
+Baixa Imagem          |
+  |                   |
+  v                   v
+Prepara Body Imagem (Code: monta JSON para Claude Vision)
+  |
+  v
+Descreve Imagem (HTTP Request -> Anthropic API, Haiku 4.5, max 300 tokens)
+  |
+  v
+Formata Imagem (Code: monta dbMensagem com descricao, detecta mencao)
+  |
+  +--> Salva Imagem (Postgres: INSERT ON CONFLICT DO UPDATE — sobrescreve "[imagem]")
+  |
+  +--> Verifica Mencao Imagem (IF: isMentioned?)
+         |
+         true --> E Treinamento? --> [fluxo principal com imagem no content array]
+```
+Custo estimado: ~US$ 0,0015/imagem (Haiku 4.5 Vision). 100 imgs/dia ≈ US$ 4/mês.
+
 ### Fluxo de Agendamento (Solicitacoes Programadas)
 ```
 Agendamento Trigger (a cada minuto)
@@ -331,6 +357,7 @@ O botao "Executar Agora" da dashboard faz exatamente a mesma injecao sintetica (
 | `/login` | Login com email + senha | Publico |
 | `/dashboard` | Visao geral: metricas (mensagens/erros/online), cards por filial, execucoes recentes do N8N | Admin + Colaborador |
 | `/chamados` | Abas: importar chamados XLSX + importar clientes XLSX (colaborador ve sem botoes de upload/limpeza) | Admin + Colaborador |
+| `/chat` | Chat direto com o bot: envio de texto e imagens, polling de respostas, historico por usuario | Admin + Colaborador |
 | `/treinamento` | 5 abas: Regras, POPs (com prioridade), Colaboradores, Skills, Solicitacoes Programadas | Admin |
 | `/system-prompt` | Editor do system prompt com placeholders | Admin |
 | `/conversas` | Historico de interacoes + log de erros | Admin |
@@ -353,6 +380,8 @@ O botao "Executar Agora" da dashboard faz exatamente a mesma injecao sintetica (
 | `/api/chamados` | GET/POST/DELETE | Admin | Importar/status/limpar chamados (Redis) |
 | `/api/clientes` | GET/POST/DELETE | Admin | Importar/status/limpar clientes (Redis) |
 | `/api/historico` | GET/DELETE | Admin | Status/limpar historico Redis |
+| `/api/chat/send` | POST | JWT | Envia texto ou imagem para o bot via webhook N8N |
+| `/api/chat/messages` | GET/DELETE | JWT | Lista/limpa historico do chat do usuario logado |
 | `/api/skills` | GET/POST | Admin | Listar/criar skills |
 | `/api/skills/[id]` | PUT/DELETE | Admin | Atualizar/excluir skill |
 | `/api/skills/n8n` | GET | Token | Endpoint para N8N buscar skills ativas |
@@ -418,23 +447,29 @@ Estes nos precisam de `executeOnce: true`:
 
 ```
 /
-├── workflow_v2.json          # Workflow principal do N8N
+├── workflow_v2.json          # Workflow principal do N8N (~50 nos)
 ├── deploy.sh                 # Script de deploy automatizado (SSH + build + PM2)
+├── deploy.bat                # Wrapper Windows para deploy.sh
 ├── deploy_workflow.json      # Config de deploy do workflow
+├── DEPLOY.md                 # Guia de deploy N8N (API) + Dashboard + Docker
 ├── README.md                 # Este arquivo
 ├── CLAUDE.md                 # Instrucoes para Claude Code
 ├── COMO_FUNCIONA_CHAMADOS.md # Documentacao do fluxo XLSX -> Redis -> Bot
+├── GUIA_DE_ESTUDO.md         # Guia de estudo do projeto
+├── hostinger/                # Docker Compose, Nginx, .env.example do VPS
 │
 └── dashboard/                # Dashboard web (Next.js 14)
     ├── app/
     │   ├── dashboard/        # Visao geral
+    │   ├── chat/             # Chat direto com o bot (texto + imagem)
     │   ├── treinamento/      # 5 abas: Regras, POPs, Colaboradores, Skills, Solicitacoes
     │   ├── system-prompt/    # Editor system prompt
     │   ├── conversas/        # Historico + erros
     │   ├── chamados/         # Importar chamados + clientes (abas)
-    │   ├── admin/            # Filiais + configuracoes
+    │   ├── admin/            # Filiais + usuarios
     │   └── api/
     │       ├── auth/         # Login, logout, me
+    │       ├── chat/         # send (POST webhook) + messages (GET/DELETE historico)
     │       ├── pops/         # CRUD POPs
     │       ├── pops-n8n/     # POPs para N8N (token auth)
     │       ├── treinamento/  # CRUD regras
