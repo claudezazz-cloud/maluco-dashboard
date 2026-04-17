@@ -45,7 +45,7 @@ export async function POST(req) {
       }
     }
 
-    const payload = { body: { data: { ...baseData, message } } }
+    const payload = { event: 'messages.upsert', data: { ...baseData, message } }
 
     const url = N8N_URL.replace(/\/$/, '') + WEBHOOK_PATH
     const resp = await fetch(url, {
