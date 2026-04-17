@@ -15,8 +15,9 @@ export default function ChatPage() {
   const [user, setUser] = useState(null)
   const [mensagens, setMensagens] = useState([])
   const [texto, setTexto] = useState('')
-  const [imagem, setImagem] = useState(null)
+  const [imagens, setImagens] = useState([]) // array de { base64, mimetype, preview }
   const [sending, setSending] = useState(false)
+  const MAX_IMG = 10
   const [aguardandoBot, setAguardandoBot] = useState(false)
   const [erro, setErro] = useState('')
   const scrollRef = useRef(null)
@@ -59,28 +60,45 @@ export default function ChatPage() {
   }, [mensagens])
 
   async function onFile(e) {
-    const f = e.target.files?.[0]
-    if (!f) return
-    if (f.size > 5 * 1024 * 1024) { setErro('Imagem maior que 5MB'); return }
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = reader.result
-      const base64 = dataUrl.split(',')[1]
-      setImagem({ base64, mimetype: f.type || 'image/jpeg', preview: dataUrl })
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const espacoRestante = MAX_IMG - imagens.length
+    if (espacoRestante <= 0) { setErro(`Máximo ${MAX_IMG} imagens`); e.target.value = ''; return }
+    const selecionados = files.slice(0, espacoRestante)
+    if (files.length > espacoRestante) setErro(`Só cabem mais ${espacoRestante} imagens (máx ${MAX_IMG})`)
+
+    const novos = []
+    for (const f of selecionados) {
+      if (f.size > 5 * 1024 * 1024) { setErro(`${f.name}: maior que 5MB`); continue }
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = reject
+        reader.readAsDataURL(f)
+      })
+      novos.push({ base64: dataUrl.split(',')[1], mimetype: f.type || 'image/jpeg', preview: dataUrl, name: f.name })
     }
-    reader.readAsDataURL(f)
+    setImagens(prev => [...prev, ...novos])
     e.target.value = ''
+  }
+
+  function removerImagem(idx) {
+    setImagens(prev => prev.filter((_, i) => i !== idx))
   }
 
   async function enviar() {
     if (sending) return
-    if (!texto.trim() && !imagem) return
+    if (!texto.trim() && imagens.length === 0) return
     setSending(true)
     setErro('')
     try {
       let body
-      if (imagem) {
-        body = { tipo: 'image', imageBase64: imagem.base64, imageMimetype: imagem.mimetype, caption: texto || '' }
+      if (imagens.length > 0) {
+        body = {
+          tipo: 'image',
+          images: imagens.map(i => ({ base64: i.base64, mimetype: i.mimetype })),
+          caption: texto || ''
+        }
       } else {
         body = { tipo: 'text', texto }
       }
@@ -92,7 +110,7 @@ export default function ChatPage() {
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || 'Falha ao enviar')
       setTexto('')
-      setImagem(null)
+      setImagens([])
       setAguardandoBot(true)
       setTimeout(carregar, 600)
     } catch (e) {
@@ -166,12 +184,31 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Image preview */}
-        {imagem && (
-          <div className="bg-surface-raised/60 border border-white/[0.04] rounded-xl p-3 flex items-center gap-3">
-            <img src={imagem.preview} alt="preview" className="w-14 h-14 object-cover rounded-lg border border-white/[0.06]" />
-            <div className="flex-1 text-xs text-gray-500">Imagem pronta. Legenda opcional.</div>
-            <button onClick={() => setImagem(null)} className="text-gray-600 hover:text-red-400 transition-colors"><X className="w-4 h-4" /></button>
+        {/* Image previews (grid) */}
+        {imagens.length > 0 && (
+          <div className="bg-surface-raised/60 border border-white/[0.04] rounded-xl p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] text-gray-500 font-medium uppercase tracking-wider">
+                {imagens.length}/{MAX_IMG} imagens
+              </span>
+              <button onClick={() => setImagens([])} className="text-[11px] text-gray-600 hover:text-red-400 transition-colors">
+                Remover todas
+              </button>
+            </div>
+            <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 gap-2">
+              {imagens.map((img, idx) => (
+                <div key={idx} className="relative group aspect-square">
+                  <img src={img.preview} alt={img.name} className="w-full h-full object-cover rounded-lg border border-white/[0.08]" />
+                  <button
+                    onClick={() => removerImagem(idx)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    title="Remover"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -179,11 +216,12 @@ export default function ChatPage() {
 
         {/* Input area */}
         <div className="flex items-end gap-2 bg-surface-raised/80 border border-white/[0.06] rounded-2xl p-2">
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
+          <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onFile} />
           <button
             onClick={() => fileRef.current?.click()}
-            className="p-2.5 text-gray-600 hover:text-brand hover:bg-brand/[0.06] rounded-lg transition-all duration-200"
-            title="Anexar imagem"
+            disabled={imagens.length >= MAX_IMG}
+            className="p-2.5 text-gray-600 hover:text-brand hover:bg-brand/[0.06] disabled:opacity-30 disabled:hover:text-gray-600 disabled:hover:bg-transparent rounded-lg transition-all duration-200"
+            title={imagens.length >= MAX_IMG ? `Máximo ${MAX_IMG} imagens` : 'Anexar imagens (até 10)'}
           >
             <ImagePlus className="w-5 h-5" />
           </button>
@@ -191,14 +229,14 @@ export default function ChatPage() {
             value={texto}
             onChange={e => setTexto(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
-            placeholder={imagem ? 'Legenda ou pergunta...' : 'Digite uma mensagem...'}
+            placeholder={imagens.length ? `Legenda/pergunta para ${imagens.length} imagem(ns)...` : 'Digite uma mensagem...'}
             rows={1}
             className="flex-1 bg-transparent text-white text-sm resize-none outline-none px-2 py-2 max-h-32 placeholder:text-gray-700"
             style={{ minHeight: '40px' }}
           />
           <button
             onClick={enviar}
-            disabled={sending || (!texto.trim() && !imagem)}
+            disabled={sending || (!texto.trim() && imagens.length === 0)}
             className="p-2.5 bg-brand hover:bg-brand-dark disabled:bg-white/[0.04] disabled:text-gray-700 text-white rounded-lg transition-all duration-200"
           >
             {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
