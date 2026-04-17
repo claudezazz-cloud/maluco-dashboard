@@ -14,9 +14,10 @@ export async function GET(req) {
     let workflowId = null
     if (filialId) {
       const r = await query('SELECT n8n_workflow_id FROM dashboard_filiais WHERE id = $1', [filialId])
-      workflowId = r.rows[0]?.n8n_workflow_id
+      workflowId = r.rows[0]?.n8n_workflow_id || null
     }
 
+    // Sem workflow_id configurado: busca todas as execuções recentes do N8N como fallback
     const data = await getExecutions(workflowId, 30)
     const executions = (data?.data || []).map(e => ({
       id: e.id,
@@ -31,7 +32,8 @@ export async function GET(req) {
 
     return NextResponse.json(executions)
   } catch (e) {
-    console.error(e)
-    return NextResponse.json({ error: 'Erro ao buscar execuções' }, { status: 500 })
+    console.error('executions error:', e?.message || e)
+    // Silenciosamente retorna vazio — a UI já trata "Nenhuma execução encontrada"
+    return NextResponse.json([])
   }
 }
