@@ -14,49 +14,71 @@ export async function GET() {
     const results = await Promise.all(filiais.map(async (filial) => {
       let workflow = null
       let executions = []
-      let online = false
       let lastExecution = null
-      let errorCount = 0
 
       try {
         if (filial.n8n_workflow_id) {
           workflow = await getWorkflow(filial.n8n_workflow_id)
-          online = workflow?.active === true
-
           const execData = await getExecutions(filial.n8n_workflow_id, 50)
           executions = execData?.data || []
           lastExecution = executions[0] || null
-
-          const today = new Date().toISOString().split('T')[0]
-          errorCount = executions.filter(e =>
-            e.status === 'error' && e.startedAt?.startsWith(today)
-          ).length
         }
-      } catch (e) {
-        online = false
-      }
+      } catch {}
 
       // Mensagens hoje (timezone America/Sao_Paulo)
+      // Fix: usar (data_hora AT TIME ZONE 'America/Sao_Paulo')::date
+      // CURRENT_DATE AT TIME ZONE é sintaxe inválida em Postgres
       let mensagensHoje = 0
       try {
         const chatId = filial.group_chat_id
-        if (chatId) {
-          const msgResult = await query(
-            `SELECT COUNT(*) as total FROM mensagens
-             WHERE chat_id = $1
-             AND DATE(data_hora AT TIME ZONE 'America/Sao_Paulo') = CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo'`,
-            [chatId]
-          )
-          mensagensHoje = parseInt(msgResult.rows[0]?.total || 0)
-        } else {
-          // Sem chat_id configurado: conta todas as mensagens de hoje do banco
-          const msgResult = await query(
-            `SELECT COUNT(*) as total FROM mensagens
-             WHERE DATE(data_hora AT TIME ZONE 'America/Sao_Paulo') = CURRENT_DATE AT TIME ZONE 'America/Sao_Paulo'`
-          )
-          mensagensHoje = parseInt(msgResult.rows[0]?.total || 0)
-        }
+        const baseQuery = `
+          SELECT COUNT(*)::int AS total FROM mensagens
+          WHERE (data_hora AT TIME ZONE 'America/Sao_Paulo')::date
+              = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date
+        `
+        const r = chatId
+          ? await query(baseQuery + ' AND chat_id = $1', [chatId])
+          : await query(baseQuery)
+        mensagensHoje = r.rows[0]?.total || 0
       } catch {}
+
+      // Erros hoje — fonte primária: bot_erros (populada pelo próprio workflow)
+      // Fallback: contagem de execuções do N8N com status 'error'
+      let errosHoje = 0
+      try {
+        const chatId = filial.group_chat_id
+        const baseQuery = `
+          SELECT COUNT(*)::int AS total FROM bot_erros
+          WHERE (criado_em AT TIME ZONE 'America/Sao_Paulo')::date
+              = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date
+        `
+        const r = chatId
+          ? await query(baseQuery + ' AND chat_id = $1', [chatId])
+          : await query(baseQuery)
+        errosHoje = r.rows[0]?.total || 0
+      } catch {
+        // Fallback para execuções do N8N se a tabela bot_erros não existir ainda
+        const today = new Date().toISOString().split('T')[0]
+        errosHoje = executions.filter(e => e.status === 'error' && e.startedAt?.startsWith(today)).length
+      }
+
+      // "Online" — considerado online se:
+      //   1) workflow.active === true (quando workflow_id configurado), OU
+      //   2) houve pelo menos uma mensagem no chat nos últimos 15 minutos (heurística)
+      let online = workflow?.active === true
+      if (!online) {
+        try {
+          const chatId = filial.group_chat_id
+          const recenteQuery = `
+            SELECT 1 FROM mensagens
+            WHERE data_hora >= NOW() - INTERVAL '15 minutes'
+            ${chatId ? 'AND chat_id = $1' : ''}
+            LIMIT 1
+          `
+          const r = chatId ? await query(recenteQuery, [chatId]) : await query(recenteQuery)
+          if (r.rows.length > 0) online = true
+        } catch {}
+      }
 
       return {
         id: filial.id,
@@ -71,7 +93,7 @@ export async function GET() {
             ? Math.round((new Date(lastExecution.stoppedAt) - new Date(lastExecution.startedAt)) / 1000)
             : null,
         } : null,
-        errosHoje: errorCount,
+        errosHoje,
         mensagensHoje,
       }
     }))
