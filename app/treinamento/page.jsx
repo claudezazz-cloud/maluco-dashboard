@@ -394,8 +394,8 @@ export default function TreinamentoPage() {
     return matchBusca && matchCat
   })
 
-  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000] transition'
-  const inputEditCls = 'w-full bg-[#0f0f13] border border-[#008000] rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition'
+  const inputCls = 'w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000] transition'
+  const inputEditCls = 'w-full bg-surface border border-[#008000] rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition'
 
   const tabs = [
     { id: 'regras', label: <span className="flex items-center gap-1"><Brain className="w-3.5 h-3.5" /> Regras</span>, count: regras.length },
@@ -406,7 +406,7 @@ export default function TreinamentoPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#0f0f13]">
+    <div className="min-h-screen bg-surface">
       <Navbar user={user} />
       <main className="max-w-5xl mx-auto px-4 py-8">
 
@@ -417,14 +417,14 @@ export default function TreinamentoPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-[#1a1a24] p-1 rounded-xl border border-gray-800 w-fit">
+        <div className="flex gap-1 mb-6 bg-surface-raised p-1 rounded-xl border border-white/[0.06] w-fit">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                 tab === t.id
-                  ? 'bg-[#008000] text-white'
+                  ? 'bg-brand text-white'
                   : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`}
             >
@@ -439,32 +439,32 @@ export default function TreinamentoPage() {
         {/* ==================== ABA REGRAS ==================== */}
         {tab === 'regras' && (
           <>
-            <div className="bg-green-900/20 border border-green-800 rounded-xl px-5 py-3 mb-6 text-sm text-green-300">
+            <div className="bg-green-900/20 border border-green-800 rounded-xl px-5 py-3 mb-6 text-sm text-brand-light">
               <Lightbulb className="w-4 h-4 inline shrink-0" /> Essas regras são aplicadas em <strong>todas</strong> as respostas do bot. Os colaboradores também podem ensinar via WhatsApp com <code className="bg-green-900/40 px-1 rounded">Claude aprenda: ...</code>
             </div>
 
             {msg.texto && (
-              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msg.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msg.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
                 {msg.texto}
               </div>
             )}
 
             {/* Adicionar nova regra */}
-            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
+            <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mb-6">
               <h2 className="text-white font-medium mb-3">+ Adicionar nova regra</h2>
               <textarea
                 value={novaRegra}
                 onChange={e => setNovaRegra(e.target.value)}
                 placeholder="Ex: Sempre responda em português formal. Nunca mencione preços sem consultar a tabela oficial."
                 rows={3}
-                className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#008000] resize-none transition"
+                className="w-full bg-surface border border-gray-700 rounded-lg px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#008000] resize-none transition"
               />
               <div className="flex justify-between items-center mt-3">
                 <span className="text-xs text-gray-500">{novaRegra.length} caracteres</span>
                 <button
                   onClick={adicionarRegra}
                   disabled={!novaRegra.trim() || salvando}
-                  className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
+                  className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
                 >
                   {salvando ? 'Salvando...' : 'Adicionar Regra'}
                 </button>
@@ -472,8 +472,8 @@ export default function TreinamentoPage() {
             </div>
 
             {/* Lista de regras */}
-            <div className="bg-[#1a1a24] rounded-xl border border-gray-800">
-              <div className="px-5 py-4 border-b border-gray-800">
+            <div className="bg-surface-raised rounded-xl border border-white/[0.06]">
+              <div className="px-5 py-4 border-b border-white/[0.06]">
                 <h2 className="text-white font-medium">Regras ativas</h2>
               </div>
               {loadingRegras ? (
@@ -490,17 +490,17 @@ export default function TreinamentoPage() {
                     <div key={r.id} className="px-5 py-4 group">
                       {editandoId === r.id ? (
                         <div>
-                          <div className="text-xs text-green-400 mb-2 font-medium">Editando regra #{i + 1}</div>
+                          <div className="text-xs text-brand mb-2 font-medium">Editando regra #{i + 1}</div>
                           <textarea
                             value={editandoTexto}
                             onChange={e => setEditandoTexto(e.target.value)}
                             rows={3}
-                            className="w-full bg-[#0f0f13] border border-[#008000] rounded-lg px-4 py-3 text-white text-sm focus:outline-none resize-none"
+                            className="w-full bg-surface border border-[#008000] rounded-lg px-4 py-3 text-white text-sm focus:outline-none resize-none"
                             autoFocus
                           />
                           <div className="flex gap-2 mt-2">
                             <button onClick={() => salvarEdicao(r.id)} disabled={salvando}
-                              className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-xs px-4 py-1.5 rounded-lg transition">
+                              className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-xs px-4 py-1.5 rounded-lg transition">
                               {salvando ? 'Salvando...' : 'Salvar'}
                             </button>
                             <button onClick={() => setEditandoId(null)}
@@ -537,7 +537,7 @@ export default function TreinamentoPage() {
         {tab === 'pops' && (
           <>
             {msgPop.texto && (
-              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgPop.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgPop.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
                 {msgPop.texto}
               </div>
             )}
@@ -547,7 +547,7 @@ export default function TreinamentoPage() {
               <p className="text-gray-400 text-sm">Procedimentos Operacionais Padrão da empresa</p>
               <button
                 onClick={() => { setMostraNovoPop(true); setExpandido(null); setEditandoPop(null) }}
-                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition font-medium"
+                className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition font-medium"
               >
                 + Novo POP
               </button>
@@ -555,7 +555,7 @@ export default function TreinamentoPage() {
 
             {/* Formulário novo POP */}
             {mostraNovoPop && (
-              <div className="bg-[#1a1a24] rounded-xl border border-green-900 p-6 mb-6">
+              <div className="bg-surface-raised rounded-xl border border-brand/20 p-6 mb-6">
                 <h2 className="text-white font-medium mb-4">Novo POP</h2>
                 <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
@@ -592,7 +592,7 @@ export default function TreinamentoPage() {
                 </div>
                 <div className="flex gap-3">
                   <button onClick={salvarNovoPop} disabled={!novoPopForm.titulo.trim() || !novoPopForm.conteudo.trim() || salvandoPop}
-                    className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
+                    className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
                     {salvandoPop ? 'Salvando...' : 'Salvar POP'}
                   </button>
                   <button onClick={() => setMostraNovoPop(false)}
@@ -604,7 +604,7 @@ export default function TreinamentoPage() {
             )}
 
             {/* Info prioridades */}
-            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-4 mb-4">
+            <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-4 mb-4">
               <div className="flex flex-wrap gap-4 text-xs">
                 <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400"></span> <strong className="text-red-400">Leia Sempre</strong> <span className="text-gray-500">— conteudo completo em TODAS as respostas</span></span>
                 <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-yellow-400"></span> <strong className="text-yellow-400">Importante</strong> <span className="text-gray-500">— conteudo completo sempre que mencionado</span></span>
@@ -618,10 +618,10 @@ export default function TreinamentoPage() {
                 value={buscaPop}
                 onChange={e => setBuscaPop(e.target.value)}
                 placeholder="Buscar por título ou conteúdo..."
-                className="flex-1 bg-[#1a1a24] border border-gray-800 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-[#008000] transition"
+                className="flex-1 bg-surface-raised border border-white/[0.06] rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-[#008000] transition"
               />
               <select value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}
-                className="bg-[#1a1a24] border border-gray-800 rounded-lg px-3 py-2 text-gray-300 text-sm focus:outline-none focus:border-[#008000]">
+                className="bg-surface-raised border border-white/[0.06] rounded-lg px-3 py-2 text-gray-300 text-sm focus:outline-none focus:border-[#008000]">
                 {categorias.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
@@ -629,17 +629,17 @@ export default function TreinamentoPage() {
             {/* Lista de POPs */}
             {loadingPops ? (
               <div className="space-y-3">
-                {[1,2,3].map(i => <div key={i} className="bg-[#1a1a24] rounded-xl border border-gray-800 h-16 animate-pulse" />)}
+                {[1,2,3].map(i => <div key={i} className="bg-surface-raised rounded-xl border border-white/[0.06] h-16 animate-pulse" />)}
               </div>
             ) : popsFiltrados.length === 0 ? (
-              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-12 text-center">
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-12 text-center">
                 <ClipboardList className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                 <p className="text-gray-400">{buscaPop || categoriaFiltro !== 'Todas' ? 'Nenhum POP encontrado com esses filtros.' : 'Nenhum POP cadastrado ainda.'}</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {popsFiltrados.map(pop => (
-                  <div key={pop.id} className="bg-[#1a1a24] rounded-xl border border-gray-800 overflow-hidden">
+                  <div key={pop.id} className="bg-surface-raised rounded-xl border border-white/[0.06] overflow-hidden">
                     <div
                       className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-800/30 transition"
                       onClick={() => editandoPop !== pop.id && setExpandido(expandido === pop.id ? null : pop.id)}
@@ -650,7 +650,7 @@ export default function TreinamentoPage() {
                           <span className="text-white font-medium">{pop.titulo}</span>
                           <div className="flex items-center gap-2 mt-0.5">
                             {pop.categoria && (
-                              <span className="text-xs bg-green-900/30 text-green-400 border border-green-900/50 px-2 py-0.5 rounded-full">
+                              <span className="text-xs bg-green-900/30 text-brand border border-brand/20/50 px-2 py-0.5 rounded-full">
                                 {pop.categoria}
                               </span>
                             )}
@@ -681,7 +681,7 @@ export default function TreinamentoPage() {
                     </div>
 
                     {expandido === pop.id && (
-                      <div className="border-t border-gray-800 px-5 py-4">
+                      <div className="border-t border-white/[0.06] px-5 py-4">
                         {editandoPop === pop.id ? (
                           <div>
                             <div className="grid grid-cols-3 gap-3 mb-3">
@@ -712,7 +712,7 @@ export default function TreinamentoPage() {
                             />
                             <div className="flex gap-3">
                               <button onClick={salvarEdicaoPop} disabled={salvandoPop}
-                                className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition">
+                                className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition">
                                 {salvandoPop ? 'Salvando...' : 'Salvar'}
                               </button>
                               <button onClick={() => setEditandoPop(null)}
@@ -739,13 +739,13 @@ export default function TreinamentoPage() {
         {tab === 'colaboradores' && (
           <>
             {msgColab.texto && (
-              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgColab.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgColab.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
                 {msgColab.texto}
               </div>
             )}
 
             {/* Adicionar colaborador */}
-            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
+            <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mb-6">
               <h2 className="text-white font-medium mb-3">+ Adicionar colaborador</h2>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
@@ -767,15 +767,15 @@ export default function TreinamentoPage() {
               </div>
               <div className="flex justify-end">
                 <button onClick={adicionarColab} disabled={!novoColab.nome.trim()}
-                  className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium">
+                  className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium">
                   Adicionar
                 </button>
               </div>
             </div>
 
             {/* Lista colaboradores */}
-            <div className="bg-[#1a1a24] rounded-xl border border-gray-800">
-              <div className="px-5 py-4 border-b border-gray-800">
+            <div className="bg-surface-raised rounded-xl border border-white/[0.06]">
+              <div className="px-5 py-4 border-b border-white/[0.06]">
                 <h2 className="text-white font-medium">Equipe cadastrada</h2>
               </div>
               {colaboradores.length === 0 ? (
@@ -804,13 +804,13 @@ export default function TreinamentoPage() {
                           <textarea value={editColabForm.funcoes || ''} onChange={e => setEditColabForm({...editColabForm, funcoes: e.target.value})}
                             rows={2} className={inputEditCls + ' resize-none mb-2'} />
                           <div className="flex gap-2">
-                            <button onClick={() => salvarColab(c.id)} className="bg-[#008000] hover:bg-[#006600] text-white text-xs px-4 py-1.5 rounded-lg">Salvar</button>
+                            <button onClick={() => salvarColab(c.id)} className="bg-brand hover:bg-brand-dark text-white text-xs px-4 py-1.5 rounded-lg">Salvar</button>
                             <button onClick={() => setEditandoColab(null)} className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-4 py-1.5 rounded-lg">Cancelar</button>
                           </div>
                         </div>
                       ) : (
                         <div className="flex items-start gap-4">
-                          <div className="w-9 h-9 rounded-full bg-green-900/50 border border-green-900 flex items-center justify-center text-green-300 font-bold text-sm shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-brand/15 border border-brand/20 flex items-center justify-center text-brand-light font-bold text-sm shrink-0">
                             {c.nome.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1">
@@ -840,12 +840,12 @@ export default function TreinamentoPage() {
         {tab === 'skills' && (
           <>
             {msgSkill.texto && (
-              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgSkill.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgSkill.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
                 {msgSkill.texto}
               </div>
             )}
 
-            <div className="bg-green-900/20 border border-green-800 rounded-xl px-5 py-3 mb-6 text-sm text-green-300">
+            <div className="bg-green-900/20 border border-green-800 rounded-xl px-5 py-3 mb-6 text-sm text-brand-light">
               <Zap className="w-4 h-4 inline shrink-0 mr-1" />
               Skills são ativadas por comandos <code className="bg-green-900/40 px-1 rounded">/comando</code> no WhatsApp. O bot injeta o <strong>Prompt Base</strong> automaticamente quando detecta o comando.
             </div>
@@ -854,14 +854,14 @@ export default function TreinamentoPage() {
               <p className="text-gray-400 text-sm">Comandos especiais que modificam o comportamento do bot</p>
               <button
                 onClick={() => { setMostraNovaSkill(true); setEditandoSkill(null) }}
-                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition font-medium"
+                className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition font-medium"
               >
                 + Nova Skill
               </button>
             </div>
 
             {mostraNovaSkill && (
-              <div className="bg-[#1a1a24] rounded-xl border border-green-900 p-6 mb-6">
+              <div className="bg-surface-raised rounded-xl border border-brand/20 p-6 mb-6">
                 <h2 className="text-white font-medium mb-4">Nova Skill</h2>
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
@@ -910,7 +910,7 @@ export default function TreinamentoPage() {
                   <button
                     onClick={salvarNovaSkill}
                     disabled={!novaSkill.nome.trim() || !novaSkill.prompt_base.trim() || salvandoSkill}
-                    className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium"
+                    className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium"
                   >
                     {salvandoSkill ? 'Salvando...' : 'Salvar Skill'}
                   </button>
@@ -923,10 +923,10 @@ export default function TreinamentoPage() {
 
             {loadingSkills ? (
               <div className="space-y-3">
-                {[1, 2, 3].map(i => <div key={i} className="bg-[#1a1a24] rounded-xl border border-gray-800 h-16 animate-pulse" />)}
+                {[1, 2, 3].map(i => <div key={i} className="bg-surface-raised rounded-xl border border-white/[0.06] h-16 animate-pulse" />)}
               </div>
             ) : skills.length === 0 ? (
-              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-12 text-center">
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-12 text-center">
                 <Zap className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                 <p className="text-gray-400">Nenhuma skill cadastrada ainda.</p>
                 <p className="text-gray-600 text-sm mt-1">Adicione skills para criar comandos especiais no WhatsApp.</p>
@@ -934,7 +934,7 @@ export default function TreinamentoPage() {
             ) : (
               <div className="space-y-3">
                 {skills.map(sk => (
-                  <div key={sk.id} className="bg-[#1a1a24] rounded-xl border border-gray-800 overflow-hidden">
+                  <div key={sk.id} className="bg-surface-raised rounded-xl border border-white/[0.06] overflow-hidden">
                     {editandoSkill === sk.id ? (
                       <div className="p-5">
                         <div className="grid grid-cols-2 gap-3 mb-3">
@@ -974,7 +974,7 @@ export default function TreinamentoPage() {
                         />
                         <div className="flex gap-3">
                           <button onClick={salvarEdicaoSkill} disabled={salvandoSkill}
-                            className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition">
+                            className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition">
                             {salvandoSkill ? 'Salvando...' : 'Salvar'}
                           </button>
                           <button onClick={() => setEditandoSkill(null)} className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-5 py-2 rounded-lg transition">
@@ -985,12 +985,12 @@ export default function TreinamentoPage() {
                     ) : (
                       <div className="flex items-center justify-between px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-green-900/30 border border-green-900/50 flex items-center justify-center shrink-0">
-                            <Zap className="w-4 h-4 text-green-400" />
+                          <div className="w-9 h-9 rounded-lg bg-green-900/30 border border-brand/20/50 flex items-center justify-center shrink-0">
+                            <Zap className="w-4 h-4 text-brand" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <code className="text-green-400 font-mono font-medium">{sk.nome}</code>
+                              <code className="text-brand font-mono font-medium">{sk.nome}</code>
                               {!sk.ativo && <span className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">inativo</span>}
                             </div>
                             {sk.descricao && <p className="text-gray-400 text-sm mt-0.5">{sk.descricao}</p>}
@@ -999,7 +999,7 @@ export default function TreinamentoPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => toggleSkillAtivo(sk)}
-                            className={`text-xs px-3 py-1.5 rounded-lg transition ${sk.ativo ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                            className={`text-xs px-3 py-1.5 rounded-lg transition ${sk.ativo ? 'bg-green-900/30 text-brand hover:bg-brand/15' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
                           >
                             {sk.ativo ? 'Ativo' : 'Inativo'}
                           </button>
@@ -1032,7 +1032,7 @@ export default function TreinamentoPage() {
         {tab === 'solicitacoes' && (
           <>
             {msgSolicitacao.texto && (
-              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgSolicitacao.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgSolicitacao.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
                 {msgSolicitacao.texto}
               </div>
             )}
@@ -1047,14 +1047,14 @@ export default function TreinamentoPage() {
               <h2 className="text-white font-semibold">Agendamentos ({solicitacoes.length})</h2>
               <button
                 onClick={() => setMostraNovaSolicitacao(!mostraNovaSolicitacao)}
-                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 {mostraNovaSolicitacao ? 'Cancelar' : '+ Nova Solicitação'}
               </button>
             </div>
 
             {mostraNovaSolicitacao && (
-              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mb-6">
                 <h3 className="text-white font-medium mb-4">Nova Solicitação Programada</h3>
                 <div className="grid grid-cols-1 gap-3">
                   <div>
@@ -1115,7 +1115,7 @@ export default function TreinamentoPage() {
                                 setNovaSolicitacao(p => ({ ...p, dias_semana: novo.length ? novo.join(',') : 'seg' }))
                               }
                             }}
-                            className={`text-xs px-3 py-1.5 rounded-lg transition border ${isChecked ? 'bg-[#008000] border-green-700 text-white' : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                            className={`text-xs px-3 py-1.5 rounded-lg transition border ${isChecked ? 'bg-brand border-green-700 text-white' : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500'}`}
                           >{label}</button>
                         )
                       })}
@@ -1126,7 +1126,7 @@ export default function TreinamentoPage() {
                   <button
                     onClick={salvarNovaSolicitacao}
                     disabled={salvandoSolicitacao}
-                    className="bg-[#008000] hover:bg-[#006600] disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm transition"
+                    className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm transition"
                   >
                     {salvandoSolicitacao ? 'Salvando...' : 'Salvar'}
                   </button>
@@ -1146,7 +1146,7 @@ export default function TreinamentoPage() {
             ) : (
               <div className="space-y-3">
                 {solicitacoes.map(s => (
-                  <div key={s.id} className="bg-[#1a1a24] rounded-xl border border-gray-800 p-4">
+                  <div key={s.id} className="bg-surface-raised rounded-xl border border-white/[0.06] p-4">
                     {editandoSolicitacao === s.id ? (
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
@@ -1185,14 +1185,14 @@ export default function TreinamentoPage() {
                                       setEditSolicitacaoForm(p => ({ ...p, dias_semana: novo.length ? novo.join(',') : 'seg' }))
                                     }
                                   }}
-                                  className={`text-xs px-3 py-1.5 rounded-lg transition border ${isChecked ? 'bg-[#008000] border-green-700 text-white' : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                                  className={`text-xs px-3 py-1.5 rounded-lg transition border ${isChecked ? 'bg-brand border-green-700 text-white' : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500'}`}
                                 >{label}</button>
                               )
                             })}
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <button onClick={salvarEdicaoSolicitacao} disabled={salvandoSolicitacao} className="bg-[#008000] hover:bg-[#006600] disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-sm transition">{salvandoSolicitacao ? 'Salvando...' : 'Salvar'}</button>
+                          <button onClick={salvarEdicaoSolicitacao} disabled={salvandoSolicitacao} className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-sm transition">{salvandoSolicitacao ? 'Salvando...' : 'Salvar'}</button>
                           <button onClick={() => setEditandoSolicitacao(null)} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-sm transition">Cancelar</button>
                         </div>
                       </div>
@@ -1217,7 +1217,7 @@ export default function TreinamentoPage() {
                         <div className="flex gap-1 shrink-0">
                           <button onClick={() => executarAgora(s)}
                             className="text-xs text-blue-400 bg-blue-900/20 hover:bg-blue-900/40 px-3 py-1.5 rounded-lg transition">Executar Agora</button>
-                          <button onClick={() => toggleSolicitacaoAtivo(s)} className={`text-xs px-3 py-1.5 rounded-lg transition ${s.ativo ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
+                          <button onClick={() => toggleSolicitacaoAtivo(s)} className={`text-xs px-3 py-1.5 rounded-lg transition ${s.ativo ? 'bg-green-900/30 text-brand hover:bg-brand/15' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
                             {s.ativo ? 'Ativo' : 'Inativo'}
                           </button>
                           <button onClick={() => { setEditandoSolicitacao(s.id); setEditSolicitacaoForm({ nome: s.nome, comando: s.comando, chat_id: s.chat_id, hora: s.hora, dias_semana: s.dias_semana, ativo: s.ativo }) }}

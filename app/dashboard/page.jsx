@@ -54,61 +54,75 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-transparent">
       <Navbar user={user} />
 
-      <main className="max-w-7xl mx-auto px-4 py-8 animate-fade-in">
+      <main className="max-w-7xl mx-auto px-6 py-8 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white">Visão Geral</h1>
-            <p className="text-gray-400 text-sm mt-1">
-              {lastUpdate ? `Atualizado às ${lastUpdate.toLocaleTimeString('pt-BR')}` : 'Carregando...'}
+            <h1 className="font-display text-2xl font-bold text-white tracking-tight">Visao Geral</h1>
+            <p className="text-gray-600 text-sm mt-1 font-mono">
+              {lastUpdate ? `${lastUpdate.toLocaleTimeString('pt-BR')}` : '...'}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-              <div
-                onClick={() => setAutoRefresh(v => !v)}
-                className={`w-10 h-5 rounded-full transition-colors ${autoRefresh ? 'bg-[#008000]' : 'bg-gray-700'} relative cursor-pointer`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${autoRefresh ? 'translate-x-5' : 'translate-x-0.5'}`} />
-              </div>
-              Auto-refresh (30s)
-            </label>
+            <button
+              onClick={() => setAutoRefresh(v => !v)}
+              className={`flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg border transition-all duration-200 ${
+                autoRefresh
+                  ? 'text-brand/80 bg-brand/[0.06] border-brand/20'
+                  : 'text-gray-600 bg-white/[0.02] border-white/[0.04] hover:border-white/[0.08]'
+              }`}
+            >
+              <div className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-brand animate-pulse' : 'bg-gray-600'}`} />
+              Auto 30s
+            </button>
             <button
               onClick={fetchStatus}
-              className="bg-gray-800 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg transition"
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04] hover:border-white/[0.08] px-3 py-2 rounded-lg transition-all duration-200"
             >
-              <RefreshCw className="w-3.5 h-3.5 inline mr-1.5" />
+              <RefreshCw className="w-3 h-3" />
               Atualizar
             </button>
           </div>
         </div>
 
-        {/* Métricas globais */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl p-6 border border-gray-800/50 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(0,128,0,0.1)] transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-            <p className="text-gray-400 text-sm font-medium tracking-wide uppercase">Bots Online</p>
-            <p className="text-4xl font-bold text-white mt-2 drop-shadow-md">{botsOnline}<span className="text-gray-500 text-xl font-normal ml-1">/{filiais.length}</span></p>
-          </div>
-          <div className="bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl p-6 border border-gray-800/50 hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(0,128,0,0.1)] transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <p className="text-gray-400 text-sm font-medium tracking-wide uppercase">Mensagens Hoje</p>
-            <p className="text-4xl font-bold text-green-400 mt-2 glow-sm">{totalMensagens}</p>
-          </div>
-          <div className="bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl p-6 border border-gray-800/50 hover:border-red-500/30 hover:shadow-[0_0_20px_rgba(248,113,113,0.1)] transition-all duration-300 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-            <p className="text-gray-400 text-sm font-medium tracking-wide uppercase">Erros Hoje</p>
-            <p className={`text-4xl font-bold mt-2 ${totalErros > 0 ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]' : 'text-white'}`}>{totalErros}</p>
-          </div>
+        {/* Metrics */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          {[
+            { label: 'Bots Online', value: botsOnline, suffix: `/${filiais.length}`, color: 'text-white' },
+            { label: 'Mensagens Hoje', value: totalMensagens, color: 'text-brand glow-sm' },
+            { label: 'Erros Hoje', value: totalErros, color: totalErros > 0 ? 'text-red-400' : 'text-white' },
+          ].map((m, i) => (
+            <div
+              key={m.label}
+              className="bg-surface-raised/60 border border-white/[0.04] rounded-2xl p-6 hover:border-white/[0.08] transition-all duration-300 animate-fade-in-up"
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <p className="text-[11px] text-gray-600 font-medium tracking-widest uppercase">{m.label}</p>
+              <p className={`text-3xl font-display font-bold mt-2 ${m.color}`}>
+                {m.value}
+                {m.suffix && <span className="text-gray-600 text-lg font-normal ml-0.5">{m.suffix}</span>}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* Cards das filiais */}
-        <h2 className="text-gray-300 font-medium mb-4">Filiais</h2>
+        {/* Branch Cards */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-sm font-semibold text-gray-400 uppercase tracking-wider">Filiais</h2>
+          {selectedFilial && (
+            <button onClick={() => setSelectedFilial(null)} className="text-[11px] text-gray-600 hover:text-brand transition-colors">
+              Limpar filtro
+            </button>
+          )}
+        </div>
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
             {[1,2,3].map(i => (
-              <div key={i} className="bg-[#1a1a24] rounded-xl p-6 border border-gray-800 animate-pulse h-40" />
+              <div key={i} className="bg-surface-raised/40 rounded-2xl p-6 border border-white/[0.04] animate-pulse h-40" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
             {filiais.map(f => (
               <StatusCard
                 key={f.id}
@@ -120,26 +134,19 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Execuções recentes */}
-        <div className="bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl border border-gray-800/50 overflow-hidden shadow-lg animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-          <div className="px-6 py-4 border-b border-gray-800/50 flex items-center justify-between bg-black/20">
-            <h2 className="font-medium text-white tracking-wide">
-              Execuções Recentes
+        {/* Recent Executions */}
+        <div className="bg-surface-raised/60 border border-white/[0.04] rounded-2xl overflow-hidden animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+          <div className="px-6 py-4 border-b border-white/[0.04] flex items-center justify-between">
+            <h2 className="font-display font-semibold text-white text-sm tracking-wide">
+              Execucoes Recentes
               {selectedFilial && (
-                <span className="ml-2 text-sm text-green-400 font-normal">
-                  — {filiais.find(f => f.id === selectedFilial)?.nome}
+                <span className="ml-2 text-brand/70 font-normal">
+                  {filiais.find(f => f.id === selectedFilial)?.nome}
                 </span>
               )}
             </h2>
-            {selectedFilial && (
-              <button onClick={() => setSelectedFilial(null)} className="text-xs text-gray-400 hover:text-green-400 hover:glow-sm transition-all duration-300">
-                Mostrar todas
-              </button>
-            )}
           </div>
-          <div className="bg-black/10">
-            <ExecutionList executions={executions} />
-          </div>
+          <ExecutionList executions={executions} />
         </div>
       </main>
     </div>

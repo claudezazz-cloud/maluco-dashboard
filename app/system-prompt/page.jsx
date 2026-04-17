@@ -103,7 +103,7 @@ export default function SystemPromptPage() {
   const hasChanges = prompt !== originalPrompt
 
   return (
-    <div className="min-h-screen bg-[#0f0f13]">
+    <div className="min-h-screen bg-surface">
       <Navbar user={user} />
       <main className="max-w-5xl mx-auto px-4 py-8">
 
@@ -120,19 +120,19 @@ export default function SystemPromptPage() {
           <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${
             toast.type === 'error'
               ? 'bg-red-900/20 border-red-800 text-red-400'
-              : 'bg-green-900/20 border-green-800 text-green-400'
+              : 'bg-green-900/20 border-green-800 text-brand'
           }`}>
             {toast.text}
           </div>
         )}
 
         {/* Placeholders reference */}
-        <div className="bg-[#1a1a24] border border-gray-800 rounded-xl p-5 mb-6">
+        <div className="bg-surface-raised border border-white/[0.06] rounded-xl p-5 mb-6">
           <h2 className="text-white font-medium mb-3 text-sm">Placeholders disponíveis</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {PLACEHOLDERS.map(({ key, desc }) => (
               <div key={key} className="flex items-start gap-2 text-sm">
-                <code className="bg-[#0f0f13] border border-gray-700 text-green-300 px-2 py-0.5 rounded font-mono text-xs shrink-0">
+                <code className="bg-surface border border-gray-700 text-brand-light px-2 py-0.5 rounded font-mono text-xs shrink-0">
                   {key}
                 </code>
                 <span className="text-gray-400 text-xs mt-0.5">{desc}</span>
@@ -142,8 +142,8 @@ export default function SystemPromptPage() {
         </div>
 
         {/* Editor */}
-        <div className="bg-[#1a1a24] border border-gray-800 rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+        <div className="bg-surface-raised border border-white/[0.06] rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
             <h2 className="text-white font-medium text-sm">Editor</h2>
             <div className="flex items-center gap-3 text-xs text-gray-500">
               <span>{charCount.toLocaleString()} caracteres</span>
@@ -158,7 +158,7 @@ export default function SystemPromptPage() {
             <textarea
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
-              className="w-full bg-[#0f0f13] text-gray-200 text-sm font-mono px-5 py-4 focus:outline-none resize-none"
+              className="w-full bg-surface text-gray-200 text-sm font-mono px-5 py-4 focus:outline-none resize-none"
               style={{ minHeight: '60vh' }}
               spellCheck={false}
               placeholder="Digite as instruções do system prompt aqui..."
@@ -166,7 +166,7 @@ export default function SystemPromptPage() {
           )}
 
           {/* Footer actions */}
-          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-800 bg-[#15151e]">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-white/[0.06] bg-[#15151e]">
             <button
               onClick={handleReset}
               className="text-xs text-gray-500 hover:text-gray-300 transition"
@@ -185,7 +185,7 @@ export default function SystemPromptPage() {
               <button
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
-                className="text-sm bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white px-5 py-2 rounded-lg transition font-medium"
+                className="text-sm bg-brand hover:bg-brand-dark disabled:opacity-40 text-white px-5 py-2 rounded-lg transition font-medium"
               >
                 {saving ? 'Salvando...' : 'Salvar'}
               </button>

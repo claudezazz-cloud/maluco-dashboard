@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bot } from 'lucide-react'
+import { Zap } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -34,41 +34,48 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f0f13]">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <Bot className="w-12 h-12 text-[#2E4EF0] mx-auto mb-3" />
-          <h1 className="text-2xl font-bold text-white">Maluco da IA</h1>
-          <p className="text-gray-400 text-sm mt-1">Dashboard de Monitoramento</p>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Background accents */}
+      <div className="absolute top-[-30%] left-[-10%] w-[500px] h-[500px] bg-brand/[0.04] rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-20%] right-[-5%] w-[400px] h-[400px] bg-brand/[0.03] rounded-full blur-[100px]" />
+
+      <div className="w-full max-w-sm relative z-10">
+        {/* Logo area */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand/10 border border-brand/20 mb-5 shadow-[0_0_30px_rgba(0,200,83,0.1)]">
+            <Zap className="w-7 h-7 text-brand" />
+          </div>
+          <h1 className="font-display text-2xl font-bold text-white tracking-tight">Maluco da IA</h1>
+          <p className="text-gray-600 text-sm mt-1.5 tracking-wide">Dashboard de Monitoramento</p>
         </div>
 
-        <form onSubmit={handleLogin} className="bg-[#1a1a24] rounded-2xl p-8 shadow-xl border border-gray-800">
+        <form onSubmit={handleLogin} className="glass-raised rounded-2xl p-8 border border-white/[0.06] shadow-2xl shadow-black/40">
           <div className="mb-5">
-            <label className="block text-sm text-gray-400 mb-2">E-mail</label>
+            <label className="block text-xs text-gray-500 mb-2 font-medium uppercase tracking-wider">E-mail</label>
             <input
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#008000] transition"
+              className="w-full bg-surface border border-white/[0.06] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand/40 focus:ring-1 focus:ring-brand/20 transition-all placeholder:text-gray-700"
               placeholder="seu@email.com"
             />
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm text-gray-400 mb-2">Senha</label>
+          <div className="mb-7">
+            <label className="block text-xs text-gray-500 mb-2 font-medium uppercase tracking-wider">Senha</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#008000] transition"
+              className="w-full bg-surface border border-white/[0.06] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-brand/40 focus:ring-1 focus:ring-brand/20 transition-all placeholder:text-gray-700"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <div className="mb-4 text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-lg px-4 py-2">
+            <div className="mb-5 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">
               {error}
             </div>
           )}
@@ -76,9 +83,14 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#008000] hover:bg-[#006600] disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition"
+            className="w-full bg-brand hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed text-white font-display font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-brand/20 hover:shadow-brand/30 active:scale-[0.98]"
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Entrando...
+              </span>
+            ) : 'Entrar'}
           </button>
         </form>
       </div>

@@ -198,11 +198,11 @@ export default function ChamadosPage() {
   // ===== PREVIEW TABLE COMPONENT =====
   function PreviewTable({ preview }) {
     return (
-      <div className="bg-[#1a1a24] rounded-xl border border-gray-800 overflow-hidden">
+      <div className="bg-surface-raised rounded-xl border border-white/[0.06] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-800">
+              <tr className="border-b border-white/[0.06]">
                 {preview.headers.slice(0, 12).map((h, i) => (
                   <th key={i} className="text-left text-gray-400 font-medium px-3 py-2 whitespace-nowrap">
                     {h || `Col ${i + 1}`}
@@ -215,7 +215,7 @@ export default function ChamadosPage() {
             </thead>
             <tbody>
               {preview.rows.slice(0, 10).map((row, ri) => (
-                <tr key={ri} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <tr key={ri} className="border-b border-white/[0.06]/50 hover:bg-gray-800/20">
                   {row.slice(0, 12).map((cell, ci) => (
                     <td key={ci} className="text-gray-300 px-3 py-2 whitespace-nowrap max-w-[200px] truncate">
                       {cell !== null && cell !== undefined ? String(cell) : ''}
@@ -230,7 +230,7 @@ export default function ChamadosPage() {
           </table>
         </div>
         {preview.totalRows > 10 && (
-          <div className="px-3 py-2 border-t border-gray-800 text-gray-500 text-xs">
+          <div className="px-3 py-2 border-t border-white/[0.06] text-gray-500 text-xs">
             Mostrando 10 de {preview.totalRows} linhas
           </div>
         )}
@@ -244,7 +244,7 @@ export default function ChamadosPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#0f0f13]">
+    <div className="min-h-screen bg-surface">
       <Navbar user={user} />
       <main className="max-w-5xl mx-auto px-4 py-8">
 
@@ -255,14 +255,14 @@ export default function ChamadosPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-[#1a1a24] p-1 rounded-xl border border-gray-800 w-fit">
+        <div className="flex gap-1 mb-6 bg-surface-raised p-1 rounded-xl border border-white/[0.06] w-fit">
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                 tab === t.id
-                  ? 'bg-[#008000] text-white'
+                  ? 'bg-brand text-white'
                   : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`}
             >
@@ -280,19 +280,19 @@ export default function ChamadosPage() {
         {tab === 'chamados' && (
           <>
             {msgChamados.texto && (
-              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgChamados.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgChamados.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
                 {msgChamados.texto}
               </div>
             )}
 
             {/* Status atual */}
             {!loadingChamados && chamadosStatus?.ativo && (
-              <div className="bg-[#1a1a24] rounded-xl border border-green-900/40 p-5 mb-6">
+              <div className="bg-surface-raised rounded-xl border border-brand/20/40 p-5 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-green-400 font-medium text-sm">Chamados ativos no bot</span>
+                      <span className="text-brand font-medium text-sm">Chamados ativos no bot</span>
                     </div>
                     <p className="text-white text-lg font-bold">{chamadosStatus.total} chamados</p>
                     <p className="text-gray-400 text-xs mt-1">
@@ -307,7 +307,7 @@ export default function ChamadosPage() {
                   )}
                 </div>
                 {chamadosStatus.resumo && (
-                  <div className="mt-3 pt-3 border-t border-gray-800">
+                  <div className="mt-3 pt-3 border-t border-white/[0.06]">
                     <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide">Resumo</p>
                     <pre className="text-gray-300 text-xs whitespace-pre-wrap font-sans leading-relaxed">{chamadosStatus.resumo}</pre>
                   </div>
@@ -317,7 +317,7 @@ export default function ChamadosPage() {
 
             {/* Limpar histórico — admin only */}
             {user?.role === 'admin' && (
-              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-6">
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white font-medium text-sm">Historico de conversas</p>
@@ -337,8 +337,8 @@ export default function ChamadosPage() {
             {user?.role === 'admin' && (
               <>
                 <div
-                  className={`bg-[#1a1a24] rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
-                    dragOverChamados ? 'border-[#008000] bg-[#008000]/5' : 'border-gray-700 hover:border-gray-600'
+                  className={`bg-surface-raised rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
+                    dragOverChamados ? 'border-[#008000] bg-brand/5' : 'border-gray-700 hover:border-gray-600'
                   }`}
                   onClick={() => chamadosFileRef.current?.click()}
                   onDragOver={e => { e.preventDefault(); setDragOverChamados(true) }}
@@ -366,7 +366,7 @@ export default function ChamadosPage() {
                         <button onClick={() => setPreviewChamados(null)}
                           className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition">Cancelar</button>
                         <button onClick={enviarChamados} disabled={uploadingChamados}
-                          className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
+                          className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
                           {uploadingChamados ? 'Enviando...' : `Enviar ${previewChamados.totalRows} chamados`}
                         </button>
                       </div>
@@ -378,13 +378,13 @@ export default function ChamadosPage() {
             )}
 
             {/* Como funciona */}
-            <div className="mt-8 bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+            <div className="mt-8 bg-surface-raised rounded-xl border border-white/[0.06] p-5">
               <h3 className="text-white font-medium mb-3">Como funciona</h3>
               <div className="space-y-2 text-sm text-gray-400">
-                <p><span className="text-green-400">1.</span> Exporte a planilha de chamados do seu sistema em formato <strong className="text-white">.xlsx</strong></p>
-                <p><span className="text-green-400">2.</span> Importe aqui — a planilha sera processada e enviada para o bot</p>
-                <p><span className="text-green-400">3.</span> Pergunte no WhatsApp: <em className="text-gray-300">"quantos chamados abertos?", "chamados do bairro Centro?"</em></p>
-                <p><span className="text-green-400">4.</span> Os dados ficam disponiveis por <strong className="text-white">24 horas</strong>, depois expiram automaticamente</p>
+                <p><span className="text-brand">1.</span> Exporte a planilha de chamados do seu sistema em formato <strong className="text-white">.xlsx</strong></p>
+                <p><span className="text-brand">2.</span> Importe aqui — a planilha sera processada e enviada para o bot</p>
+                <p><span className="text-brand">3.</span> Pergunte no WhatsApp: <em className="text-gray-300">"quantos chamados abertos?", "chamados do bairro Centro?"</em></p>
+                <p><span className="text-brand">4.</span> Os dados ficam disponiveis por <strong className="text-white">24 horas</strong>, depois expiram automaticamente</p>
               </div>
             </div>
           </>
@@ -394,19 +394,19 @@ export default function ChamadosPage() {
         {tab === 'clientes' && (
           <>
             {msgClientes.texto && (
-              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgClientes.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgClientes.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
                 {msgClientes.texto}
               </div>
             )}
 
             {/* Status atual */}
             {!loadingClientes && clientesStatus?.ativo && (
-              <div className="bg-[#1a1a24] rounded-xl border border-green-900/40 p-5 mb-6">
+              <div className="bg-surface-raised rounded-xl border border-brand/20/40 p-5 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-green-400 font-medium text-sm">Clientes ativos no bot</span>
+                      <span className="text-brand font-medium text-sm">Clientes ativos no bot</span>
                     </div>
                     <p className="text-white text-lg font-bold">{clientesStatus.total} clientes</p>
                     <p className="text-gray-400 text-xs mt-1">Importado em {clientesStatus.importado_em}</p>
@@ -425,8 +425,8 @@ export default function ChamadosPage() {
             {user?.role === 'admin' && (
               <>
                 <div
-                  className={`bg-[#1a1a24] rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
-                    dragOverClientes ? 'border-[#008000] bg-[#008000]/5' : 'border-gray-700 hover:border-gray-600'
+                  className={`bg-surface-raised rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
+                    dragOverClientes ? 'border-[#008000] bg-brand/5' : 'border-gray-700 hover:border-gray-600'
                   }`}
                   onClick={() => clientesFileRef.current?.click()}
                   onDragOver={e => { e.preventDefault(); setDragOverClientes(true) }}
@@ -454,7 +454,7 @@ export default function ChamadosPage() {
                         <button onClick={() => setPreviewClientes(null)}
                           className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition">Cancelar</button>
                         <button onClick={enviarClientes} disabled={uploadingClientes}
-                          className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
+                          className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
                           {uploadingClientes ? 'Enviando...' : `Enviar ${previewClientes.totalRows} clientes`}
                         </button>
                       </div>
@@ -466,13 +466,13 @@ export default function ChamadosPage() {
             )}
 
             {/* Como funciona */}
-            <div className="mt-8 bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+            <div className="mt-8 bg-surface-raised rounded-xl border border-white/[0.06] p-5">
               <h3 className="text-white font-medium mb-3">Como funciona</h3>
               <div className="space-y-2 text-sm text-gray-400">
-                <p><span className="text-green-400">1.</span> Exporte a lista de clientes do seu sistema em formato <strong className="text-white">.xlsx</strong></p>
-                <p><span className="text-green-400">2.</span> A planilha deve ter pelo menos as colunas <strong className="text-white">Cod</strong> e <strong className="text-white">Nome</strong></p>
-                <p><span className="text-green-400">3.</span> O bot passara a reconhecer os clientes quando mencionados no WhatsApp</p>
-                <p><span className="text-green-400">4.</span> Os dados ficam disponiveis <strong className="text-white">permanentemente</strong> ate serem removidos ou substituidos</p>
+                <p><span className="text-brand">1.</span> Exporte a lista de clientes do seu sistema em formato <strong className="text-white">.xlsx</strong></p>
+                <p><span className="text-brand">2.</span> A planilha deve ter pelo menos as colunas <strong className="text-white">Cod</strong> e <strong className="text-white">Nome</strong></p>
+                <p><span className="text-brand">3.</span> O bot passara a reconhecer os clientes quando mencionados no WhatsApp</p>
+                <p><span className="text-brand">4.</span> Os dados ficam disponiveis <strong className="text-white">permanentemente</strong> ate serem removidos ou substituidos</p>
               </div>
             </div>
           </>

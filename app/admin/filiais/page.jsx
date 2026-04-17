@@ -130,7 +130,7 @@ export default function NovaFilialPage() {
     }
   }
 
-  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000]'
+  const inputCls = 'w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000]'
   const labelCls = 'block text-xs text-gray-400 mb-1'
 
   const stepTitles = [
@@ -141,7 +141,7 @@ export default function NovaFilialPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#0f0f13]">
+    <div className="min-h-screen bg-surface">
       <Navbar user={user} />
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
@@ -167,7 +167,7 @@ export default function NovaFilialPage() {
             return (
               <div key={n} className="flex items-center gap-2 flex-1">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition
-                  ${done ? 'bg-green-600 text-white' : active ? 'bg-[#008000] text-white' : 'bg-gray-800 text-gray-500'}`}>
+                  ${done ? 'bg-green-600 text-white' : active ? 'bg-brand text-white' : 'bg-gray-800 text-gray-500'}`}>
                   {done ? <Check className="w-4 h-4" /> : n}
                 </div>
                 <span className={`text-xs hidden sm:block ${active ? 'text-white' : 'text-gray-500'}`}>{title}</span>
@@ -177,7 +177,7 @@ export default function NovaFilialPage() {
           })}
         </div>
 
-        <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-6">
+        <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-6">
 
           {/* ── STEP 1 ── */}
           {step === 1 && (
@@ -203,7 +203,7 @@ export default function NovaFilialPage() {
                   />
                   {form.webhook_path && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Preview: <span className="text-green-400">[N8N_URL]/webhook/{form.webhook_path}</span>
+                      Preview: <span className="text-brand">[N8N_URL]/webhook/{form.webhook_path}</span>
                     </p>
                   )}
                 </div>
@@ -255,7 +255,7 @@ export default function NovaFilialPage() {
                 </div>
               </div>
               {form.webhook_path && (
-                <div className="mt-4 bg-green-900/20 border border-green-800 rounded-lg px-4 py-3 text-xs text-green-300">
+                <div className="mt-4 bg-green-900/20 border border-green-800 rounded-lg px-4 py-3 text-xs text-brand-light">
                   <strong>Importante:</strong> Após criar a filial, configure o webhook na Evolution API para a instância{' '}
                   <span className="font-mono">{form.evolution_instance || '(instância)'}</span> com a URL:{' '}
                   <span className="font-mono text-green-200">[N8N_URL]/webhook/{form.webhook_path}</span>
@@ -333,20 +333,20 @@ export default function NovaFilialPage() {
             <div>
               <h2 className="text-white font-semibold text-lg mb-5">Revisão e criação</h2>
               <div className="space-y-3 text-sm">
-                <div className="bg-[#0f0f13] rounded-lg p-4 space-y-2">
+                <div className="bg-surface rounded-lg p-4 space-y-2">
                   <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">Informações básicas</h3>
                   <Row label="Nome" value={form.nome} />
                   <Row label="Webhook path" value={form.webhook_path} mono />
                   <Row label="Webhook URL" value={`[N8N_URL]/webhook/${form.webhook_path}`} mono />
                 </div>
-                <div className="bg-[#0f0f13] rounded-lg p-4 space-y-2">
+                <div className="bg-surface rounded-lg p-4 space-y-2">
                   <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">Evolution API</h3>
                   <Row label="URL" value={form.evolution_url || '—'} />
                   <Row label="API Key" value={form.evolution_apikey ? maskKey(form.evolution_apikey) : '—'} mono />
                   <Row label="Instância" value={form.evolution_instance || '—'} />
                   <Row label="Group chat_id" value={form.group_chat_id || '—'} mono />
                 </div>
-                <div className="bg-[#0f0f13] rounded-lg p-4 space-y-2">
+                <div className="bg-surface rounded-lg p-4 space-y-2">
                   <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">Chaves de API</h3>
                   <Row label="Anthropic" value={form.anthropic_key ? maskKey(form.anthropic_key) : '(usar principal)'} mono />
                   <Row label="OpenAI" value={form.openai_key ? maskKey(form.openai_key) : '(usar principal)'} mono />
@@ -357,7 +357,7 @@ export default function NovaFilialPage() {
               <button
                 onClick={criarFilial}
                 disabled={loading || !form.nome}
-                className="mt-6 w-full bg-[#008000] hover:bg-[#006600] disabled:opacity-50 text-white font-medium py-3 rounded-lg transition"
+                className="mt-6 w-full bg-brand hover:bg-brand-dark disabled:opacity-50 text-white font-medium py-3 rounded-lg transition"
               >
                 {loading ? 'Criando...' : 'Criar Filial'}
               </button>
@@ -384,10 +384,10 @@ export default function NovaFilialPage() {
 
                   {/* Webhook URL */}
                   {result.webhook_url && (
-                    <div className="bg-[#0f0f13] rounded-lg p-4">
+                    <div className="bg-surface rounded-lg p-4">
                       <p className="text-gray-400 text-xs mb-2">URL do Webhook</p>
                       <div className="flex items-center gap-2">
-                        <code className="text-green-400 text-sm flex-1 break-all">{result.webhook_url}</code>
+                        <code className="text-brand text-sm flex-1 break-all">{result.webhook_url}</code>
                         <button
                           onClick={copyWebhook}
                           className="shrink-0 bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition"
@@ -400,7 +400,7 @@ export default function NovaFilialPage() {
 
                   {/* Instructions */}
                   {form.evolution_instance && result.webhook_url && (
-                    <div className="bg-green-900/20 border border-green-800 rounded-lg px-4 py-3 text-xs text-green-300">
+                    <div className="bg-green-900/20 border border-green-800 rounded-lg px-4 py-3 text-xs text-brand-light">
                       Configure esse webhook na Evolution API para a instância{' '}
                       <strong>{form.evolution_instance}</strong>.
                     </div>
@@ -408,7 +408,7 @@ export default function NovaFilialPage() {
 
                   {/* Test results */}
                   {result.testResult && (
-                    <div className="bg-[#0f0f13] rounded-lg p-4 space-y-2">
+                    <div className="bg-surface rounded-lg p-4 space-y-2">
                       <p className="text-gray-400 text-xs mb-2">Resultado dos testes</p>
                       {Object.entries(result.testResult.results || {}).map(([key, val]) => (
                         <StatusItem key={key} ok={val.ok} label={key} detail={val.message} />
@@ -421,7 +421,7 @@ export default function NovaFilialPage() {
 
                   {/* DB results */}
                   {result.dbResult && (
-                    <div className="bg-[#0f0f13] rounded-lg p-4 space-y-2">
+                    <div className="bg-surface rounded-lg p-4 space-y-2">
                       <p className="text-gray-400 text-xs mb-2">Configuração do banco</p>
                       {Object.entries(result.dbResult.results || {}).map(([key, val]) => (
                         <StatusItem key={key} ok={val.ok} label={key} detail={val.message} />
@@ -450,7 +450,7 @@ export default function NovaFilialPage() {
                     </button>
                     <button
                       onClick={() => router.push(`/admin/filiais/${result.filial?.id}`)}
-                      className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition"
+                      className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition"
                     >
                       Ver Detalhes
                     </button>
@@ -479,7 +479,7 @@ export default function NovaFilialPage() {
                 <button
                   onClick={() => setStep(s => s + 1)}
                   disabled={step === 1 && !form.nome}
-                  className="bg-[#008000] hover:bg-[#006600] disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition"
+                  className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition"
                 >
                   Próximo
                 </button>
@@ -506,7 +506,7 @@ function StatusItem({ ok, label, detail }) {
     <div className="flex items-start gap-2 text-sm">
       <span className="shrink-0 mt-0.5">{ok ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <XCircle className="w-4 h-4 text-red-500" />}</span>
       <div>
-        <span className={ok ? 'text-green-400' : 'text-red-400'}>{label}</span>
+        <span className={ok ? 'text-brand' : 'text-red-400'}>{label}</span>
         {detail && <span className="text-gray-500 text-xs ml-2">{detail}</span>}
       </div>
     </div>
