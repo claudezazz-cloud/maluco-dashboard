@@ -104,9 +104,9 @@ function formatInline(text) {
     if (match[1]) {
       parts.push(<strong key={match.index} className="text-white font-semibold">{match[1]}</strong>)
     } else if (match[2]) {
-      parts.push(<code key={match.index} className="bg-[#0f0f13] border border-gray-700 text-green-300 px-1.5 py-0.5 rounded text-xs font-mono">{match[2]}</code>)
+      parts.push(<code key={match.index} className="bg-surface border border-white/[0.08] text-brand-light px-1.5 py-0.5 rounded text-xs font-mono">{match[2]}</code>)
     } else if (match[3] && match[4]) {
-      parts.push(<a key={match.index} href={match[4]} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:text-green-300 underline">{match[3]}</a>)
+      parts.push(<a key={match.index} href={match[4]} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-light underline">{match[3]}</a>)
     }
     lastIndex = match.index + match[0].length
   }
@@ -126,18 +126,18 @@ function RenderedMarkdown({ elements }) {
           case 'h1':
             return <h1 key={el.id} className="text-2xl font-bold text-white mt-6 mb-2 flex items-center gap-2">{formatInline(el.content)}</h1>
           case 'h2':
-            return <h2 key={el.id} className="text-xl font-bold text-white mt-5 mb-2 border-b border-gray-700 pb-2">{formatInline(el.content)}</h2>
+            return <h2 key={el.id} className="text-xl font-bold text-white mt-5 mb-2 border-b border-white/[0.08] pb-2">{formatInline(el.content)}</h2>
           case 'h3':
             return <h3 key={el.id} className="text-lg font-semibold text-gray-200 mt-4 mb-1">{formatInline(el.content)}</h3>
           case 'h4':
             return <h4 key={el.id} className="text-base font-semibold text-gray-300 mt-3 mb-1">{formatInline(el.content)}</h4>
           case 'hr':
-            return <hr key={el.id} className="border-gray-700 my-4" />
+            return <hr key={el.id} className="border-white/[0.08] my-4" />
           case 'p':
             return <p key={el.id} className="text-gray-300 text-sm leading-relaxed">{formatInline(el.content)}</p>
           case 'li':
             return <div key={el.id} className="text-gray-300 text-sm leading-relaxed flex gap-2" style={{ paddingLeft: `${el.indent * 8 + 8}px` }}>
-              <span className="text-green-400 shrink-0">•</span>
+              <span className="text-brand shrink-0">•</span>
               <span>{formatInline(el.content)}</span>
             </div>
           case 'oli':
@@ -146,8 +146,8 @@ function RenderedMarkdown({ elements }) {
             </div>
           case 'code':
             return (
-              <pre key={el.id} className="bg-[#0f0f13] border border-gray-700 rounded-lg p-4 overflow-x-auto">
-                <code className="text-green-300 text-xs font-mono whitespace-pre">{el.content}</code>
+              <pre key={el.id} className="bg-surface border border-white/[0.08] rounded-lg p-4 overflow-x-auto">
+                <code className="text-brand-light text-xs font-mono whitespace-pre">{el.content}</code>
               </pre>
             )
           case 'table':
@@ -157,7 +157,7 @@ function RenderedMarkdown({ elements }) {
                   <thead>
                     <tr>
                       {el.headers.map((h, j) => (
-                        <th key={j} className="text-left text-gray-300 font-semibold bg-[#0f0f13] border border-gray-700 px-3 py-2 text-xs">{formatInline(h)}</th>
+                        <th key={j} className="text-left text-gray-300 font-semibold bg-surface border border-white/[0.08] px-3 py-2 text-xs">{formatInline(h)}</th>
                       ))}
                     </tr>
                   </thead>
@@ -165,7 +165,7 @@ function RenderedMarkdown({ elements }) {
                     {el.rows.map((row, j) => (
                       <tr key={j}>
                         {row.map((cell, k) => (
-                          <td key={k} className="text-gray-400 border border-gray-700 px-3 py-2 text-xs">{formatInline(cell)}</td>
+                          <td key={k} className="text-gray-400 border border-white/[0.08] px-3 py-2 text-xs">{formatInline(cell)}</td>
                         ))}
                       </tr>
                     ))}
@@ -201,19 +201,19 @@ export default function Sidebar({ open, onClose }) {
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-40 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
 
       {/* Sidebar panel */}
       <div
-        className={`fixed top-0 left-0 h-full w-[480px] max-w-[90vw] bg-[#1a1a24] border-r border-gray-800 z-50 transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}
+        className={`fixed top-0 left-0 h-full w-[480px] max-w-[90vw] bg-surface-raised border-r border-white/[0.04] z-50 transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.04] shrink-0">
           <div className="flex items-center gap-3">
             <img src="/logo-zazz.png" alt="Zazz" className="h-7 w-auto" />
-            <h2 className="font-bold text-white text-lg">Sobre</h2>
+            <h2 className="font-display font-bold text-white text-lg">Sobre</h2>
           </div>
           <button
             onClick={onClose}
@@ -239,8 +239,8 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-800 text-xs text-gray-500 shrink-0">
-          Maluco da IA 👽 — Zazz Internet
+        <div className="px-5 py-3 border-t border-white/[0.04] text-xs text-gray-600 shrink-0">
+          Maluco da IA — Zazz Internet
         </div>
       </div>
 

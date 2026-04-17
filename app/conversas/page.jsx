@@ -28,7 +28,7 @@ function PopsBadges({ pops }) {
   return (
     <div className="flex flex-wrap gap-1 mt-1">
       {lista.map((p, i) => (
-        <span key={i} className="text-xs bg-green-900/30 text-green-400 border border-green-900/40 px-2 py-0.5 rounded-full">
+        <span key={i} className="text-xs bg-green-900/30 text-brand border border-brand/20/40 px-2 py-0.5 rounded-full">
           <ClipboardList className="w-3 h-3 inline" /> {p}
         </span>
       ))}
@@ -39,7 +39,7 @@ function PopsBadges({ pops }) {
 function ConversaCard({ conv }) {
   const [expandido, setExpandido] = useState(false)
   return (
-    <div className="bg-[#1a1a24] rounded-xl border border-gray-800 overflow-hidden">
+    <div className="bg-surface-raised rounded-xl border border-white/[0.06] overflow-hidden">
       <div
         className="px-5 py-4 cursor-pointer hover:bg-gray-800/20 transition"
         onClick={() => setExpandido(!expandido)}
@@ -64,14 +64,14 @@ function ConversaCard({ conv }) {
       </div>
 
       {expandido && (
-        <div className="border-t border-gray-800 px-5 py-4 space-y-4">
+        <div className="border-t border-white/[0.06] px-5 py-4 space-y-4">
           <div>
             <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide">Mensagem do colaborador</p>
             <p className="text-gray-200 text-sm whitespace-pre-wrap bg-gray-900/50 rounded-lg p-3">{conv.mensagem}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide">Resposta do bot</p>
-            <p className="text-gray-200 text-sm whitespace-pre-wrap bg-green-900/10 border border-green-900/30 rounded-lg p-3">{conv.resposta}</p>
+            <p className="text-gray-200 text-sm whitespace-pre-wrap bg-green-900/10 border border-brand/20/30 rounded-lg p-3">{conv.resposta}</p>
           </div>
           {conv.pops_usados && (
             <div>
@@ -151,14 +151,14 @@ export default function ConversasPage() {
   const abaBtn = (nome, label) => (
     <button
       onClick={() => { setAba(nome); setPage(1) }}
-      className={`px-4 py-2 text-sm rounded-lg transition font-medium ${aba === nome ? 'bg-[#008000] text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+      className={`px-4 py-2 text-sm rounded-lg transition font-medium ${aba === nome ? 'bg-brand text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
     >
       {label}
     </button>
   )
 
   return (
-    <div className="min-h-screen bg-[#0f0f13]">
+    <div className="min-h-screen bg-surface">
       <Navbar user={user} />
       <main className="max-w-5xl mx-auto px-4 py-8">
 
@@ -184,11 +184,11 @@ export default function ConversasPage() {
                 onChange={e => setBuscaInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && pesquisar()}
                 placeholder="Buscar em mensagens, respostas, remetente..."
-                className="flex-1 bg-[#1a1a24] border border-gray-800 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-[#008000] transition"
+                className="flex-1 bg-surface-raised border border-white/[0.06] rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-[#008000] transition"
               />
               <button
                 onClick={pesquisar}
-                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 Buscar
               </button>
@@ -204,10 +204,10 @@ export default function ConversasPage() {
 
             {loading ? (
               <div className="space-y-3">
-                {[1,2,3,4,5].map(i => <div key={i} className="bg-[#1a1a24] rounded-xl border border-gray-800 h-20 animate-pulse" />)}
+                {[1,2,3,4,5].map(i => <div key={i} className="bg-surface-raised rounded-xl border border-white/[0.06] h-20 animate-pulse" />)}
               </div>
             ) : conversas.length === 0 ? (
-              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-12 text-center">
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-12 text-center">
                 <MessageSquare className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                 <p className="text-gray-400">{busca ? 'Nenhuma conversa encontrada.' : 'Nenhuma conversa registrada ainda.'}</p>
                 <p className="text-gray-600 text-sm mt-1">As conversas aparecem aqui após o workflow ser atualizado.</p>
@@ -255,14 +255,14 @@ export default function ConversasPage() {
             </div>
 
             {erros.length === 0 ? (
-              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-12 text-center">
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-12 text-center">
                 <CheckCircle2 className="w-10 h-10 text-green-600 mx-auto mb-3" />
                 <p className="text-gray-400">Nenhum erro registrado.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {erros.map(erro => (
-                  <div key={erro.id} className="bg-[#1a1a24] rounded-xl border border-red-900/40 overflow-hidden">
+                  <div key={erro.id} className="bg-surface-raised rounded-xl border border-red-900/40 overflow-hidden">
                     <div className="px-5 py-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">

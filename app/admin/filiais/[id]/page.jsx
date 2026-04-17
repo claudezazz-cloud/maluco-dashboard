@@ -172,12 +172,12 @@ export default function FilialDetailPage() {
     return `${process.env.NEXT_PUBLIC_N8N_URL || '[N8N_URL]'}/webhook/${path}`
   }
 
-  const inputCls = 'w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000]'
+  const inputCls = 'w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#008000]'
   const labelCls = 'block text-xs text-gray-400 mb-1'
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f0f13]">
+      <div className="min-h-screen bg-surface">
         <Navbar user={user} />
         <div className="flex items-center justify-center h-64">
           <p className="text-gray-400">Carregando...</p>
@@ -192,7 +192,7 @@ export default function FilialDetailPage() {
   const cfg = filial.config || {}
 
   return (
-    <div className="min-h-screen bg-[#0f0f13]">
+    <div className="min-h-screen bg-surface">
       <Navbar user={user} />
       <main className="max-w-3xl mx-auto px-4 py-8">
 
@@ -208,7 +208,7 @@ export default function FilialDetailPage() {
             <div>
               <h1 className="text-2xl font-bold text-white">{filial.nome}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`text-xs px-2 py-0.5 rounded ${filial.ativo ? 'bg-green-900/40 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded ${filial.ativo ? 'bg-green-900/40 text-brand' : 'bg-gray-800 text-gray-500'}`}>
                   {filial.ativo ? 'Ativa' : 'Inativa'}
                 </span>
                 {filial.n8n_workflow_id && (
@@ -226,14 +226,14 @@ export default function FilialDetailPage() {
         </div>
 
         {saveMsg && (
-          <div className={`mb-4 text-sm px-4 py-2 rounded-lg border ${saveMsg.startsWith('Erro') ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-green-400'}`}>
+          <div className={`mb-4 text-sm px-4 py-2 rounded-lg border ${saveMsg.startsWith('Erro') ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
             {saveMsg}
           </div>
         )}
 
         {/* Edit form */}
         {editMode && (
-          <div className="bg-[#1a1a24] rounded-xl border border-green-900 p-6 mb-6">
+          <div className="bg-surface-raised rounded-xl border border-brand/20 p-6 mb-6">
             <h2 className="text-white font-semibold mb-4">Editar configuração</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -278,7 +278,7 @@ export default function FilialDetailPage() {
               </div>
             </div>
             <div className="flex gap-3 mt-4">
-              <button onClick={salvar} disabled={actionLoading} className="bg-[#008000] hover:bg-[#006600] disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition">
+              <button onClick={salvar} disabled={actionLoading} className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition">
                 {actionLoading ? 'Salvando...' : 'Salvar'}
               </button>
               <button onClick={() => setEditMode(false)} className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-5 py-2 rounded-lg transition">
@@ -291,11 +291,11 @@ export default function FilialDetailPage() {
         <div className="space-y-4">
 
           {/* Webhook URL */}
-          <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+          <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5">
             <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">URL do Webhook</h3>
             {webhookUrl ? (
               <div className="flex items-center gap-2">
-                <code className="text-green-400 text-sm flex-1 break-all">{webhookUrl}</code>
+                <code className="text-brand text-sm flex-1 break-all">{webhookUrl}</code>
                 <button
                   onClick={copyWebhook}
                   className="shrink-0 bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition"
@@ -309,7 +309,7 @@ export default function FilialDetailPage() {
           </div>
 
           {/* Evolution API config */}
-          <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+          <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5">
             <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">Evolution API</h3>
             <div className="space-y-2 text-sm">
               <Row label="URL" value={cfg.evolution_url || '—'} />
@@ -320,7 +320,7 @@ export default function FilialDetailPage() {
           </div>
 
           {/* API Keys */}
-          <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+          <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5">
             <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">Chaves de API</h3>
             <div className="space-y-2 text-sm">
               <Row label="Anthropic" value={cfg.anthropic_key ? maskKey(cfg.anthropic_key) : '(usando chave principal)'} mono />
@@ -330,7 +330,7 @@ export default function FilialDetailPage() {
           </div>
 
           {/* Status checklist */}
-          <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+          <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5">
             <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">Status</h3>
             {testResult ? (
               <div className="space-y-2">
@@ -351,7 +351,7 @@ export default function FilialDetailPage() {
 
           {/* DB result */}
           {dbResult && (
-            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+            <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5">
               <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">Configuração do Banco</h3>
               <div className="space-y-2">
                 {Object.entries(dbResult.results || {}).map(([key, val]) => (
@@ -363,13 +363,13 @@ export default function FilialDetailPage() {
           )}
 
           {/* Actions */}
-          <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+          <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5">
             <h3 className="text-gray-400 text-xs uppercase tracking-wide mb-3">Ações</h3>
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={testarConexoes}
                 disabled={actionLoading}
-                className="bg-[#008000] hover:bg-[#006600] disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 {actionLoading ? 'Aguarde...' : 'Testar todas as conexões'}
               </button>

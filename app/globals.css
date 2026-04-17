@@ -2,32 +2,83 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .glow-sm {
-    text-shadow: 0 0 10px rgba(0, 128, 0, 0.4);
+@layer base {
+  :root {
+    --color-surface: #0d0d12;
+    --color-surface-raised: #13131a;
+    --color-surface-overlay: #18181f;
+    --color-border: rgba(255, 255, 255, 0.06);
+    --color-border-hover: rgba(255, 255, 255, 0.1);
+    --color-accent: #00c853;
+    --color-accent-dim: rgba(0, 200, 83, 0.15);
+    --color-accent-glow: rgba(0, 200, 83, 0.3);
   }
-  .glow-border {
-    box-shadow: 0 0 15px rgba(0, 128, 0, 0.2);
+
+  body {
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    color: #b0b0bc;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-outfit), system-ui, sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: var(--font-mono), 'Consolas', monospace;
   }
 }
 
-body {
-  /* background-color removido em favor do background dinâmico no layout.js */
-  color: #e5e7eb;
+@layer utilities {
+  .glow-sm {
+    text-shadow: 0 0 12px var(--color-accent-glow);
+  }
+  .glow-border {
+    box-shadow: 0 0 20px var(--color-accent-dim);
+  }
+  .glass {
+    background: rgba(13, 13, 18, 0.7);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  }
+  .glass-raised {
+    background: rgba(19, 19, 26, 0.8);
+    backdrop-filter: blur(16px) saturate(1.1);
+    -webkit-backdrop-filter: blur(16px) saturate(1.1);
+  }
+}
+
+/* Noise texture overlay */
+.noise-overlay {
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  pointer-events: none;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(31, 41, 55, 0.6); /* gray-800 com opacidade */
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 85, 99, 0.8); /* gray-600 */
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Selection color */
+::selection {
+  background: rgba(0, 200, 83, 0.25);
+  color: #fff;
+}
+
+/* Smooth transitions globally */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }

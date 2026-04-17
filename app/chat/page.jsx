@@ -15,7 +15,7 @@ export default function ChatPage() {
   const [user, setUser] = useState(null)
   const [mensagens, setMensagens] = useState([])
   const [texto, setTexto] = useState('')
-  const [imagem, setImagem] = useState(null) // { base64, mimetype, preview }
+  const [imagem, setImagem] = useState(null)
   const [sending, setSending] = useState(false)
   const [aguardandoBot, setAguardandoBot] = useState(false)
   const [erro, setErro] = useState('')
@@ -34,33 +34,17 @@ export default function ChatPage() {
       const r = await fetch('/api/chat/messages')
       if (!r.ok) return
       const d = await r.json()
-      // Monta timeline combinando mensagem do usuário (mensagens) e respostas do bot (bot_conversas)
       const items = []
       for (const m of d.mensagens || []) {
-        items.push({
-          key: 'm' + m.id,
-          tipo: 'user',
-          texto: m.mensagem,
-          hora: m.data_hora,
-          remetente: m.remetente
-        })
+        items.push({ key: 'm' + m.id, tipo: 'user', texto: m.mensagem, hora: m.data_hora, remetente: m.remetente })
       }
       for (const c of d.conversas || []) {
-        items.push({
-          key: 'c' + c.id,
-          tipo: 'bot',
-          texto: c.resposta,
-          hora: c.criado_em,
-          pops: c.pops_usados,
-          tokensIn: c.tokens_input,
-          tokensOut: c.tokens_output
-        })
+        items.push({ key: 'c' + c.id, tipo: 'bot', texto: c.resposta, hora: c.criado_em, pops: c.pops_usados, tokensIn: c.tokens_input, tokensOut: c.tokens_output })
       }
       items.sort((a, b) => new Date(a.hora) - new Date(b.hora))
       setMensagens(items)
-      // Se a última mensagem é do bot, para o spinner
       if (items.length && items[items.length - 1].tipo === 'bot') setAguardandoBot(false)
-    } catch (e) { /* ignore */ }
+    } catch {}
   }, [])
 
   useEffect(() => {
@@ -119,44 +103,49 @@ export default function ChatPage() {
   }
 
   async function limpar() {
-    if (!confirm('Apagar todo o histórico deste chat?')) return
+    if (!confirm('Apagar todo o historico deste chat?')) return
     await fetch('/api/chat/messages', { method: 'DELETE' })
     setMensagens([])
   }
 
-  if (!user) return <div className="min-h-screen bg-[#0f0f13]" />
+  if (!user) return <div className="min-h-screen bg-[#08080c]" />
 
   return (
-    <div className="min-h-screen bg-[#0f0f13] text-white flex flex-col">
+    <div className="min-h-screen bg-transparent text-white flex flex-col">
       <Navbar user={user} />
 
-      <main className="max-w-3xl mx-auto w-full flex-1 flex flex-col px-4 py-4 gap-3">
+      <main className="max-w-3xl mx-auto w-full flex-1 flex flex-col px-4 py-5 gap-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold">Chat com o Maluco</h1>
-            <p className="text-xs text-gray-500">Teste o bot diretamente pela dashboard.</p>
+            <h1 className="font-display text-xl font-bold text-white tracking-tight">Chat com o Maluco</h1>
+            <p className="text-[11px] text-gray-600 mt-0.5">Teste o bot diretamente pela dashboard.</p>
           </div>
-          <button onClick={limpar} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-400 bg-gray-800/50 hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition">
-            <Trash2 className="w-3.5 h-3.5" /> Limpar histórico
+          <button onClick={limpar} className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-red-400 bg-white/[0.02] hover:bg-red-500/[0.06] border border-white/[0.04] px-3 py-1.5 rounded-lg transition-all duration-200">
+            <Trash2 className="w-3 h-3" /> Limpar
           </button>
         </div>
 
-        <div ref={scrollRef} className="flex-1 bg-[#1a1a24] border border-gray-800 rounded-xl p-4 overflow-y-auto" style={{ minHeight: '400px', maxHeight: 'calc(100vh - 260px)' }}>
+        {/* Messages area */}
+        <div ref={scrollRef} className="flex-1 bg-surface-raised/60 border border-white/[0.04] rounded-2xl p-4 overflow-y-auto" style={{ minHeight: '400px', maxHeight: 'calc(100vh - 260px)' }}>
           {mensagens.length === 0 && (
-            <div className="h-full flex items-center justify-center text-gray-600 text-sm">
-              Nenhuma mensagem ainda. Comece digitando abaixo.
+            <div className="h-full flex items-center justify-center text-gray-700 text-sm">
+              Nenhuma mensagem ainda.
             </div>
           )}
           <div className="space-y-3">
             {mensagens.map(m => (
               <div key={m.key} className={`flex ${m.tipo === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] rounded-xl px-4 py-2.5 ${m.tipo === 'user' ? 'bg-[#071DE3] text-white' : 'bg-gray-800 text-gray-100 border border-gray-700'}`}>
-                  <p className="text-sm whitespace-pre-wrap break-words">{m.texto}</p>
-                  <div className={`flex items-center gap-2 mt-1 text-[10px] ${m.tipo === 'user' ? 'text-blue-200' : 'text-gray-500'}`}>
-                    <span>{fmtHora(m.hora)}</span>
-                    {m.pops && <span className="truncate max-w-[200px]" title={m.pops}>· POPs: {m.pops.split(',').length}</span>}
+                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
+                  m.tipo === 'user'
+                    ? 'bg-brand/20 text-white border border-brand/20'
+                    : 'bg-white/[0.04] text-gray-200 border border-white/[0.06]'
+                }`}>
+                  <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{m.texto}</p>
+                  <div className={`flex items-center gap-2 mt-1.5 text-[10px] ${m.tipo === 'user' ? 'text-brand/50' : 'text-gray-600'}`}>
+                    <span className="font-mono">{fmtHora(m.hora)}</span>
+                    {m.pops && <span className="truncate max-w-[200px]" title={m.pops}>POPs: {m.pops.split(',').length}</span>}
                     {m.tokensIn != null && (m.tokensIn + m.tokensOut) > 0 && (
-                      <span>· {(m.tokensIn + m.tokensOut).toLocaleString()} tok</span>
+                      <span className="font-mono">{(m.tokensIn + m.tokensOut).toLocaleString()} tok</span>
                     )}
                   </div>
                 </div>
@@ -164,30 +153,36 @@ export default function ChatPage() {
             ))}
             {aguardandoBot && (
               <div className="flex justify-start">
-                <div className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                  <span className="text-sm text-gray-400">Maluco está pensando…</span>
+                <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 bg-brand/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 bg-brand/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 bg-brand/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                  <span className="text-sm text-gray-500">Pensando...</span>
                 </div>
               </div>
             )}
           </div>
         </div>
 
+        {/* Image preview */}
         {imagem && (
-          <div className="bg-[#1a1a24] border border-gray-800 rounded-xl p-3 flex items-center gap-3">
-            <img src={imagem.preview} alt="preview" className="w-16 h-16 object-cover rounded-lg" />
-            <div className="flex-1 text-sm text-gray-400">Imagem pronta pra enviar. Digite uma legenda ou pergunta (opcional).</div>
-            <button onClick={() => setImagem(null)} className="text-gray-500 hover:text-red-400"><X className="w-4 h-4" /></button>
+          <div className="bg-surface-raised/60 border border-white/[0.04] rounded-xl p-3 flex items-center gap-3">
+            <img src={imagem.preview} alt="preview" className="w-14 h-14 object-cover rounded-lg border border-white/[0.06]" />
+            <div className="flex-1 text-xs text-gray-500">Imagem pronta. Legenda opcional.</div>
+            <button onClick={() => setImagem(null)} className="text-gray-600 hover:text-red-400 transition-colors"><X className="w-4 h-4" /></button>
           </div>
         )}
 
-        {erro && <div className="text-xs text-red-400 bg-red-900/30 border border-red-900/40 rounded-lg px-3 py-2">{erro}</div>}
+        {erro && <div className="text-xs text-red-400 bg-red-500/[0.08] border border-red-500/20 rounded-lg px-3 py-2">{erro}</div>}
 
-        <div className="flex items-end gap-2 bg-[#1a1a24] border border-gray-800 rounded-xl p-2">
+        {/* Input area */}
+        <div className="flex items-end gap-2 bg-surface-raised/80 border border-white/[0.06] rounded-2xl p-2">
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
           <button
             onClick={() => fileRef.current?.click()}
-            className="p-2.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition"
+            className="p-2.5 text-gray-600 hover:text-brand hover:bg-brand/[0.06] rounded-lg transition-all duration-200"
             title="Anexar imagem"
           >
             <ImagePlus className="w-5 h-5" />
@@ -196,15 +191,15 @@ export default function ChatPage() {
             value={texto}
             onChange={e => setTexto(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
-            placeholder={imagem ? 'Legenda ou pergunta sobre a imagem…' : 'Digite uma mensagem (Enter envia, Shift+Enter pula linha)'}
+            placeholder={imagem ? 'Legenda ou pergunta...' : 'Digite uma mensagem...'}
             rows={1}
-            className="flex-1 bg-transparent text-white text-sm resize-none outline-none px-2 py-2 max-h-32"
+            className="flex-1 bg-transparent text-white text-sm resize-none outline-none px-2 py-2 max-h-32 placeholder:text-gray-700"
             style={{ minHeight: '40px' }}
           />
           <button
             onClick={enviar}
             disabled={sending || (!texto.trim() && !imagem)}
-            className="p-2.5 bg-[#071DE3] hover:bg-[#0516B0] disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg transition"
+            className="p-2.5 bg-brand hover:bg-brand-dark disabled:bg-white/[0.04] disabled:text-gray-700 text-white rounded-lg transition-all duration-200"
           >
             {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>

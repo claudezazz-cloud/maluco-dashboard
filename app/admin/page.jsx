@@ -161,18 +161,18 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f13]">
+    <div className="min-h-screen bg-surface">
       <Navbar user={user} />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-white mb-6">Administração</h1>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-[#1a1a24] rounded-lg p-1 w-fit">
+        <div className="flex gap-1 mb-6 bg-surface-raised rounded-lg p-1 w-fit">
           {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações']].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`px-5 py-2 rounded-md text-sm font-medium transition ${tab === key ? 'bg-[#008000] text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`px-5 py-2 rounded-md text-sm font-medium transition ${tab === key ? 'bg-brand text-white' : 'text-gray-400 hover:text-white'}`}
             >
               {label}
             </button>
@@ -186,14 +186,14 @@ export default function AdminPage() {
               <h2 className="text-gray-300 font-medium">Filiais cadastradas</h2>
               <Link
                 href="/admin/filiais"
-                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 + Nova Filial
               </Link>
             </div>
 
             {msg && (
-              <div className="mb-4 text-sm text-green-400 bg-green-900/20 border border-green-800 rounded-lg px-4 py-2">
+              <div className="mb-4 text-sm text-brand bg-green-900/20 border border-green-800 rounded-lg px-4 py-2">
                 {msg}
               </div>
             )}
@@ -201,12 +201,12 @@ export default function AdminPage() {
             {/* Filial cards */}
             <div className="space-y-3">
               {filiais.map(f => (
-                <div key={f.id} className="bg-[#1a1a24] rounded-xl border border-gray-800 px-5 py-4">
+                <div key={f.id} className="bg-surface-raised rounded-xl border border-white/[0.06] px-5 py-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-white font-medium">{f.nome}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${f.ativo ? 'bg-green-900/40 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded ${f.ativo ? 'bg-green-900/40 text-brand' : 'bg-gray-800 text-gray-500'}`}>
                           {f.ativo ? 'Ativa' : 'Inativa'}
                         </span>
                       </div>
@@ -245,7 +245,7 @@ export default function AdminPage() {
                   <p className="text-gray-500 text-sm mb-4">Nenhuma filial cadastrada.</p>
                   <Link
                     href="/admin/filiais"
-                    className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-5 py-2 rounded-lg transition"
+                    className="bg-brand hover:bg-brand-dark text-white text-sm px-5 py-2 rounded-lg transition"
                   >
                     Criar primeira filial
                   </Link>
@@ -265,21 +265,21 @@ export default function AdminPage() {
               </div>
               <button
                 onClick={() => { setMostraNovoUsuario(!mostraNovoUsuario); setMostrarSenha(false) }}
-                className="bg-[#008000] hover:bg-[#006600] text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition"
               >
                 {mostraNovoUsuario ? 'Cancelar' : '+ Novo Usuário'}
               </button>
             </div>
 
             {msg && (
-              <div className={`mb-4 text-sm rounded-lg px-4 py-2 border ${msg.startsWith('Erro') ? 'text-red-400 bg-red-900/20 border-red-800' : 'text-green-400 bg-green-900/20 border-green-800'}`}>
+              <div className={`mb-4 text-sm rounded-lg px-4 py-2 border ${msg.startsWith('Erro') ? 'text-red-400 bg-red-900/20 border-red-800' : 'text-brand bg-green-900/20 border-green-800'}`}>
                 {msg}
               </div>
             )}
 
             {/* Form novo usuário */}
             {mostraNovoUsuario && (
-              <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5 mb-4">
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mb-4">
                 <h3 className="text-white font-medium text-sm mb-4">Novo Usuário</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                   <div>
@@ -289,7 +289,7 @@ export default function AdminPage() {
                       value={novoUsuario.nome}
                       onChange={e => setNovoUsuario({ ...novoUsuario, nome: e.target.value })}
                       placeholder="Nome do colaborador"
-                      className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none"
+                      className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none"
                     />
                   </div>
                   <div>
@@ -299,7 +299,7 @@ export default function AdminPage() {
                       value={novoUsuario.email}
                       onChange={e => setNovoUsuario({ ...novoUsuario, email: e.target.value })}
                       placeholder="email@exemplo.com"
-                      className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none"
+                      className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none"
                     />
                   </div>
                   <div>
@@ -310,7 +310,7 @@ export default function AdminPage() {
                         value={novoUsuario.senha}
                         onChange={e => setNovoUsuario({ ...novoUsuario, senha: e.target.value })}
                         placeholder="Senha de acesso"
-                        className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 pr-10 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none"
+                        className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 pr-10 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none"
                       />
                       <button type="button" onClick={() => setMostrarSenha(!mostrarSenha)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
                         {mostrarSenha ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -322,7 +322,7 @@ export default function AdminPage() {
                     <select
                       value={novoUsuario.role}
                       onChange={e => setNovoUsuario({ ...novoUsuario, role: e.target.value })}
-                      className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#008000] focus:outline-none"
+                      className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#008000] focus:outline-none"
                     >
                       <option value="colaborador">Colaborador</option>
                       <option value="admin">Administrador</option>
@@ -333,7 +333,7 @@ export default function AdminPage() {
                   <button
                     onClick={criarUsuario}
                     disabled={salvandoUsuario}
-                    className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium"
+                    className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium"
                   >
                     {salvandoUsuario ? 'Salvando...' : 'Criar Usuário'}
                   </button>
@@ -346,7 +346,7 @@ export default function AdminPage() {
               {loadingUsuarios ? (
                 <div className="text-center py-8 text-gray-500 text-sm">Carregando...</div>
               ) : usuarios.map(u => (
-                <div key={u.id} className="bg-[#1a1a24] rounded-xl border border-gray-800 px-5 py-4">
+                <div key={u.id} className="bg-surface-raised rounded-xl border border-white/[0.06] px-5 py-4">
                   {editandoUsuario === u.id ? (
                     <div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
@@ -356,7 +356,7 @@ export default function AdminPage() {
                             type="text"
                             value={editUsuarioForm.nome || ''}
                             onChange={e => setEditUsuarioForm({ ...editUsuarioForm, nome: e.target.value })}
-                            className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#008000] focus:outline-none"
+                            className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#008000] focus:outline-none"
                           />
                         </div>
                         <div>
@@ -365,7 +365,7 @@ export default function AdminPage() {
                             type="email"
                             value={editUsuarioForm.email || ''}
                             onChange={e => setEditUsuarioForm({ ...editUsuarioForm, email: e.target.value })}
-                            className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#008000] focus:outline-none"
+                            className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#008000] focus:outline-none"
                           />
                         </div>
                         <div>
@@ -376,7 +376,7 @@ export default function AdminPage() {
                               value={editUsuarioForm.senha || ''}
                               onChange={e => setEditUsuarioForm({ ...editUsuarioForm, senha: e.target.value })}
                               placeholder="Nova senha..."
-                              className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 pr-10 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none"
+                              className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 pr-10 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none"
                             />
                             <button type="button" onClick={() => setMostrarSenhaEdit(!mostrarSenhaEdit)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
                               {mostrarSenhaEdit ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -388,7 +388,7 @@ export default function AdminPage() {
                           <select
                             value={editUsuarioForm.role || 'colaborador'}
                             onChange={e => setEditUsuarioForm({ ...editUsuarioForm, role: e.target.value })}
-                            className="w-full bg-[#0f0f13] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#008000] focus:outline-none"
+                            className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-[#008000] focus:outline-none"
                           >
                             <option value="colaborador">Colaborador</option>
                             <option value="admin">Administrador</option>
@@ -416,7 +416,7 @@ export default function AdminPage() {
                         <button
                           onClick={salvarEdicaoUsuario}
                           disabled={salvandoUsuario}
-                          className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
+                          className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-5 py-2 rounded-lg transition font-medium"
                         >
                           {salvandoUsuario ? 'Salvando...' : 'Salvar'}
                         </button>
@@ -427,7 +427,7 @@ export default function AdminPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-white font-medium">{u.nome}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-green-900/40 text-green-400' : 'bg-blue-900/40 text-blue-400'}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-green-900/40 text-brand' : 'bg-blue-900/40 text-blue-400'}`}>
                             {u.role === 'admin' ? 'Admin' : 'Colaborador'}
                           </span>
                           {!u.ativo && (
@@ -476,12 +476,12 @@ export default function AdminPage() {
             <h2 className="text-gray-300 font-medium mb-4">Configurações do Bot</h2>
 
             {msg && (
-              <div className="mb-4 text-sm text-green-400 bg-green-900/20 border border-green-800 rounded-lg px-4 py-2">
+              <div className="mb-4 text-sm text-brand bg-green-900/20 border border-green-800 rounded-lg px-4 py-2">
                 {msg}
               </div>
             )}
 
-            <div className="bg-[#1a1a24] rounded-xl border border-gray-800 p-5">
+            <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5">
               <div className="mb-1">
                 <label className="text-white font-medium text-sm">Grupo do Bom Dia (WhatsApp)</label>
                 <p className="text-gray-500 text-xs mt-0.5 mb-3">
@@ -494,17 +494,17 @@ export default function AdminPage() {
                   value={grupoId}
                   onChange={e => setGrupoId(e.target.value)}
                   placeholder="554384924456-1616013394@g.us"
-                  className="flex-1 bg-[#0f0f13] border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none transition"
+                  className="flex-1 bg-surface border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none transition"
                 />
                 <button
                   onClick={salvarGrupo}
                   disabled={salvandoGrupo || !grupoId.trim()}
-                  className="bg-[#008000] hover:bg-[#006600] disabled:opacity-40 text-white text-sm px-6 py-2.5 rounded-lg transition font-medium shrink-0"
+                  className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2.5 rounded-lg transition font-medium shrink-0"
                 >
                   {salvandoGrupo ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-800">
+              <div className="mt-4 pt-4 border-t border-white/[0.06]">
                 <p className="text-xs text-gray-500">
                   Para encontrar o ID do grupo: abra a Evolution API ou verifique nos logs do webhook. O ID sempre termina com @g.us
                 </p>

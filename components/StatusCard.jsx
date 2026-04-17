@@ -4,67 +4,83 @@ export default function StatusCard({ filial, selected, onSelect }) {
   const { nome, online, workflowNome, ultimaExecucao, errosHoje, mensagensHoje } = filial
 
   function formatTime(iso) {
-    if (!iso) return '—'
+    if (!iso) return '--'
     const d = new Date(iso)
     return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   }
 
   function formatDate(iso) {
-    if (!iso) return '—'
+    if (!iso) return '--'
     const d = new Date(iso)
     const hoje = new Date()
-    if (d.toDateString() === hoje.toDateString()) return `Hoje às ${formatTime(iso)}`
+    if (d.toDateString() === hoje.toDateString()) return `Hoje ${formatTime(iso)}`
     return d.toLocaleDateString('pt-BR') + ' ' + formatTime(iso)
   }
 
-  const statusColor = ultimaExecucao?.status === 'success' ? 'text-green-400'
+  const statusColor = ultimaExecucao?.status === 'success' ? 'text-emerald-400'
     : ultimaExecucao?.status === 'error' ? 'text-red-400'
-    : ultimaExecucao?.status === 'running' ? 'text-yellow-400'
-    : 'text-gray-500'
+    : ultimaExecucao?.status === 'running' ? 'text-amber-400'
+    : 'text-gray-600'
 
   const StatusIcon = ultimaExecucao?.status === 'success' ? CheckCircle2
     : ultimaExecucao?.status === 'error' ? XCircle
     : ultimaExecucao?.status === 'running' ? RefreshCw
     : null
 
-  const statusText = ultimaExecucao?.status === 'success' ? 'Sucesso'
+  const statusText = ultimaExecucao?.status === 'success' ? 'OK'
     : ultimaExecucao?.status === 'error' ? 'Erro'
-    : ultimaExecucao?.status === 'running' ? 'Executando'
-    : '—'
+    : ultimaExecucao?.status === 'running' ? 'Rodando'
+    : '--'
 
   return (
     <div
       onClick={onSelect}
-      className={`bg-[#0f0f13]/40 backdrop-blur-md rounded-2xl border p-5 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(0,128,0,0.15)] ${selected ? 'border-green-500/80 shadow-[0_0_15px_rgba(0,128,0,0.2)]' : 'border-gray-800/50 hover:border-green-500/40'}`}
+      className={`group relative rounded-2xl border p-5 cursor-pointer transition-all duration-300 ${
+        selected
+          ? 'bg-brand/[0.04] border-brand/30 shadow-[0_0_20px_rgba(0,200,83,0.08)]'
+          : 'bg-surface-raised/60 border-white/[0.04] hover:border-white/[0.08] hover:bg-surface-raised'
+      }`}
     >
+      {/* Selected indicator */}
+      {selected && (
+        <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-brand/50 to-transparent" />
+      )}
+
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-white font-semibold">{nome}</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{workflowNome || 'Sem workflow'}</p>
+          <h3 className="font-display font-semibold text-white text-[15px]">{nome}</h3>
+          <p className="text-[11px] text-gray-600 mt-0.5 font-mono">{workflowNome || 'Sem workflow'}</p>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className={`w-2.5 h-2.5 rounded-full ${online ? 'bg-green-500 shadow-[0_0_6px_#22c55e]' : 'bg-red-500'}`} />
-          <span className={`text-sm font-medium ${online ? 'text-green-400' : 'text-red-400'}`}>
+          <div className={`w-2 h-2 rounded-full ${
+            online
+              ? 'bg-brand shadow-[0_0_8px_rgba(0,200,83,0.5)] animate-pulse-glow'
+              : 'bg-red-500/80'
+          }`} />
+          <span className={`text-xs font-medium ${online ? 'text-brand' : 'text-red-400/80'}`}>
             {online ? 'Online' : 'Offline'}
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-black/30 border border-gray-800/30 rounded-xl p-3 hover:border-green-500/20 transition-colors">
-          <p className="text-[11px] text-gray-500 mb-1 uppercase tracking-wider font-semibold">Mensagens hoje</p>
-          <p className="text-xl font-bold text-white drop-shadow-sm">{mensagensHoje}</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white/[0.02] border border-white/[0.03] rounded-xl p-3 group-hover:border-white/[0.06] transition-colors">
+          <p className="text-[10px] text-gray-600 mb-1 uppercase tracking-widest font-semibold">Msgs</p>
+          <p className="text-lg font-display font-bold text-white">{mensagensHoje}</p>
         </div>
-        <div className="bg-black/30 border border-gray-800/30 rounded-xl p-3 hover:border-red-500/20 transition-colors">
-          <p className="text-[11px] text-gray-500 mb-1 uppercase tracking-wider font-semibold">Erros hoje</p>
-          <p className={`text-xl font-bold ${errosHoje > 0 ? 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.5)]' : 'text-white drop-shadow-sm'}`}>{errosHoje}</p>
+        <div className="bg-white/[0.02] border border-white/[0.03] rounded-xl p-3 group-hover:border-white/[0.06] transition-colors">
+          <p className="text-[10px] text-gray-600 mb-1 uppercase tracking-widest font-semibold">Erros</p>
+          <p className={`text-lg font-display font-bold ${errosHoje > 0 ? 'text-red-400' : 'text-white'}`}>{errosHoje}</p>
         </div>
       </div>
 
       {ultimaExecucao && (
-        <div className="mt-3 flex items-center justify-between text-xs">
-          <span className="text-gray-500">{formatDate(ultimaExecucao.inicio)}</span>
-          <span className={`font-medium flex items-center gap-1 ${statusColor}`}>{StatusIcon && <StatusIcon className="w-3.5 h-3.5" />}{statusText}</span>
+        <div className="mt-3 flex items-center justify-between text-[11px]">
+          <span className="text-gray-600 font-mono">{formatDate(ultimaExecucao.inicio)}</span>
+          <span className={`font-medium flex items-center gap-1 ${statusColor}`}>
+            {StatusIcon && <StatusIcon className="w-3 h-3" />}
+            {statusText}
+          </span>
         </div>
       )}
     </div>
