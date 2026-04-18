@@ -17,9 +17,9 @@ export async function POST(req) {
 
   try {
     const body = await req.json()
-    const { tipo, texto, imageBase64, imageMimetype, caption, images } = body
+    const { tipo, texto, imageBase64, imageMimetype, caption, images, audioBase64, audioMimetype } = body
 
-    if (!['text', 'image'].includes(tipo)) {
+    if (!['text', 'image', 'audio'].includes(tipo)) {
       return NextResponse.json({ error: 'tipo inválido' }, { status: 400 })
     }
 
@@ -34,6 +34,17 @@ export async function POST(req) {
     if (tipo === 'text') {
       if (!texto || !texto.trim()) return NextResponse.json({ error: 'texto vazio' }, { status: 400 })
       message = { conversation: texto }
+    } else if (tipo === 'audio') {
+      if (!audioBase64) return NextResponse.json({ error: 'audio ausente' }, { status: 400 })
+      const mime = (audioMimetype || 'audio/webm').split(';')[0]
+      message = {
+        audioMessage: {
+          mimetype: mime,
+          dashboardBase64: audioBase64,
+          dashboardMimetype: mime,
+          ptt: true
+        }
+      }
     } else {
       const lista = Array.isArray(images) && images.length
         ? images
