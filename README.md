@@ -18,8 +18,9 @@ Alem do bot, existe uma dashboard web completa para o administrador gerenciar tu
 
 ### Atendimento no WhatsApp
 - Responde mensagens de texto quando mencionado no grupo (ex: "@Claude como faco uma nova venda?")
-- Recebe e transcreve mensagens de audio usando a API do Whisper (OpenAI)
+- Recebe e transcreve mensagens de audio usando **Groq Whisper-large-v3** (substituto do OpenAI Whisper — mais rapido e free tier)
 - **Reconhecimento de imagens com Claude Vision** — toda imagem enviada no grupo e automaticamente analisada pelo Claude Haiku 4.5. A descricao substitui o placeholder `[imagem]` no banco, permitindo que relatorios incluam contexto visual. Quando a legenda menciona o bot, ele responde analisando a foto diretamente (Vision nativo no prompt principal)
+- **Multi-imagem em uma unica resposta** — a dashboard permite enviar ate 10 imagens numa mesma mensagem. O Claude Vision analisa o conjunto (SEQUENCIA das imagens) e devolve uma unica resposta. Ideal para analisar prints de conversas do WhatsApp e receber sugestoes de melhoria
 - Busca semantica de POPs com sistema de prioridade (`sempre` / `importante` / `relevante`) — POPs "sempre" sao injetados em toda resposta, "importante" sempre enviam conteudo completo, "relevante" sao filtrados por score de palavras-chave (top 5 mais proximos da mensagem)
 - Mantem historico de conversa com Redis — o bot lembra das ultimas mensagens trocadas para manter contexto entre perguntas
 - Cria tarefas automaticamente no Notion quando o colaborador pede (ex: "Claude agenda uma instalacao para o cliente Joao amanha")
@@ -49,8 +50,9 @@ Execucoes automaticas de comandos em horarios definidos, gerenciadas pela dashbo
 
 ### Tratamento de erros
 - Quando a API do Claude retorna erro, o bot responde com uma mensagem amigavel em vez de travar
-- Todos os erros sao salvos automaticamente no banco de dados com detalhes: nome do no que falhou, mensagem de erro, mensagem do usuario que causou o erro, chat_id e timestamp
-- Os erros podem ser consultados na dashboard
+- **Error Trigger global** — qualquer no do workflow que falhe (Whisper, Claude, Evolution, Postgres, etc.) dispara um no `Erro Global (Trigger)` que grava automaticamente em `bot_erros` com o nome do no que falhou e a mensagem tecnica. A configuracao `errorWorkflow` aponta o workflow para ele mesmo, ativando o handler
+- Todos os erros sao salvos no banco com detalhes: nome do no que falhou, mensagem de erro, mensagem do usuario que causou o erro, chat_id e timestamp
+- Os erros podem ser consultados na dashboard (`/conversas` aba Erros) e aparecem no contador "ERROS HOJE" da visao geral
 
 ### Registro de conversas
 - Toda interacao (pergunta do colaborador + resposta do bot) e salva no PostgreSQL
@@ -65,8 +67,8 @@ Execucoes automaticas de comandos em horarios definidos, gerenciadas pela dashbo
 |-----------|-----------|----------|
 | Automacao | **N8N** (self-hosted) | Orquestra todo o fluxo do bot + agendamento de solicitacoes |
 | WhatsApp | **Evolution API v2** | Hospedada no VPS Hostinger |
-| Inteligencia Artificial | **Claude Haiku 4.5** (Anthropic) | Modelo `claude-haiku-4-5-20251001`, chamado via API REST |
-| Transcricao de audio | **OpenAI Whisper** | API `v1/audio/transcriptions` para converter audio em texto |
+| Inteligencia Artificial | **Claude Haiku 4.5** (Anthropic) | Modelo `claude-haiku-4-5-20251001`, chamado via API REST. Suporta Vision nativo (texto + imagens) |
+| Transcricao de audio | **Groq Whisper-large-v3** | API `api.groq.com/openai/v1/audio/transcriptions`, compativel com formato OpenAI, free tier generoso |
 | Banco de dados | **PostgreSQL** | Docker no VPS, armazena mensagens, POPs, regras, conversas, erros, config |
 | Cache e historico | **Redis** | Docker no VPS, armazena historico de conversa, chamados importados e configuracoes |
 | Tarefas | **Notion API** | Cria paginas automaticamente quando o colaborador solicita uma tarefa ou quando ha pendentes ao fim do dia |
@@ -299,35 +301,57 @@ Monta Prompt (inclui contexto de skill se aplicavel) ---> Claude API ---> Parse 
 
 ### Fluxo de Audio
 ```
-Detecta Audio --> Baixa Audio --> Converte p/ Whisper --> Transcreve Audio
+Detecta Audio --> Audio Preloaded? (IF)
+  |                   |
+  |  false            |  true (dashboard: base64 ja veio no payload)
+  v                   |
+Baixa Audio           |
+  |                   |
+  v                   v
+Converte p/ Whisper --> Transcreve Audio (Groq whisper-large-v3)
   --> Formata Transcricao --> Salva Transcricao --> Verifica Mencao Audio
   --> [continua no fluxo principal a partir de Busca POPs]
 ```
+O IF `Audio Preloaded?` permite que a dashboard (gravacao via MediaRecorder) envie o base64 direto, pulando a etapa de `Baixa Audio` (que busca no Evolution). WhatsApp continua usando o caminho normal (Baixa Audio -> Evolution API).
 
-### Fluxo de Imagem (Claude Vision)
+### Fluxo de Imagem (Claude Vision) — Single ou Multi-imagem
 ```
 Detecta Imagem --> Imagem Preloaded? (IF)
   |                   |
-  |  false            |  true (dashboard: base64 ja veio no payload)
+  |  false            |  true (dashboard: base64 ja veio no payload, ate 10 imagens)
   v                   |
 Baixa Imagem          |
   |                   |
   v                   v
-Prepara Body Imagem (Code: monta JSON para Claude Vision)
+Prepara Body Imagem (Code: monta JSON com TODAS as imagens no content array)
   |
   v
-Descreve Imagem (HTTP Request -> Anthropic API, Haiku 4.5, max 300 tokens)
+Descreve Imagem (HTTP Request -> Anthropic API, Haiku 4.5)
+  - 1 imagem: max 300 tokens, prompt "Descreva em 1-3 frases CURTAS..."
+  - 2-10 imagens: max 600 tokens, prompt "Analise o conjunto considerando a SEQUENCIA..."
   |
   v
-Formata Imagem (Code: monta dbMensagem com descricao, detecta mencao)
+Formata Imagem (Code: monta dbMensagem, carrega allImages[] adiante)
   |
   +--> Salva Imagem (Postgres: INSERT ON CONFLICT DO UPDATE — sobrescreve "[imagem]")
   |
   +--> Verifica Mencao Imagem (IF: isMentioned?)
          |
-         true --> E Treinamento? --> [fluxo principal com imagem no content array]
+         true --> E Treinamento? --> [fluxo principal com TODAS as imagens no content array]
 ```
-Custo estimado: ~US$ 0,0015/imagem (Haiku 4.5 Vision). 100 imgs/dia ≈ US$ 4/mês.
+- **1 webhook = 1 resposta**: mesmo com 10 imagens, o bot faz apenas 1 chamada ao Claude Vision e devolve 1 resposta analisando o conjunto completo.
+- **Custo estimado**: ~US$ 0,0015 por imagem individual (Haiku 4.5 Vision). 100 imgs/dia ≈ US$ 4/mês.
+- **Caso de uso**: analisar prints de conversas do WhatsApp e receber sugestoes de melhoria em uma unica resposta.
+
+### Error Trigger Global
+```
+[Qualquer no falha] --> Erro Global (Trigger)
+                         --> Salva Erro Global (Postgres: bot_erros)
+```
+- Node type: `n8n-nodes-base.errorTrigger` — dispara quando qualquer execucao do workflow termina com erro
+- Settings: `errorWorkflow = <proprio-id>` + `saveDataErrorExecution = 'all'` (aponta o error workflow pra ele mesmo)
+- Insere em `bot_erros`: `no_n8n = $json.execution.lastNodeExecuted`, `mensagem_erro = $json.execution.error.message` (ate 2000 chars)
+- A dashboard le essa tabela via `/api/erros` e mostra em `/conversas` (aba Erros) + contador "ERROS HOJE" em `/dashboard`
 
 ### Fluxo de Agendamento (Solicitacoes Programadas)
 ```
@@ -357,7 +381,7 @@ O botao "Executar Agora" da dashboard faz exatamente a mesma injecao sintetica (
 | `/login` | Login com email + senha | Publico |
 | `/dashboard` | Visao geral: metricas (mensagens/erros/online), cards por filial, execucoes recentes do N8N | Admin + Colaborador |
 | `/chamados` | Abas: importar chamados XLSX + importar clientes XLSX (colaborador ve sem botoes de upload/limpeza) | Admin + Colaborador |
-| `/chat` | Chat direto com o bot: envio de texto e imagens, polling de respostas, historico por usuario | Admin + Colaborador |
+| `/chat` | Chat direto com o bot: envio de texto, ate 10 imagens, audio gravado (MediaRecorder/webm-opus) e skills via dropdown. Polling de respostas a cada 2s, historico por usuario | Admin + Colaborador |
 | `/treinamento` | 5 abas: Regras, POPs (com prioridade), Colaboradores, Skills, Solicitacoes Programadas | Admin |
 | `/system-prompt` | Editor do system prompt com placeholders | Admin |
 | `/conversas` | Historico de interacoes + log de erros | Admin |
@@ -380,7 +404,8 @@ O botao "Executar Agora" da dashboard faz exatamente a mesma injecao sintetica (
 | `/api/chamados` | GET/POST/DELETE | Admin | Importar/status/limpar chamados (Redis) |
 | `/api/clientes` | GET/POST/DELETE | Admin | Importar/status/limpar clientes (Redis) |
 | `/api/historico` | GET/DELETE | Admin | Status/limpar historico Redis |
-| `/api/chat/send` | POST | JWT | Envia texto ou imagem para o bot via webhook N8N |
+| `/api/chat/send` | POST | JWT | Envia texto, ate 10 imagens ou audio gravado (`tipo: text/image/audio`) para o bot via webhook N8N |
+| `/api/skills/ativas` | GET | JWT | Lista skills ativas (usado pelo dropdown no chat) — endpoint nao-admin |
 | `/api/chat/messages` | GET/DELETE | JWT | Lista/limpa historico do chat do usuario logado |
 | `/api/skills` | GET/POST | Admin | Listar/criar skills |
 | `/api/skills/[id]` | PUT/DELETE | Admin | Atualizar/excluir skill |
