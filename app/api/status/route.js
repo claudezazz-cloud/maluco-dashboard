@@ -10,8 +10,10 @@ export async function GET() {
   try {
     const filiaisResult = await query('SELECT * FROM dashboard_filiais WHERE ativo = true ORDER BY nome')
     const filiais = filiaisResult.rows
+    const primeiraFilialId = filiais[0]?.id
 
     const results = await Promise.all(filiais.map(async (filial) => {
+      const incluirDashboard = filial.id === primeiraFilialId
       let workflow = null
       let executions = []
       let lastExecution = null
@@ -25,20 +27,28 @@ export async function GET() {
         }
       } catch {}
 
-      // Mensagens hoje (timezone America/Sao_Paulo)
-      // Fix: usar (data_hora AT TIME ZONE 'America/Sao_Paulo')::date
-      // CURRENT_DATE AT TIME ZONE é sintaxe inválida em Postgres
+      // Respostas do Claude hoje (timezone America/Sao_Paulo)
+      // Conta toda linha de bot_conversas — cada interação = 1 resposta do Claude
+      // Inclui: WhatsApp + Solicitações Programadas (chat_id = group_chat_id) + Dashboard /chat (chat_id LIKE 'dashboard-%')
+      // Dashboard /chat só conta na 1ª filial pra não duplicar entre filiais
       let mensagensHoje = 0
       try {
         const chatId = filial.group_chat_id
         const baseQuery = `
-          SELECT COUNT(*)::int AS total FROM mensagens
-          WHERE (data_hora AT TIME ZONE 'America/Sao_Paulo')::date
+          SELECT COUNT(*)::int AS total FROM bot_conversas
+          WHERE (criado_em AT TIME ZONE 'America/Sao_Paulo')::date
               = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date
         `
-        const r = chatId
-          ? await query(baseQuery + ' AND chat_id = $1', [chatId])
-          : await query(baseQuery)
+        let r
+        if (chatId && incluirDashboard) {
+          r = await query(baseQuery + " AND (chat_id = $1 OR chat_id LIKE 'dashboard-%')", [chatId])
+        } else if (chatId) {
+          r = await query(baseQuery + ' AND chat_id = $1', [chatId])
+        } else if (incluirDashboard) {
+          r = await query(baseQuery + " AND chat_id LIKE 'dashboard-%'")
+        } else {
+          r = await query(baseQuery)
+        }
         mensagensHoje = r.rows[0]?.total || 0
       } catch {}
 

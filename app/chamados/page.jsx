@@ -299,12 +299,10 @@ export default function ChamadosPage() {
                       Importado em {chamadosStatus.importado_em} — {formatTTL(chamadosStatus.expira_em_segundos)}
                     </p>
                   </div>
-                  {user?.role === 'admin' && (
-                    <button onClick={limparChamados}
-                      className="text-xs text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition">
-                      Remover
-                    </button>
-                  )}
+                  <button onClick={limparChamados}
+                    className="text-xs text-red-400 hover:text-red-300 bg-red-900/20 hover:bg-red-900/30 px-3 py-1.5 rounded-lg transition">
+                    Remover
+                  </button>
                 </div>
                 {chamadosStatus.resumo && (
                   <div className="mt-3 pt-3 border-t border-white/[0.06]">
@@ -333,48 +331,44 @@ export default function ChamadosPage() {
               </div>
             )}
 
-            {/* Upload area — admin only */}
-            {user?.role === 'admin' && (
-              <>
-                <div
-                  className={`bg-surface-raised rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
-                    dragOverChamados ? 'border-[#008000] bg-brand/5' : 'border-gray-700 hover:border-gray-600'
-                  }`}
-                  onClick={() => chamadosFileRef.current?.click()}
-                  onDragOver={e => { e.preventDefault(); setDragOverChamados(true) }}
-                  onDragLeave={() => setDragOverChamados(false)}
-                  onDrop={e => { e.preventDefault(); setDragOverChamados(false); handleChamadosFile(e.dataTransfer?.files?.[0]) }}
-                >
-                  <input ref={chamadosFileRef} type="file" accept=".xlsx,.xls" className="hidden"
-                    onChange={e => handleChamadosFile(e.target.files?.[0])} />
-                  <div className="mb-3">{uploadingChamados ? <Loader2 className="w-10 h-10 text-gray-600 mx-auto animate-spin" /> : <FileSpreadsheet className="w-10 h-10 text-gray-600 mx-auto" />}</div>
-                  <p className="text-white font-medium">
-                    {uploadingChamados ? 'Lendo planilha...' : 'Clique ou arraste a planilha XLSX aqui'}
-                  </p>
-                  <p className="text-gray-500 text-sm mt-1">Planilha de chamados exportada do sistema (IXC, SGP, etc)</p>
-                </div>
+            {/* Upload area */}
+            <div
+              className={`bg-surface-raised rounded-xl border-2 border-dashed p-12 text-center transition cursor-pointer ${
+                dragOverChamados ? 'border-[#008000] bg-brand/5' : 'border-gray-700 hover:border-gray-600'
+              }`}
+              onClick={() => chamadosFileRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDragOverChamados(true) }}
+              onDragLeave={() => setDragOverChamados(false)}
+              onDrop={e => { e.preventDefault(); setDragOverChamados(false); handleChamadosFile(e.dataTransfer?.files?.[0]) }}
+            >
+              <input ref={chamadosFileRef} type="file" accept=".xlsx,.xls" className="hidden"
+                onChange={e => handleChamadosFile(e.target.files?.[0])} />
+              <div className="mb-3">{uploadingChamados ? <Loader2 className="w-10 h-10 text-gray-600 mx-auto animate-spin" /> : <FileSpreadsheet className="w-10 h-10 text-gray-600 mx-auto" />}</div>
+              <p className="text-white font-medium">
+                {uploadingChamados ? 'Lendo planilha...' : 'Clique ou arraste a planilha XLSX aqui'}
+              </p>
+              <p className="text-gray-500 text-sm mt-1">Planilha de chamados exportada do sistema (IXC, SGP, etc)</p>
+            </div>
 
-                {/* Preview */}
-                {previewChamados && (
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h2 className="text-white font-medium">Preview da planilha</h2>
-                        <p className="text-gray-400 text-sm">{previewChamados.totalRows} chamados — {previewChamados.headers.length} colunas</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => setPreviewChamados(null)}
-                          className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition">Cancelar</button>
-                        <button onClick={enviarChamados} disabled={uploadingChamados}
-                          className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
-                          {uploadingChamados ? 'Enviando...' : `Enviar ${previewChamados.totalRows} chamados`}
-                        </button>
-                      </div>
-                    </div>
-                    <PreviewTable preview={previewChamados} />
+            {/* Preview */}
+            {previewChamados && (
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-white font-medium">Preview da planilha</h2>
+                    <p className="text-gray-400 text-sm">{previewChamados.totalRows} chamados — {previewChamados.headers.length} colunas</p>
                   </div>
-                )}
-              </>
+                  <div className="flex gap-2">
+                    <button onClick={() => setPreviewChamados(null)}
+                      className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition">Cancelar</button>
+                    <button onClick={enviarChamados} disabled={uploadingChamados}
+                      className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2 rounded-lg transition font-medium">
+                      {uploadingChamados ? 'Enviando...' : `Enviar ${previewChamados.totalRows} chamados`}
+                    </button>
+                  </div>
+                </div>
+                <PreviewTable preview={previewChamados} />
+              </div>
             )}
 
             {/* Como funciona */}
