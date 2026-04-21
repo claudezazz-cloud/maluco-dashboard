@@ -26,12 +26,23 @@ function PopsBadges({ pops }) {
   const lista = pops.split(',').map(p => p.trim()).filter(Boolean)
   if (!lista.length) return null
   return (
-    <div className="flex flex-wrap gap-1 mt-1">
-      {lista.map((p, i) => (
-        <span key={i} className="text-xs bg-green-900/30 text-brand border border-brand/20/40 px-2 py-0.5 rounded-full">
-          <ClipboardList className="w-3 h-3 inline" /> {p}
-        </span>
-      ))}
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {lista.map((p, i) => {
+        const isLeiaSempre = p.toLowerCase().startsWith('leia sempre')
+        return (
+          <span
+            key={i}
+            className={`inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md ${
+              isLeiaSempre
+                ? 'bg-amber-500/15 text-amber-300'
+                : 'bg-emerald-500/10 text-emerald-300'
+            }`}
+          >
+            <ClipboardList className="w-3 h-3 opacity-70" />
+            <span className="truncate max-w-[280px]">{p}</span>
+          </span>
+        )
+      })}
     </div>
   )
 }
@@ -71,7 +82,7 @@ function ConversaCard({ conv }) {
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide">Resposta do bot</p>
-            <p className="text-gray-200 text-sm whitespace-pre-wrap bg-green-900/10 border border-brand/20/30 rounded-lg p-3">{conv.resposta}</p>
+            <p className="text-gray-200 text-sm whitespace-pre-wrap bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">{conv.resposta}</p>
           </div>
           {conv.pops_usados && (
             <div>
