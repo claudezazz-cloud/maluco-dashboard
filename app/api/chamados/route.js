@@ -176,7 +176,7 @@ function buildAIContext(chamados, importadoEm) {
 // POST - Importar chamados (recebe JSON parseado do client)
 export async function POST(req) {
   const session = await getSession()
-  if (!session || !requireAdmin(session)) {
+  if (!session) {
     return NextResponse.json({ error: 'Sem permissao' }, { status: 403 })
   }
 
@@ -284,7 +284,7 @@ export async function GET() {
 // DELETE - Limpar chamados do Redis
 export async function DELETE() {
   const session = await getSession()
-  if (!session || !requireAdmin(session)) {
+  if (!session) {
     return NextResponse.json({ error: 'Sem permissao' }, { status: 403 })
   }
 
