@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { Ticket, Users, Loader2, FileSpreadsheet } from 'lucide-react'
+import { Ticket, Users, Loader2, FileSpreadsheet, CheckCircle2, RefreshCw } from 'lucide-react'
 
 function formatTTL(seconds) {
   if (!seconds || seconds < 0) return 'Expirado'
@@ -26,6 +26,10 @@ export default function ChamadosPage() {
   const [msgChamados, setMsgChamados] = useState({ texto: '', tipo: '' })
   const [dragOverChamados, setDragOverChamados] = useState(false)
 
+  // ===== RESOLVIDOS HOJE =====
+  const [resolvidos, setResolvidos] = useState(null)
+  const [loadingResolvidos, setLoadingResolvidos] = useState(false)
+
   // ===== CLIENTES =====
   const [clientesStatus, setClientesStatus] = useState(null)
   const [loadingClientes, setLoadingClientes] = useState(true)
@@ -44,7 +48,17 @@ export default function ChamadosPage() {
     })
     fetchChamadosStatus()
     fetchClientesStatus()
+    fetchResolvidos()
   }, [router])
+
+  async function fetchResolvidos() {
+    setLoadingResolvidos(true)
+    try {
+      const r = await fetch('/api/chamados/resolvidos-hoje?detalhes=1')
+      if (r.ok) setResolvidos(await r.json())
+    } catch {}
+    setLoadingResolvidos(false)
+  }
 
   // ===== CHAMADOS FUNCS =====
   async function fetchChamadosStatus() {
@@ -240,6 +254,7 @@ export default function ChamadosPage() {
 
   const tabs = [
     { id: 'chamados', label: <span className="flex items-center gap-1"><Ticket className="w-3.5 h-3.5" /> Chamados</span>, badge: chamadosStatus?.ativo ? chamadosStatus.total : null },
+    { id: 'resolvidos', label: <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Resolvidos hoje</span>, badge: resolvidos?.total_resolvidos || null },
     { id: 'clientes', label: <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Clientes</span>, badge: clientesStatus?.ativo ? clientesStatus.total : null },
   ]
 
@@ -381,6 +396,112 @@ export default function ChamadosPage() {
                 <p><span className="text-brand">4.</span> Os dados ficam disponiveis por <strong className="text-white">24 horas</strong>, depois expiram automaticamente</p>
               </div>
             </div>
+          </>
+        )}
+
+        {/* ==================== ABA RESOLVIDOS HOJE ==================== */}
+        {tab === 'resolvidos' && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-white font-medium text-lg">Chamados resolvidos hoje</h2>
+                <p className="text-gray-500 text-xs mt-0.5">
+                  Calculado por diferença entre snapshots — chamado que aparecia em algum momento hoje e sumiu do snapshot mais recente.
+                </p>
+              </div>
+              <button
+                onClick={fetchResolvidos}
+                disabled={loadingResolvidos}
+                className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingResolvidos ? 'animate-spin' : ''}`} />
+                Atualizar
+              </button>
+            </div>
+
+            {loadingResolvidos && !resolvidos && (
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-12 text-center">
+                <Loader2 className="w-8 h-8 text-gray-600 mx-auto animate-spin" />
+              </div>
+            )}
+
+            {resolvidos && resolvidos.total_resolvidos === 0 && (
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-12 text-center">
+                <CheckCircle2 className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400 text-sm">Nenhum chamado resolvido hoje ainda.</p>
+                <p className="text-gray-500 text-xs mt-1">Snapshots começam em :05 de cada hora — espere mais algumas execuções.</p>
+              </div>
+            )}
+
+            {resolvidos && resolvidos.total_resolvidos > 0 && (
+              <>
+                <div className="bg-surface-raised rounded-xl border border-brand/20 p-5 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-brand/10 flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-brand" />
+                    </div>
+                    <div>
+                      <p className="text-white text-2xl font-bold leading-tight">{resolvidos.total_resolvidos}</p>
+                      <p className="text-gray-400 text-xs">chamados resolvidos hoje</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-surface-raised rounded-xl border border-white/[0.06] overflow-hidden">
+                  <div className="px-5 py-3 border-b border-white/[0.06]">
+                    <p className="text-white text-sm font-medium">Ranking por técnico</p>
+                  </div>
+                  <div className="divide-y divide-white/[0.04]">
+                    {resolvidos.ranking.map((r, idx) => (
+                      <details key={r.usuario} className="group">
+                        <summary className="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] list-none">
+                          <div className="flex items-center gap-3">
+                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                              idx === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                              idx === 1 ? 'bg-gray-400/20 text-gray-300' :
+                              idx === 2 ? 'bg-orange-700/30 text-orange-400' :
+                              'bg-gray-800 text-gray-500'
+                            }`}>{idx + 1}</span>
+                            <span className="text-white font-mono text-sm">{r.usuario}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-brand font-bold text-sm">{r.total}</span>
+                            <span className="text-gray-500 text-xs">chamado{r.total > 1 ? 's' : ''}</span>
+                          </div>
+                        </summary>
+                        <div className="px-5 pb-3 pt-1 bg-black/20">
+                          <table className="w-full text-xs text-gray-400">
+                            <thead>
+                              <tr className="text-gray-500">
+                                <th className="text-left py-1.5 font-medium">#Numero</th>
+                                <th className="text-left py-1.5 font-medium">Cliente</th>
+                                <th className="text-left py-1.5 font-medium">Bairro</th>
+                                <th className="text-left py-1.5 font-medium">Tipo</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {r.chamados.map(c => (
+                                <tr key={c.numero} className="border-t border-white/[0.03]">
+                                  <td className="py-1.5 font-mono text-gray-500">#{c.numero}</td>
+                                  <td className="py-1.5 text-gray-300">{c.cod_cliente ? `${c.cod_cliente} - ` : ''}{c.cliente || '-'}</td>
+                                  <td className="py-1.5">{c.bairro || '-'}</td>
+                                  <td className="py-1.5">{c.tipo || '-'}{c.topico ? ` / ${c.topico}` : ''}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 text-xs text-gray-500">
+                  <p>Texto enviado pro bot quando alguém pergunta no WhatsApp:</p>
+                  <pre className="mt-1 bg-black/40 border border-white/[0.06] rounded-lg p-3 whitespace-pre-wrap font-mono text-gray-400">{resolvidos.ai_text}</pre>
+                </div>
+              </>
+            )}
           </>
         )}
 
