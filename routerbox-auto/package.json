@@ -1,0 +1,15 @@
+{
+  "name": "routerbox-auto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Baixa chamados do Routerbox via Playwright e envia pro dashboard a cada hora",
+  "main": "scrape.js",
+  "scripts": {
+    "start": "node scrape.js",
+    "dry-run": "DRY_RUN=1 node scrape.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0",
+    "xlsx": "^0.18.5"
+  }
+}
