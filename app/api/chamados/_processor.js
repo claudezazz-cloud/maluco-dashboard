@@ -1,4 +1,5 @@
 import { getRedis } from '@/lib/redis'
+import { query } from '@/lib/db'
 
 export const REDIS_KEY = 'chamados:data'
 export const TTL = 86400
@@ -37,6 +38,14 @@ const COLUMN_MAP = {
   'usuario abe': 'usuario',
   'usuário abe': 'usuario',
   'usuario': 'usuario',
+  'usuario des': 'usuario_des',
+  'usuário des': 'usuario_des',
+  'grupo des': 'grupo_des',
+  'sit': 'sit',
+  'ult atualizacao': 'ultima_atualizacao',
+  'última atualização': 'ultima_atualizacao',
+  'ultima atualizacao': 'ultima_atualizacao',
+  'end num': 'end_num',
   'grupo os': 'grupo_os',
   'sit oh atualizacao': 'sit_atualizacao',
   'sit oh atualização': 'sit_atualizacao',
@@ -165,6 +174,51 @@ function buildAIContext(chamados, importadoEm) {
   return ctx
 }
 
+async function ensureSnapshotTable() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS chamados_snapshots (
+      id SERIAL PRIMARY KEY,
+      snapshot_ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      numero TEXT NOT NULL,
+      protocolo TEXT,
+      cliente TEXT,
+      cod_cliente TEXT,
+      bairro TEXT,
+      cidade TEXT,
+      tipo TEXT,
+      topico TEXT,
+      usuario TEXT,
+      usuario_des TEXT,
+      grupo_des TEXT,
+      sit TEXT,
+      situacao TEXT,
+      data_abertura TEXT,
+      ultima_atualizacao TEXT
+    )
+  `)
+  await query(`CREATE INDEX IF NOT EXISTS idx_chamados_snap_ts ON chamados_snapshots(snapshot_ts)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_chamados_snap_num_ts ON chamados_snapshots(numero, snapshot_ts DESC)`)
+}
+
+async function gravarSnapshot(chamados) {
+  if (!chamados.length) return
+  await ensureSnapshotTable()
+  // Bulk insert num único query (mais rápido que loop)
+  const cols = ['numero','protocolo','cliente','cod_cliente','bairro','cidade','tipo','topico','usuario','usuario_des','grupo_des','sit','situacao','data_abertura','ultima_atualizacao']
+  const rows = []
+  const params = []
+  let p = 1
+  for (const c of chamados) {
+    if (!c.numero) continue
+    const placeholders = cols.map(() => `$${p++}`).join(',')
+    rows.push(`(${placeholders})`)
+    for (const col of cols) params.push(c[col] || null)
+  }
+  if (!rows.length) return
+  const sql = `INSERT INTO chamados_snapshots (${cols.join(',')}) VALUES ${rows.join(',')}`
+  await query(sql, params)
+}
+
 export async function processarChamados({ rawRows, rawHeaders }) {
   if (!rawRows || !Array.isArray(rawRows) || !rawRows.length) {
     return { ok: false, status: 400, error: 'Nenhum dado encontrado na planilha' }
@@ -211,6 +265,13 @@ export async function processarChamados({ rawRows, rawHeaders }) {
 
   const redis = getRedis()
   await redis.set(REDIS_KEY, JSON.stringify(payload), 'EX', TTL)
+
+  // Histórico: grava snapshot no Postgres pra calcular "resolvidos hoje" depois
+  try {
+    await gravarSnapshot(chamados)
+  } catch (e) {
+    console.error('Falha ao gravar snapshot (continua, Redis OK):', e.message)
+  }
 
   return {
     ok: true,

@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Component | Technology |
 |-----------|-----------|
 | Bot orchestration | N8N (workflow_v2.json, 41 nodes) |
-| AI model | Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) via Anthropic API |
+| AI model | Claude Sonnet 4.6 (`claude-sonnet-4-6`) via Anthropic API |
 | Audio transcription | OpenAI Whisper API |
 | WhatsApp | Evolution API v2 |
 | Database | PostgreSQL |
