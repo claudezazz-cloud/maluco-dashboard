@@ -49,9 +49,25 @@ async function handler(detalhar) {
   const ranking = Object.values(porUsuario).sort((a, b) => b.total - a.total)
 
   // Texto pro bot consumir direto
-  const linhas = ranking.map(r => `${r.usuario}: ${r.total} chamado${r.total > 1 ? 's' : ''}`)
+  const resumoPorUser = ranking
+    .map(r => `- ${r.usuario}: ${r.total} chamado${r.total > 1 ? 's' : ''}`)
+    .join('\n')
+
+  const detalhesLinhas = []
+  for (const r of ranking) {
+    for (const c of r.chamados) {
+      const cliente = c.cod_cliente && c.cliente
+        ? `${c.cod_cliente} - ${c.cliente}`
+        : (c.cliente || c.cod_cliente || 'Sem cliente')
+      const topico = [c.tipo, c.topico].filter(Boolean).join(' / ') || 'Sem tipo'
+      detalhesLinhas.push(`- ${r.usuario} | ${cliente} | ${topico}`)
+    }
+  }
+
   const ai_text = ranking.length
-    ? `Resolvidos hoje (${rows.length} no total):\n` + linhas.join('\n')
+    ? `Resolvidos hoje (${rows.length} no total):\n\n`
+      + `POR RESPONSÁVEL:\n${resumoPorUser}\n\n`
+      + `DETALHES (responsavel | codigo - cliente | tipo / topico):\n${detalhesLinhas.join('\n')}`
     : 'Nenhum chamado resolvido hoje (ou sem snapshots suficientes ainda).'
 
   return {
