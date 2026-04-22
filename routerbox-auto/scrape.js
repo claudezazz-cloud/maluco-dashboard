@@ -105,54 +105,212 @@ async function login(page) {
   }
   if (!clicked) await page.keyboard.press('Enter')
 
-  await page.waitForLoadState('networkidle', { timeout: TIMEOUT_MS })
-
-  // Heurística: se ainda existe campo de senha, login falhou
-  if (await page.locator(passField).count()) {
-    await dumpScreenshot(page, 'login-failed')
-    throw new Error('Login parece ter falhado — screenshot salvo, confira credenciais')
+  // Espera redirecionamento (URL muda de /app_login/ pra outra coisa)
+  try {
+    await page.waitForURL(url => !url.toString().includes('app_login'), { timeout: 15000 })
+  } catch {
+    // Se não mudou URL em 15s, capricha mais
+    await page.waitForTimeout(3000)
   }
-  log('Login OK')
+  await page.waitForLoadState('networkidle', { timeout: TIMEOUT_MS }).catch(() => {})
+  await page.waitForTimeout(1500) // dar tempo pra SPA renderizar
+
+  // Heurística mais robusta: se URL ainda contem app_login, falhou
+  if (page.url().includes('app_login')) {
+    await dumpScreenshot(page, 'login-failed')
+    throw new Error(`Login falhou — URL ainda em app_login: ${page.url()}`)
+  }
+  log(`Login OK (URL: ${page.url()})`)
+}
+
+async function dismissModalNovidades(page) {
+  log('Tentando fechar modal de Novidades (se aparecer)...')
+  await page.waitForTimeout(2000)
+  try {
+    // O modal tem um "x" clicável no canto superior direito
+    const closeX = page.locator('text=/^x$/').first()
+    if (await closeX.count()) {
+      await closeX.click({ timeout: 5000 })
+      log('  Modal fechado via "x"')
+      await page.waitForTimeout(500)
+      return
+    }
+  } catch {}
+  try {
+    await page.keyboard.press('Escape')
+    log('  Modal fechado via Escape')
+  } catch {}
 }
 
 async function navegarParaAtendimentos(page) {
-  // Caminho conhecido pela screenshot
-  const url = 'https://routerbox.zazzinternet.com/routerbox/app_menu/app_menu.php?menu=atendimentos'
-  log(`Navegando pra ${url}`)
-  await page.goto(url, { waitUntil: 'networkidle', timeout: TIMEOUT_MS })
-
-  // Confirma que carregou tabela de chamados
-  const hint = page.locator('text=/Atendimentos|Chamados|Botões/i').first()
-  if (!(await hint.count())) {
-    await dumpScreenshot(page, 'atendimentos-nao-carregou')
-    throw new Error('Página de Atendimentos não carregou como esperado')
+  // Vai pra app_menu.php (já estamos logados)
+  if (!page.url().includes('app_menu.php')) {
+    log('Navegando pra app_menu.php')
+    await page.goto('https://routerbox.zazzinternet.com/routerbox/app_menu/app_menu.php', { waitUntil: 'networkidle', timeout: 30000 })
   }
+  await dismissModalNovidades(page)
+
+  // Trigger o item "Atendimentos > Execução" via JS exposto pelo Routerbox.
+  // item_59 = Execução (descoberto inspecionando o HTML do menu).
+  log('Disparando openMenuItem(app_menu_item_59) — Atendimentos > Execução')
+  await page.evaluate(() => {
+    if (typeof openMenuItem === 'function') openMenuItem('app_menu_item_59')
+  })
+  await page.waitForTimeout(2500)
+
+  // O conteúdo principal carrega dentro do iframe app_menu_iframe.
+  const iframeHandle = await page.locator('iframe#iframe_app_menu, iframe[name="app_menu_iframe"]').first()
+  if (!(await iframeHandle.count())) {
+    await dumpScreenshot(page, 'sem-iframe')
+    throw new Error('Iframe app_menu_iframe não encontrado')
+  }
+  const frame = await iframeHandle.contentFrame()
+  if (!frame) {
+    await dumpScreenshot(page, 'iframe-sem-frame')
+    throw new Error('Não consegui pegar contentFrame do app_menu_iframe')
+  }
+
+  // Espera o iframe ter carregado (URL não vazia + body com algo)
+  await page.waitForTimeout(2000)
+  try { log(`Iframe URL: ${frame.url()}`) } catch { log('Iframe carregado (URL indisponível)') }
+  return frame
 }
 
-async function exportarExcel(page, context) {
-  log('Procurando botão "Botões" → "Excel"')
-
-  // 1. Clica no dropdown "Botões"
-  const botoesDropdown = page.locator('button:has-text("Botões"), a:has-text("Botões")').first()
-  if (!(await botoesDropdown.count())) {
-    await dumpScreenshot(page, 'sem-botoes')
-    throw new Error('Dropdown "Botões" não encontrado')
+async function findFrameWithBotoes(page) {
+  // Espera tabela carregar
+  await page.waitForTimeout(3000)
+  const allFrames = page.frames()
+  log(`Pagina tem ${allFrames.length} frames; procurando "Botões"…`)
+  for (const f of allFrames) {
+    try {
+      const url = f.url()
+      const count = await f.locator('text="Botões"').count().catch(() => 0)
+      log(`  frame: ${url || '(sem url)'} — matches: ${count}`)
+      if (count > 0) return f
+    } catch {}
   }
-  await botoesDropdown.click()
+  return null
+}
 
-  // 2. Aguarda menu abrir e procura "Excel"
-  await page.waitForTimeout(500)
-  const excelOption = page.locator('a:has-text("Excel"), button:has-text("Excel"), li:has-text("Excel")').first()
+async function clicarVerTodos(frame, page) {
+  log('Procurando botão "Ver Todos" (carrega todos os chamados)')
+  const candidatos = [
+    'button:has-text("Ver Todos")',
+    'a:has-text("Ver Todos")',
+    'input[value="Ver Todos" i]',
+    'button:has-text("VER TODOS")',
+    'a:has-text("VER TODOS")',
+    'text=/Ver\\s*Todos/i',
+  ]
+  let clicado = false
+  for (const sel of candidatos) {
+    try {
+      const loc = frame.locator(sel).first()
+      if (await loc.count()) {
+        await loc.click({ timeout: 5000 })
+        log(`  "Ver Todos" clicado (selector: ${sel})`)
+        clicado = true
+        break
+      }
+    } catch {}
+  }
+  if (!clicado) {
+    // Pode não existir sempre (se já carregou tudo por padrão); só avisa
+    log('  "Ver Todos" não encontrado — seguindo (pode já estar listado)')
+    return
+  }
+  // Aguarda recarregar a tabela
+  await page.waitForTimeout(3500)
+}
+
+async function setar180PorPagina(frame, page) {
+  // Observação (abr/2026): o Excel do Routerbox já exporta TODOS os registros
+  // da query atual — a paginação "1 2 3" é só visual. O clique em "Ver Todos"
+  // remove filtros e o Excel pega tudo de uma vez. Deixo a tentativa pra caso
+  // algum dia o comportamento mude.
+  try {
+    const selects = frame.locator('select')
+    const n = await selects.count()
+    for (let i = 0; i < n; i++) {
+      const s = selects.nth(i)
+      const opts = await s.locator('option').allTextContents().catch(() => [])
+      if (opts.some(o => /^\s*180\s*$/.test(o))) {
+        await s.selectOption({ label: '180' }).catch(() => s.selectOption('180'))
+        log(`  Paginação setada em 180`)
+        await page.waitForTimeout(2500)
+        return
+      }
+    }
+  } catch {}
+  // Sem erro — Excel exporta tudo de qualquer forma
+}
+
+async function exportarExcel(page, _topFrame) {
+  log('Procurando botão "Botões" em todos os frames')
+
+  let frame = await findFrameWithBotoes(page)
+  if (!frame) {
+    // Aguarda mais um pouco e tenta de novo (tabela pode estar carregando)
+    log('Não achei na primeira tentativa, aguardando mais 5s…')
+    await page.waitForTimeout(5000)
+    frame = await findFrameWithBotoes(page)
+  }
+  if (!frame) {
+    await dumpScreenshot(page, 'sem-botoes-em-nenhum-frame')
+    throw new Error('Botão "Botões" não encontrado em nenhum frame')
+  }
+  log(`Achei "Botões" no frame: ${frame.url() || '(sem url)'}`)
+
+  // Antes de exportar: clicar em "Ver Todos" e setar 180 por página
+  // (padrão do sistema mostra poucos — sem isso, o Excel sai parcial)
+  await clicarVerTodos(frame, page)
+  await setar180PorPagina(frame, page)
+
+  const botoesDropdown = frame.locator('text="Botões"').first()
+  await botoesDropdown.click()
+  await page.waitForTimeout(800)
+
+  // Excel pode estar no mesmo frame ou em outro (tooltip pode ser portal)
+  let excelOption = frame.locator('text="Excel"').first()
+  if (!(await excelOption.count())) {
+    // Tenta nos outros frames também
+    for (const f of page.frames()) {
+      const c = await f.locator('text="Excel"').count().catch(() => 0)
+      if (c > 0) { excelOption = f.locator('text="Excel"').first(); break }
+    }
+  }
   if (!(await excelOption.count())) {
     await dumpScreenshot(page, 'sem-opcao-excel')
-    throw new Error('Opção "Excel" não encontrada no dropdown')
+    throw new Error('Opção "Excel" não encontrada após abrir dropdown')
   }
 
-  // 3. Captura o download
-  log('Clicando em Excel e aguardando download…')
+  log('Clicando em Excel — Routerbox vai processar e mostrar modal "Arquivo criado"…')
+  await excelOption.click()
+
+  // O Routerbox NÃO baixa direto — ele processa e mostra modal com link "Baixar"
+  log('Aguardando modal "Arquivo criado" aparecer…')
+  let baixarLink = null
+  const start = Date.now()
+  while (Date.now() - start < TIMEOUT_MS) {
+    for (const f of [page, ...page.frames()]) {
+      const c = await f.locator('a:has-text("Baixar")').count().catch(() => 0)
+      if (c > 0) {
+        baixarLink = f.locator('a:has-text("Baixar")').first()
+        break
+      }
+    }
+    if (baixarLink) break
+    await page.waitForTimeout(1000)
+  }
+  if (!baixarLink) {
+    await dumpScreenshot(page, 'sem-link-baixar')
+    throw new Error('Modal "Arquivo criado" / link "Baixar" não apareceu')
+  }
+  log('Link "Baixar" encontrado, clicando…')
+
   const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: TIMEOUT_MS }),
-    excelOption.click(),
+    page.waitForEvent('download', { timeout: 60000 }),
+    baixarLink.click(),
   ])
 
   const filename = `chamados-${Date.now()}.xlsx`
@@ -200,8 +358,8 @@ async function main() {
   let xlsxPath
   try {
     await login(page)
-    await navegarParaAtendimentos(page)
-    xlsxPath = await exportarExcel(page, context)
+    const frame = await navegarParaAtendimentos(page)
+    xlsxPath = await exportarExcel(page, frame)
   } catch (e) {
     await dumpScreenshot(page, 'erro')
     fail('Falha durante scraping', e)
