@@ -12,6 +12,7 @@ async function ensureTable() {
       ativo BOOLEAN DEFAULT true
     )
   `)
+  await query(`ALTER TABLE dashboard_colaboradores ADD COLUMN IF NOT EXISTS telefone_whatsapp VARCHAR(20)`)
 }
 
 export async function GET() {
@@ -35,11 +36,12 @@ export async function POST(req) {
   }
   try {
     await ensureTable()
-    const { nome, cargo, funcoes } = await req.json()
+    const { nome, cargo, funcoes, telefone_whatsapp } = await req.json()
     if (!nome?.trim()) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 })
+    const tel = (telefone_whatsapp || '').replace(/\D/g, '') || null
     const result = await query(
-      'INSERT INTO dashboard_colaboradores (nome, cargo, funcoes) VALUES ($1, $2, $3) RETURNING *',
-      [nome.trim(), cargo?.trim() || null, funcoes?.trim() || null]
+      'INSERT INTO dashboard_colaboradores (nome, cargo, funcoes, telefone_whatsapp) VALUES ($1, $2, $3, $4) RETURNING *',
+      [nome.trim(), cargo?.trim() || null, funcoes?.trim() || null, tel]
     )
     return NextResponse.json(result.rows[0], { status: 201 })
   } catch (e) {

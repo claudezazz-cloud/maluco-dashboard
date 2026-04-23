@@ -22,7 +22,7 @@ export default function TreinamentoPage() {
 
   // ===== COLABORADORES =====
   const [colaboradores, setColaboradores] = useState([])
-  const [novoColab, setNovoColab] = useState({ nome: '', cargo: '', funcoes: '' })
+  const [novoColab, setNovoColab] = useState({ nome: '', cargo: '', funcoes: '', telefone_whatsapp: '' })
   const [editandoColab, setEditandoColab] = useState(null)
   const [editColabForm, setEditColabForm] = useState({})
   const [msgColab, setMsgColab] = useState({ texto: '', tipo: '' })
@@ -152,7 +152,7 @@ export default function TreinamentoPage() {
       body: JSON.stringify(novoColab),
     })
     if (r.ok) {
-      setNovoColab({ nome: '', cargo: '', funcoes: '' })
+      setNovoColab({ nome: '', cargo: '', funcoes: '', telefone_whatsapp: '' })
       showMsgColab('Colaborador adicionado!')
       fetchColaboradores()
     } else {
@@ -760,6 +760,11 @@ export default function TreinamentoPage() {
                 </div>
               </div>
               <div className="mb-3">
+                <label className="block text-xs text-gray-400 mb-1">Telefone WhatsApp <span className="text-gray-500">(com DDD, ex: 5543999998888)</span></label>
+                <input value={novoColab.telefone_whatsapp} onChange={e => setNovoColab({...novoColab, telefone_whatsapp: e.target.value})}
+                  placeholder="5543999998888" className={inputCls} />
+              </div>
+              <div className="mb-3">
                 <label className="block text-xs text-gray-400 mb-1">Funções e responsabilidades</label>
                 <textarea value={novoColab.funcoes} onChange={e => setNovoColab({...novoColab, funcoes: e.target.value})}
                   placeholder="Ex: Atende clientes, realiza visitas técnicas..." rows={2}
@@ -801,6 +806,11 @@ export default function TreinamentoPage() {
                                 className={inputEditCls} />
                             </div>
                           </div>
+                          <div className="mb-2">
+                            <label className="block text-xs text-gray-400 mb-1">Telefone WhatsApp</label>
+                            <input value={editColabForm.telefone_whatsapp || ''} onChange={e => setEditColabForm({...editColabForm, telefone_whatsapp: e.target.value})}
+                              placeholder="5543999998888" className={inputEditCls} />
+                          </div>
                           <textarea value={editColabForm.funcoes || ''} onChange={e => setEditColabForm({...editColabForm, funcoes: e.target.value})}
                             rows={2} className={inputEditCls + ' resize-none mb-2'} />
                           <div className="flex gap-2">
@@ -814,14 +824,15 @@ export default function TreinamentoPage() {
                             {c.nome.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-white font-medium">{c.nome}</span>
                               {c.cargo && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{c.cargo}</span>}
+                              {c.telefone_whatsapp && <span className="text-xs bg-green-900/40 text-green-300 px-2 py-0.5 rounded-full font-mono">📱 {c.telefone_whatsapp}</span>}
                             </div>
                             {c.funcoes && <p className="text-gray-400 text-sm mt-1 leading-relaxed">{c.funcoes}</p>}
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
-                            <button onClick={() => { setEditandoColab(c.id); setEditColabForm({nome: c.nome, cargo: c.cargo, funcoes: c.funcoes}) }}
+                            <button onClick={() => { setEditandoColab(c.id); setEditColabForm({nome: c.nome, cargo: c.cargo, funcoes: c.funcoes, telefone_whatsapp: c.telefone_whatsapp || ''}) }}
                               className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg">Editar</button>
                             <button onClick={() => excluirColab(c.id, c.nome)}
                               className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg">Remover</button>
