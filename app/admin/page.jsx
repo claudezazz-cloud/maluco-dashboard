@@ -1,9 +1,242 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
+
+// ── Métricas helpers ──────────────────────────────────────────────────────────
+
+function MetricCard({ label, value, sub, highlight }) {
+  return (
+    <div className={`bg-surface-raised rounded-xl border px-5 py-4 flex flex-col gap-1 ${highlight ? 'border-brand/40' : 'border-white/[0.06]'}`}>
+      <span className="text-xs text-gray-500 uppercase tracking-wide">{label}</span>
+      <span className={`text-3xl font-bold font-display ${highlight ? 'text-brand' : 'text-white'}`}>{value}</span>
+      {sub && <span className="text-xs text-gray-500">{sub}</span>}
+    </div>
+  )
+}
+
+function SvgBarChart({ data }) {
+  if (!data || data.length === 0) return <div className="text-gray-600 text-sm text-center py-8">Sem dados</div>
+
+  const H = 100
+  const maxVal = Math.max(...data.map(d => d.criadas), 1)
+  const n = data.length
+
+  return (
+    <div className="w-full">
+      <svg viewBox={`0 0 ${n * 12} ${H + 20}`} className="w-full overflow-visible" preserveAspectRatio="none">
+        {data.map((d, i) => {
+          const barH = Math.max(1, Math.round((d.criadas / maxVal) * H))
+          const concH = Math.max(0, Math.round((d.concluidas / maxVal) * H))
+          const x = i * 12
+          return (
+            <g key={d.data}>
+              <rect x={x + 1} y={H - barH} width={9} height={barH} fill="rgba(0,200,83,0.18)" rx="1" />
+              <rect x={x + 1} y={H - concH} width={9} height={concH} fill="#00c853" rx="1" />
+            </g>
+          )
+        })}
+      </svg>
+      <div className="flex gap-4 justify-end mt-2 text-xs text-gray-500">
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-2 rounded-sm bg-brand/30" />Criadas</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-2 rounded-sm bg-brand" />Concluídas</span>
+      </div>
+    </div>
+  )
+}
+
+function MetricasTab() {
+  const [periodo, setPeriodo] = useState('30d')
+  const [customInicio, setCustomInicio] = useState('')
+  const [customFim, setCustomFim] = useState('')
+  const [dados, setDados] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [erro, setErro] = useState('')
+
+  const carregar = useCallback(async (p, ini, fim) => {
+    setLoading(true)
+    setErro('')
+    try {
+      let url = `/api/admin/metricas/notion?periodo=${p}`
+      if (p === 'custom' && ini && fim) url += `&inicio=${ini}&fim=${fim}`
+      const r = await fetch(url)
+      const d = await r.json()
+      if (!r.ok) { setErro(d.error || 'Erro ao carregar métricas'); setDados(null) }
+      else setDados(d)
+    } catch (e) {
+      setErro(e.message)
+      setDados(null)
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { carregar('30d') }, [carregar])
+
+  function selecionarPeriodo(p) {
+    setPeriodo(p)
+    if (p !== 'custom') carregar(p)
+  }
+
+  function aplicarCustom() {
+    if (customInicio && customFim) carregar('custom', customInicio, customFim)
+  }
+
+  const periodos = [['hoje', 'Hoje'], ['7d', '7 dias'], ['30d', '30 dias'], ['custom', 'Personalizado']]
+
+  const r = dados?.resumo
+
+  return (
+    <div className="animate-fade-in">
+      {/* Mensagem executiva */}
+      <div className="mb-6 bg-brand/10 border border-brand/30 rounded-xl px-5 py-4">
+        <p className="text-brand font-semibold text-sm">
+          As chances de esquecer tarefas de internet caída diminuíram significativamente com o registro no Notion!
+        </p>
+        <p className="text-gray-400 text-xs mt-1">
+          Cada chamado registrado aqui é uma tarefa que não será esquecida. Acompanhe abaixo.
+        </p>
+      </div>
+
+      {/* Filtros de período */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {periodos.map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => selecionarPeriodo(key)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${periodo === key ? 'bg-brand text-white' : 'bg-surface-raised text-gray-400 hover:text-white border border-white/[0.06]'}`}
+          >
+            {label}
+          </button>
+        ))}
+        {periodo === 'custom' && (
+          <div className="flex gap-2 items-center">
+            <input
+              type="date"
+              value={customInicio}
+              onChange={e => setCustomInicio(e.target.value)}
+              className="bg-surface border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:border-brand focus:outline-none"
+            />
+            <span className="text-gray-500 text-sm">até</span>
+            <input
+              type="date"
+              value={customFim}
+              onChange={e => setCustomFim(e.target.value)}
+              className="bg-surface border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:border-brand focus:outline-none"
+            />
+            <button
+              onClick={aplicarCustom}
+              disabled={!customInicio || !customFim}
+              className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-4 py-1.5 rounded-lg transition"
+            >
+              Aplicar
+            </button>
+          </div>
+        )}
+        <button
+          onClick={() => carregar(periodo === 'custom' ? 'custom' : periodo, customInicio, customFim)}
+          disabled={loading}
+          className="ml-auto text-xs text-gray-500 hover:text-white transition"
+        >
+          {loading ? 'Carregando...' : '↻ Atualizar'}
+        </button>
+      </div>
+
+      {/* Erro */}
+      {erro && (
+        <div className="mb-6 bg-red-900/20 border border-red-800 rounded-xl px-5 py-4 text-red-400 text-sm">
+          {erro}
+        </div>
+      )}
+
+      {/* Skeleton / Cards */}
+      {loading && !dados ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="bg-surface-raised rounded-xl border border-white/[0.06] px-5 py-4 h-24 animate-pulse" />
+          ))}
+        </div>
+      ) : r ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <MetricCard label="Anotações (7 dias)" value={r.total7d} sub="tarefas registradas" />
+          <MetricCard label="Anotações (30 dias)" value={r.total30d} sub="tarefas registradas" />
+          <MetricCard
+            label={`Concluídas (${periodo === 'hoje' ? 'hoje' : periodo === '7d' ? '7 dias' : periodo === '30d' ? '30 dias' : 'período'})`}
+            value={`${r.taxaConclusao}%`}
+            sub={`${r.totalConcluidas} de ${r.totalCriadas} resolvidas`}
+            highlight
+          />
+          <MetricCard
+            label="Redução de esquecimentos"
+            value={`${r.reducaoEsquecimentos}%`}
+            sub={`${r.totalPendentes} ainda pendente${r.totalPendentes !== 1 ? 's' : ''}`}
+            highlight={r.reducaoEsquecimentos >= 50}
+          />
+        </div>
+      ) : null}
+
+      {/* Gráfico */}
+      {dados?.grafico && (
+        <div className="bg-surface-raised rounded-xl border border-white/[0.06] px-5 py-4 mb-4">
+          <h3 className="text-gray-300 font-medium text-sm mb-4">Evolução diária — últimos 30 dias</h3>
+          <SvgBarChart data={dados.grafico} />
+        </div>
+      )}
+
+      {/* Tabela */}
+      {dados?.tabela && dados.tabela.length > 0 && (
+        <div className="bg-surface-raised rounded-xl border border-white/[0.06] overflow-hidden">
+          <div className="px-5 py-3 border-b border-white/[0.06]">
+            <h3 className="text-gray-300 font-medium text-sm">
+              Resumo por dia
+              {dados.periodo && <span className="text-gray-600 font-normal ml-2 text-xs">({dados.periodo.inicio} → {dados.periodo.fim})</span>}
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/[0.04]">
+                  <th className="text-left px-5 py-2.5 text-gray-500 font-medium text-xs uppercase tracking-wide">Data</th>
+                  <th className="text-right px-5 py-2.5 text-gray-500 font-medium text-xs uppercase tracking-wide">Criadas</th>
+                  <th className="text-right px-5 py-2.5 text-gray-500 font-medium text-xs uppercase tracking-wide">Concluídas</th>
+                  <th className="text-right px-5 py-2.5 text-gray-500 font-medium text-xs uppercase tracking-wide">Pendentes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dados.tabela.map((row, i) => (
+                  <tr key={row.data} className={`border-b border-white/[0.03] hover:bg-white/[0.02] ${i % 2 === 0 ? '' : 'bg-white/[0.01]'}`}>
+                    <td className="px-5 py-2.5 text-gray-300 font-mono text-xs">
+                      {new Date(row.data + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-5 py-2.5 text-right text-white">{row.criadas}</td>
+                    <td className="px-5 py-2.5 text-right text-brand">{row.concluidas}</td>
+                    <td className="px-5 py-2.5 text-right text-yellow-500">{row.pendentes}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t border-white/[0.06]">
+                <tr>
+                  <td className="px-5 py-2.5 text-gray-500 text-xs font-medium">Total</td>
+                  <td className="px-5 py-2.5 text-right text-white font-semibold">{r?.totalCriadas ?? 0}</td>
+                  <td className="px-5 py-2.5 text-right text-brand font-semibold">{r?.totalConcluidas ?? 0}</td>
+                  <td className="px-5 py-2.5 text-right text-yellow-500 font-semibold">{r?.totalPendentes ?? 0}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {dados && dados.tabela?.length === 0 && !loading && !erro && (
+        <div className="text-center py-12 text-gray-500 text-sm">
+          Nenhuma tarefa encontrada no período selecionado.
+          <br /><span className="text-xs mt-1 block">Verifique as variáveis NOTION_TOKEN, NOTION_DATABASE_ID e os filtros de propriedade.</span>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function AdminPage() {
   const router = useRouter()
@@ -168,7 +401,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-surface-raised rounded-lg p-1 w-fit">
-          {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações']].map(([key, label]) => (
+          {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações'], ['metricas', 'Métricas']].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -469,6 +702,9 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* Métricas */}
+        {tab === 'metricas' && <MetricasTab />}
 
         {/* Configurações */}
         {tab === 'configuracoes' && (
