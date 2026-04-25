@@ -68,8 +68,9 @@ async function notionRequest(token, databaseId, filter, cursor) {
   })
 
   if (!res.ok) {
-    const text = await res.text().catch(() => res.status.toString())
-    throw new Error(`Notion API ${res.status}: ${text}`)
+    const json = await res.json().catch(() => null)
+    if (res.status === 404) throw new Error('O banco existe mas não está compartilhado com a integração. Abra o banco no Notion → ... → Connections → adicione a integração.')
+    throw new Error(`Notion API ${res.status}: ${json?.message || res.status}`)
   }
 
   return res.json()
