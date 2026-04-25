@@ -8,17 +8,25 @@ const NOTION_BASE = 'https://api.notion.com/v1'
 const FETCH_TIMEOUT_MS = 15000
 const MAX_PAGES_SAFETY = 1000
 
-// Resolve token: env var > first filial with token configured
-async function resolveNotionToken() {
-  if (process.env.NOTION_TOKEN) return process.env.NOTION_TOKEN
+// Resolve a config value: env var > filial config
+async function resolveFromDb(chave) {
   try {
     const res = await query(
-      "SELECT valor FROM dashboard_filiais_config WHERE chave = 'notion_token' AND valor IS NOT NULL AND valor != '' LIMIT 1"
+      "SELECT valor FROM dashboard_filiais_config WHERE chave = $1 AND valor IS NOT NULL AND valor != '' LIMIT 1",
+      [chave]
     )
     return res.rows[0]?.valor || null
   } catch {
     return null
   }
+}
+
+async function resolveNotionToken() {
+  return process.env.NOTION_TOKEN || resolveFromDb('notion_token')
+}
+
+async function resolveNotionDatabaseId() {
+  return process.env.NOTION_DATABASE_ID || resolveFromDb('notion_database_id')
 }
 
 // Notion property names — configurable via env, with sensible defaults
@@ -162,10 +170,10 @@ export async function GET(req) {
     )
   }
 
-  const databaseId = process.env.NOTION_DATABASE_ID
+  const databaseId = await resolveNotionDatabaseId()
   if (!databaseId) {
     return NextResponse.json(
-      { error: 'ID do banco Notion não configurado. Defina NOTION_DATABASE_ID no ambiente.' },
+      { error: 'ID do banco Notion não configurado. Defina em Admin → Filiais → Notion Database ID.' },
       { status: 400 }
     )
   }
