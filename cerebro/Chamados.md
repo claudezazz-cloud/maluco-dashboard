@@ -1,6 +1,6 @@
 # Chamados
 
-← volta para [[Maluco da IA]] | ver também [[Dashboard]] e [[Banco de Dados]]
+← volta para [[Maluco da IA]] | ver também [[Dashboard]], [[Banco de Dados]] e [[Resolvidos Hoje]]
 
 Importação de planilhas XLSX do sistema de gestão (IXC, SGP, etc) → o bot passa a responder perguntas sobre os chamados do dia.
 
