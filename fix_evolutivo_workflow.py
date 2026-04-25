@@ -38,7 +38,7 @@ def get_workflow():
 
 def put_workflow(wf):
     # N8N API only accepts these top-level fields on PUT
-    allowed = {"name", "nodes", "connections", "settings", "staticData", "tags"}
+    allowed = {"name", "nodes", "connections", "settings", "staticData"}
     body = {k: v for k, v in wf.items() if k in allowed}
     # Filter settings to only known-good fields
     allowed_settings = {"executionOrder", "saveManualExecutions", "callerPolicy",
