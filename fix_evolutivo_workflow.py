@@ -37,7 +37,10 @@ def get_workflow():
     return req("GET", f"/workflows/{WORKFLOW_ID}")
 
 def put_workflow(wf):
-    return req("PUT", f"/workflows/{WORKFLOW_ID}", wf)
+    # N8N API only accepts these fields on PUT
+    allowed = {"name", "nodes", "connections", "settings", "staticData", "tags"}
+    body = {k: v for k, v in wf.items() if k in allowed}
+    return req("PUT", f"/workflows/{WORKFLOW_ID}", body)
 
 def deactivate():
     try: req("POST", f"/workflows/{WORKFLOW_ID}/deactivate")
