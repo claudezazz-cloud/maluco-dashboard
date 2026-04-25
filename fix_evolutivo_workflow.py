@@ -37,9 +37,15 @@ def get_workflow():
     return req("GET", f"/workflows/{WORKFLOW_ID}")
 
 def put_workflow(wf):
-    # N8N API only accepts these fields on PUT
+    # N8N API only accepts these top-level fields on PUT
     allowed = {"name", "nodes", "connections", "settings", "staticData", "tags"}
     body = {k: v for k, v in wf.items() if k in allowed}
+    # Filter settings to only known-good fields
+    allowed_settings = {"executionOrder", "saveManualExecutions", "callerPolicy",
+                        "errorWorkflow", "timezone", "saveDataSuccessExecution",
+                        "saveDataErrorExecution", "saveExecutionProgress"}
+    if "settings" in body:
+        body["settings"] = {k: v for k, v in body["settings"].items() if k in allowed_settings}
     return req("PUT", f"/workflows/{WORKFLOW_ID}", body)
 
 def deactivate():
