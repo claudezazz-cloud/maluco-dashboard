@@ -51,6 +51,7 @@ export async function PUT(req, { params }) {
       anthropic_key,
       openai_key,
       notion_token,
+      notion_database_id,
       webhook_path,
       ativo,
     } = await req.json()
@@ -79,6 +80,7 @@ export async function PUT(req, { params }) {
       ['anthropic_key', anthropic_key],
       ['openai_key', openai_key],
       ['notion_token', notion_token],
+      ['notion_database_id', notion_database_id],
       ['webhook_path', webhook_path],
     ]
 

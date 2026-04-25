@@ -58,6 +58,7 @@ export default function FilialDetailPage() {
         anthropic_key: '',
         openai_key: '',
         notion_token: '',
+        notion_database_id: '',
         webhook_path: data.config?.webhook_path || '',
       })
     } finally {
@@ -275,6 +276,10 @@ export default function FilialDetailPage() {
               <div>
                 <label className={labelCls}>Notion Token (deixe vazio para manter)</label>
                 <input className={inputCls} type="password" value={form.notion_token} onChange={e => setForm({ ...form, notion_token: e.target.value })} placeholder="Deixe vazio para usar o token principal" />
+              </div>
+              <div>
+                <label className={labelCls}>Notion Database ID (para Métricas)</label>
+                <input className={inputCls} type="text" value={form.notion_database_id} onChange={e => setForm({ ...form, notion_database_id: e.target.value })} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
               </div>
             </div>
             <div className="flex gap-3 mt-4">
