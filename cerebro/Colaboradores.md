@@ -45,9 +45,18 @@ Preencher `funcoes` com descrição rica aumenta a utilidade. Exemplo bom: "Resp
 
 ## Telefone → @menção no grupo
 
-Quando `telefone_whatsapp` estiver preenchido, o bot poderá **@marcar** o colaborador no grupo pra cobrar tarefas do [[Notion]] (ex: "Fulano, esse chamado de 2 dias ainda tá parado"). Fluxo ainda em implementação — falta:
+Quando `telefone_whatsapp` estiver preenchido, o bot pode **@marcar** o colaborador no grupo pra cobrar tarefas do [[Notion]] (ex: "Fulano, esse chamado de 2 dias ainda tá parado").
 
-1. Passar o mapa `nome→telefone` no `Monta Prompt` (system prompt do Claude)
-2. Instruir Claude a inserir `@5543XXXXXXXX` na linha da tarefa
-3. `Parse Resposta` extrai os `@DDDDDDDDDDD` e monta array `mentions.mentioned`
-4. `Envia WhatsApp` envia com `mentions: { everyOne: false, mentioned: [...] }` (formato Evolution v2)
+### Estado atual
+
+- ✅ `Busca Colaboradores` query inclui `telefone_whatsapp`
+- ✅ `Monta Prompt` formata `colaboradoresStr` com `| @marcar: @5543XXXXXXXX` ao lado de cada nome (ou `(sem telefone — mencione pelo nome)` se vazio)
+- ✅ Bloco de instruções no system prompt: "Use EXATAMENTE @<telefone>. NUNCA invente número. Se sem telefone, escreva o nome sem @."
+- ❌ `Parse Resposta` ainda não extrai os `@<digitos>` para o array `mentions.mentioned`
+- ❌ `Envia WhatsApp` ainda não passa `mentions: { everyOne: false, mentioned: [...] }`
+
+> Sem os dois últimos passos, o `@5543XXXXXXXX` aparece como texto literal no WhatsApp — funciona visualmente mas não dispara notificação na pessoa.
+
+### Bug histórico
+
+Antes de incluir `telefone_whatsapp` no contexto, o Claude alucinava IDs (ex: `@15363131580657`) tentando seguir uma instrução do system prompt sem ter dados reais. Por isso o bloco de instruções é explícito sobre NUNCA inventar.
