@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { Brain, Lightbulb, BotMessageSquare, Users, ClipboardList, FileText, ChevronDown, Zap, Clock } from 'lucide-react'
+import { Brain, Lightbulb, BotMessageSquare, Users, ClipboardList, FileText, ChevronDown, Zap, Clock, BookOpen, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 
 const CATEGORIAS = ['Geral', 'Atendimento', 'Técnico', 'Financeiro', 'Comercial', 'RH', 'Outro']
 
@@ -403,6 +403,7 @@ export default function TreinamentoPage() {
     { id: 'colaboradores', label: <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Colaboradores</span>, count: colaboradores.length },
     { id: 'skills', label: <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Skills</span>, count: skills.length },
     { id: 'solicitacoes', label: <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Solicitações</span>, count: solicitacoes.length },
+    ...(user?.role === 'admin' ? [{ id: 'evolutivo', label: <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> Evolutivo</span>, count: null }] : []),
   ]
 
   return (
@@ -429,9 +430,11 @@ export default function TreinamentoPage() {
               }`}
             >
               {t.label}
-              <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
-                tab === t.id ? 'bg-green-700' : 'bg-gray-800'
-              }`}>{t.count}</span>
+              {t.count !== null && (
+                <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+                  tab === t.id ? 'bg-green-700' : 'bg-gray-800'
+                }`}>{t.count}</span>
+              )}
             </button>
           ))}
         </div>
@@ -1245,7 +1248,262 @@ export default function TreinamentoPage() {
           </>
         )}
 
+        {/* ==================== ABA EVOLUTIVO ==================== */}
+        {tab === 'evolutivo' && <EvolutivoTab inputCls={inputCls} />}
+
       </main>
+    </div>
+  )
+}
+
+// ── Treinamento Evolutivo (Obsidian) ─────────────────────────────────────────
+function EvolutivoTab({ inputCls }) {
+  const [config, setConfig] = useState({ nome: 'Cerebro Evolutivo', pasta: 'cerebro-evolutivo', ignorar: '.obsidian,templates,lixeira,trash' })
+  const [status, setStatus] = useState(null)
+  const [docs, setDocs] = useState([])
+  const [loadingStatus, setLoadingStatus] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [validating, setValidating] = useState(false)
+  const [syncResult, setSyncResult] = useState(null)
+  const [validResult, setValidResult] = useState(null)
+  const [salvandoConfig, setSalvandoConfig] = useState(false)
+  const [msg, setMsg] = useState({ texto: '', tipo: '' })
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+
+  function showMsg(texto, tipo = 'ok') {
+    setMsg({ texto, tipo })
+    setTimeout(() => setMsg({ texto: '', tipo: '' }), 5000)
+  }
+
+  async function carregarStatus() {
+    setLoadingStatus(true)
+    try {
+      const r = await fetch('/api/treinamento-evolutivo/status')
+      if (r.ok) {
+        const d = await r.json()
+        setStatus(d)
+        if (d.fonte) setConfig(c => ({ ...c, nome: d.fonte.nome || c.nome, pasta: d.fonte.pasta || c.pasta, ignorar: d.fonte.ignorar || c.ignorar }))
+      }
+    } finally { setLoadingStatus(false) }
+  }
+
+  async function carregarDocs(p = 1) {
+    const r = await fetch(`/api/treinamento-evolutivo/documentos?page=${p}`)
+    if (r.ok) {
+      const d = await r.json()
+      setDocs(d.documentos || [])
+      setTotalPages(d.pages || 1)
+      setPage(p)
+    }
+  }
+
+  useEffect(() => {
+    carregarStatus()
+    carregarDocs()
+  }, [])
+
+  async function salvarConfig() {
+    setSalvandoConfig(true)
+    try {
+      const r = await fetch('/api/treinamento-evolutivo/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      })
+      if (r.ok) { showMsg('Configuração salva!'); carregarStatus() }
+      else { const d = await r.json(); showMsg(d.error || 'Erro ao salvar', 'error') }
+    } finally { setSalvandoConfig(false) }
+  }
+
+  async function validarCaminho() {
+    setValidating(true)
+    setValidResult(null)
+    try {
+      const r = await fetch('/api/treinamento-evolutivo/validar-path', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pasta: config.pasta }),
+      })
+      const d = await r.json()
+      setValidResult(d)
+    } finally { setValidating(false) }
+  }
+
+  async function sincronizar() {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      await salvarConfig()
+      const r = await fetch('/api/treinamento-evolutivo/sync', { method: 'POST' })
+      const d = await r.json()
+      if (r.ok) {
+        setSyncResult(d)
+        showMsg(`Sync completo: ${d.atualizados} atualizados, ${d.pulados} sem mudança, ${d.erros} erros.`)
+        carregarStatus()
+        carregarDocs()
+      } else {
+        showMsg(d.error || 'Erro ao sincronizar', 'error')
+      }
+    } finally { setSyncing(false) }
+  }
+
+  return (
+    <div className="animate-fade-in">
+      {/* Banner */}
+      <div className="bg-purple-900/20 border border-purple-800 rounded-xl px-5 py-3 mb-6 text-sm text-purple-300">
+        <BookOpen className="w-4 h-4 inline shrink-0 mr-1" />
+        <strong>Treinamento Evolutivo</strong> — lê notas Markdown da pasta configurada, indexa em chunks e injeta como contexto adicional (não normativo) no bot.
+        POPs têm prioridade em caso de conflito.
+      </div>
+
+      {msg.texto && (
+        <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msg.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
+          {msg.texto}
+        </div>
+      )}
+
+      {/* Config */}
+      <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mb-5">
+        <h3 className="text-white font-semibold mb-4 text-sm">Configuração da fonte</h3>
+        <div className="grid grid-cols-1 gap-3 mb-4">
+          <div>
+            <label className="text-gray-400 text-xs mb-1 block">Nome da fonte</label>
+            <input className={inputCls} value={config.nome} onChange={e => setConfig(c => ({ ...c, nome: e.target.value }))} placeholder="Ex: Cerebro Evolutivo" />
+          </div>
+          <div>
+            <label className="text-gray-400 text-xs mb-1 block">Pasta (relativa à raiz do projeto ou path absoluto)</label>
+            <div className="flex gap-2">
+              <input className={inputCls} value={config.pasta} onChange={e => { setConfig(c => ({ ...c, pasta: e.target.value })); setValidResult(null) }} placeholder="cerebro-evolutivo" />
+              <button onClick={validarCaminho} disabled={validating} className="shrink-0 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition">
+                {validating ? '...' : 'Validar'}
+              </button>
+            </div>
+            {validResult && (
+              <div className={`mt-1.5 text-xs flex items-center gap-1.5 ${validResult.ok ? 'text-brand' : 'text-red-400'}`}>
+                {validResult.ok ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                {validResult.ok ? `Pasta válida — ${validResult.mdCount} arquivo(s) .md encontrado(s)` : validResult.erro}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="text-gray-400 text-xs mb-1 block">Pastas/arquivos a ignorar (separados por vírgula)</label>
+            <input className={inputCls} value={config.ignorar} onChange={e => setConfig(c => ({ ...c, ignorar: e.target.value }))} placeholder=".obsidian,templates,lixeira,trash" />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={salvarConfig} disabled={salvandoConfig} className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition">
+            {salvandoConfig ? 'Salvando...' : 'Salvar configuração'}
+          </button>
+          <button onClick={sincronizar} disabled={syncing} className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white text-sm px-5 py-2 rounded-lg transition flex items-center gap-2">
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar agora'}
+          </button>
+        </div>
+      </div>
+
+      {/* Métricas */}
+      {loadingStatus ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+          {[1,2,3,4].map(i => <div key={i} className="bg-surface-raised rounded-xl border border-white/[0.06] h-20 animate-pulse" />)}
+        </div>
+      ) : status && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+          {[
+            { label: 'Notas indexadas', value: status.totalDocumentos },
+            { label: 'Chunks gerados', value: status.totalChunks },
+            { label: 'Última sync', value: status.fonte?.ultima_sync ? new Date(status.fonte.ultima_sync).toLocaleString('pt-BR') : '—' },
+            { label: 'Erros de leitura', value: status.totalErros, destaque: status.totalErros > 0 },
+          ].map(({ label, value, destaque }) => (
+            <div key={label} className="bg-surface-raised rounded-xl border border-white/[0.06] px-4 py-3">
+              <div className="text-xs text-gray-500 mb-1">{label}</div>
+              <div className={`text-2xl font-bold font-display ${destaque ? 'text-red-400' : 'text-white'}`}>{value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Último resultado de sync */}
+      {syncResult && (
+        <div className="bg-surface-raised rounded-xl border border-white/[0.06] px-5 py-4 mb-5 text-sm">
+          <div className="text-gray-300 font-medium mb-2">Resultado da última sincronização</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              ['Lidos', syncResult.lidos, 'text-white'],
+              ['Atualizados', syncResult.atualizados, 'text-brand'],
+              ['Sem mudança', syncResult.pulados, 'text-gray-400'],
+              ['Erros', syncResult.erros, syncResult.erros > 0 ? 'text-red-400' : 'text-gray-500'],
+            ].map(([label, val, cls]) => (
+              <div key={label}>
+                <span className="text-gray-500 text-xs">{label}: </span>
+                <span className={`font-semibold ${cls}`}>{val}</span>
+              </div>
+            ))}
+          </div>
+          {syncResult.detalhes?.length > 0 && (
+            <details className="mt-3">
+              <summary className="text-xs text-gray-500 cursor-pointer">Ver erros ({syncResult.detalhes.length})</summary>
+              <ul className="mt-2 space-y-1">
+                {syncResult.detalhes.map((d, i) => (
+                  <li key={i} className="text-xs text-red-400 font-mono">{d.caminho}: {d.erro}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
+
+      {/* Tabela de documentos */}
+      {docs.length > 0 && (
+        <div className="bg-surface-raised rounded-xl border border-white/[0.06] overflow-hidden">
+          <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
+            <h3 className="text-gray-300 font-medium text-sm">Notas indexadas ({status?.totalDocumentos || 0})</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/[0.04]">
+                  {['Título', 'Caminho', 'Chunks', 'Status', 'Atualizado'].map(h => (
+                    <th key={h} className="text-left px-4 py-2.5 text-gray-500 font-medium text-xs uppercase tracking-wide">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {docs.map(doc => (
+                  <tr key={doc.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+                    <td className="px-4 py-2.5 text-white text-xs font-medium max-w-xs truncate">{doc.titulo || '—'}</td>
+                    <td className="px-4 py-2.5 text-gray-500 text-xs font-mono max-w-xs truncate">{doc.caminho}</td>
+                    <td className="px-4 py-2.5 text-gray-300 text-xs">{doc.chunks}</td>
+                    <td className="px-4 py-2.5">
+                      {doc.erro
+                        ? <span className="flex items-center gap-1 text-red-400 text-xs"><AlertCircle className="w-3 h-3" /> Erro</span>
+                        : <span className="flex items-center gap-1 text-brand text-xs"><CheckCircle className="w-3 h-3" /> OK</span>
+                      }
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-500 text-xs">
+                      {doc.atualizado_em ? new Date(doc.atualizado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {totalPages > 1 && (
+            <div className="px-5 py-3 flex gap-2 justify-end border-t border-white/[0.06]">
+              {page > 1 && <button onClick={() => carregarDocs(page - 1)} className="text-xs text-gray-400 hover:text-white px-3 py-1 rounded-lg bg-gray-800 transition">← Anterior</button>}
+              <span className="text-xs text-gray-500 self-center">Página {page} de {totalPages}</span>
+              {page < totalPages && <button onClick={() => carregarDocs(page + 1)} className="text-xs text-gray-400 hover:text-white px-3 py-1 rounded-lg bg-gray-800 transition">Próxima →</button>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!loadingStatus && docs.length === 0 && status?.totalDocumentos === 0 && (
+        <div className="text-center py-12 text-gray-500 text-sm">
+          Nenhuma nota indexada ainda.
+          <br /><span className="text-xs mt-1 block">Configure a pasta acima e clique em "Sincronizar agora".</span>
+        </div>
+      )}
     </div>
   )
 }
