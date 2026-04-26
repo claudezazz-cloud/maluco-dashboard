@@ -16,6 +16,16 @@ docker exec -it n8n-postgres-1 psql -U zazz -d zazzdb
 docker exec -it n8n-redis-1 redis-cli -a ZazzRedis2026!
 ```
 
+## Deploy obrigatório
+
+**Regra:** sempre que alterar qualquer arquivo do dashboard (`.jsx`, `.js`, `.css`, componentes, rotas API), fazer deploy no VPS ao final da tarefa:
+
+```bash
+ssh root@195.200.7.239 "cd /opt/zazz/dashboard && git pull origin main && npm run build && pm2 restart maluco-dashboard --update-env"
+```
+
+Não esperar o usuário pedir — deploy faz parte da entrega.
+
 ## Infra (Hostinger VPS 195.200.7.239)
 - N8N: https://n8n.srv1537041.hstgr.cloud
 - Evolution: https://evolution.srv1537041.hstgr.cloud
