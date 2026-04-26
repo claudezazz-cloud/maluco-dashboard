@@ -398,12 +398,12 @@ export default function TreinamentoPage() {
   const inputEditCls = 'w-full bg-surface border border-[#008000] rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition'
 
   const tabs = [
-    { id: 'regras', label: <span className="flex items-center gap-1"><Brain className="w-3.5 h-3.5" /> Regras</span>, count: regras.length },
+    { id: 'regras', label: <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> Regras</span>, count: regras.length },
     { id: 'pops', label: <span className="flex items-center gap-1"><ClipboardList className="w-3.5 h-3.5" /> POPs</span>, count: pops.length },
     { id: 'colaboradores', label: <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Colaboradores</span>, count: colaboradores.length },
     { id: 'skills', label: <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Skills</span>, count: skills.length },
     { id: 'solicitacoes', label: <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Solicitações</span>, count: solicitacoes.length },
-    ...(user?.role === 'admin' ? [{ id: 'evolutivo', label: <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5" /> Evolutivo</span>, count: null }] : []),
+    ...(user?.role === 'admin' ? [{ id: 'evolutivo', label: <span className="flex items-center gap-1"><Brain className="w-3.5 h-3.5" /> Evolutivo</span>, count: null }] : []),
   ]
 
   return (
