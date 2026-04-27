@@ -46,13 +46,28 @@ Scripts Python `fix_*.py` no projeto:
 - Settings aceita só: `{executionOrder, saveManualExecutions, callerPolicy, errorWorkflow, timezone, saveDataSuccessExecution, saveDataErrorExecution, saveExecutionProgress}`
 - `tags` é read-only — nunca incluir no PUT
 
-## Bug conhecido corrigido (abr/2026)
+## Bugs corrigidos (abr/2026)
 
 **"É Relatório?" crashava em mensagens de texto** porque referenciava `$('Formata Transcrição')` que só executa em mensagens de áudio. Fix: usar `isExecuted` como guarda:
 
 ```js
 ={{ $('Verifica Menção').first().json?.isReport || ($('Formata Transcrição').isExecuted ? $('Formata Transcrição').first().json?.isReport : false) || false }}
 ```
+
+**Criação de tarefa no Notion falhava com data vazia** — `{"date": {}}` é rejeitado pela API. Fix no `buildNotionBody` (nó Parse Resposta):
+- Data/Entrega sem valor → default = hoje no fuso America/Sao_Paulo
+- Descrição vazia → usa campo `obs` como fallback
+- Fone vazio → campo omitido (spread condicional)
+
+**Bot ignorava mensagens citadas (reply)** — ao responder uma mensagem no grupo, o bot recebia só o texto novo, sem o contexto do que estava sendo citado. Fix no nó `Verifica Menção`: extrai `contextInfo.quotedMessage` da Evolution API e prepend ao `textMessage`:
+
+```js
+const textMessage = (quotedText && rawText)
+  ? `[Respondendo à mensagem: "${quotedText}" (de @${quotedParticipant})]\n\n${rawText}`
+  : rawText;
+```
+
+Suporta: `conversation`, `extendedTextMessage.text`, `imageMessage.caption`, `videoMessage.caption`.
 
 ## System Prompt placeholders
 
