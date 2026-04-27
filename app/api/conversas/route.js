@@ -55,6 +55,9 @@ export async function GET(req) {
 
 // Chamado pelo N8N para salvar cada conversa
 export async function POST(req) {
+  const token = req.headers.get('x-token')
+  const expectedToken = process.env.N8N_POPS_TOKEN || 'MALUCO_POPS_2026'
+  if (token !== expectedToken) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   try {
     await ensureTable()
     const { chat_id, remetente, mensagem, resposta, pops_usados, tokens_input, tokens_output } = await req.json()

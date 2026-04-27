@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSession, requireAdmin } from '@/lib/auth'
-import { query } from '@/lib/db'
+import { query, withTransaction } from '@/lib/db'
 
 const COLUMN_MAP = {
   'cod': 'cod',
@@ -96,43 +96,36 @@ export async function POST(req) {
 
     await ensureTable()
 
-    // Limpa tabela antes de reimportar
-    await query('DELETE FROM dashboard_clientes')
-
-    // Bulk insert em batches de 100
-    const BATCH_SIZE = 100
-    for (let i = 0; i < clientes.length; i += BATCH_SIZE) {
-      const batch = clientes.slice(i, i + BATCH_SIZE)
-      const values = []
-      const params = []
-      batch.forEach((c, idx) => {
-        const offset = idx * 2
-        values.push(`($${offset + 1}, $${offset + 2})`)
-        params.push(c.cod, c.nome)
-      })
-      await query(
-        `INSERT INTO dashboard_clientes (cod, nome) VALUES ${values.join(', ')}`,
-        params
-      )
-    }
-
-    // Salva texto compacto para o N8N ler (1 unica linha no dashboard_config)
-    // Formato: "Nome\tCod\n" por linha — o Monta Prompt ja sabe parsear
     const textoBot = clientes.map(c => `${c.nome}\t${c.cod}`).join('\n')
-
     const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-    await query(
-      `INSERT INTO dashboard_config (chave, valor, atualizado_em)
-       VALUES ('clientes_importado_em', $1, NOW())
-       ON CONFLICT (chave) DO UPDATE SET valor = $1, atualizado_em = NOW()`,
-      [agora]
-    )
-    await query(
-      `INSERT INTO dashboard_config (chave, valor, atualizado_em)
-       VALUES ('clientes_texto', $1, NOW())
-       ON CONFLICT (chave) DO UPDATE SET valor = $1, atualizado_em = NOW()`,
-      [textoBot]
-    )
+    const BATCH_SIZE = 100
+
+    await withTransaction(async (qt) => {
+      await qt('DELETE FROM dashboard_clientes')
+
+      for (let i = 0; i < clientes.length; i += BATCH_SIZE) {
+        const batch = clientes.slice(i, i + BATCH_SIZE)
+        const values = []
+        const params = []
+        batch.forEach((c, idx) => {
+          const offset = idx * 2
+          values.push(`($${offset + 1}, $${offset + 2})`)
+          params.push(c.cod, c.nome)
+        })
+        await qt(`INSERT INTO dashboard_clientes (cod, nome) VALUES ${values.join(', ')}`, params)
+      }
+
+      await qt(
+        `INSERT INTO dashboard_config (chave, valor, atualizado_em) VALUES ('clientes_importado_em', $1, NOW())
+         ON CONFLICT (chave) DO UPDATE SET valor = $1, atualizado_em = NOW()`,
+        [agora]
+      )
+      await qt(
+        `INSERT INTO dashboard_config (chave, valor, atualizado_em) VALUES ('clientes_texto', $1, NOW())
+         ON CONFLICT (chave) DO UPDATE SET valor = $1, atualizado_em = NOW()`,
+        [textoBot]
+      )
+    })
 
     return NextResponse.json({
       ok: true,

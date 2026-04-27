@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
-export async function GET() {
+export async function GET(req) {
+  const setupToken = req.headers.get('x-setup-token')
+  const expectedToken = process.env.SETUP_TOKEN
+  if (!expectedToken || setupToken !== expectedToken) {
+    return NextResponse.json({ error: 'Não autorizado. Defina SETUP_TOKEN no .env e envie via header x-setup-token.' }, { status: 401 })
+  }
   try {
     await query(`
       CREATE TABLE IF NOT EXISTS dashboard_usuarios (
