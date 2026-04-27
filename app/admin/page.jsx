@@ -247,6 +247,8 @@ export default function AdminPage() {
   const [deletingId, setDeletingId] = useState(null)
   const [grupoId, setGrupoId] = useState('')
   const [salvandoGrupo, setSalvandoGrupo] = useState(false)
+  const [grupoNotifOk, setGrupoNotifOk] = useState('')
+  const [salvandoNotifOk, setSalvandoNotifOk] = useState(false)
 
   // Usuarios
   const [usuarios, setUsuarios] = useState([])
@@ -281,10 +283,11 @@ export default function AdminPage() {
   async function fetchConfig() {
     try {
       const r = await fetch('/api/config/bom-dia')
-      if (r.ok) {
-        const d = await r.json()
-        setGrupoId(d.grupo || '')
-      }
+      if (r.ok) { const d = await r.json(); setGrupoId(d.grupo || '') }
+    } catch {}
+    try {
+      const r = await fetch('/api/config/notificacao-ok')
+      if (r.ok) { const d = await r.json(); setGrupoNotifOk(d.grupo || '') }
     } catch {}
   }
 
@@ -318,6 +321,21 @@ export default function AdminPage() {
     } finally {
       setSalvandoGrupo(false)
     }
+  }
+
+  async function salvarNotifOk() {
+    setSalvandoNotifOk(true)
+    try {
+      const r = await fetch('/api/config/notificacao-ok', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grupo: grupoNotifOk.trim() }),
+      })
+      const d = await r.json()
+      if (r.ok) { setMsg('Grupo de notificação salvo!'); setTimeout(() => setMsg(''), 4000) }
+      else setMsg('Erro: ' + (d.error || r.status))
+    } catch (e) { setMsg('Erro: ' + e.message) }
+    finally { setSalvandoNotifOk(false) }
   }
 
   async function criarUsuario() {
@@ -744,6 +762,31 @@ export default function AdminPage() {
                 <p className="text-xs text-gray-500">
                   Para encontrar o ID do grupo: abra a Evolution API ou verifique nos logs do webhook. O ID sempre termina com @g.us
                 </p>
+              </div>
+            </div>
+
+            <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mt-4">
+              <div className="mb-1">
+                <label className="text-white font-medium text-sm">Grupo de Notificação — Tarefa Concluída</label>
+                <p className="text-gray-500 text-xs mt-0.5 mb-3">
+                  Quando uma tarefa for marcada como Ok no Notion, o bot envia um aviso neste grupo. Deixe vazio para desativar. Formato: numero@g.us
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={grupoNotifOk}
+                  onChange={e => setGrupoNotifOk(e.target.value)}
+                  placeholder="554384924456-1616013394@g.us (vazio = desativado)"
+                  className="flex-1 bg-surface border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none transition"
+                />
+                <button
+                  onClick={salvarNotifOk}
+                  disabled={salvandoNotifOk}
+                  className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2.5 rounded-lg transition font-medium shrink-0"
+                >
+                  {salvandoNotifOk ? 'Salvando...' : 'Salvar'}
+                </button>
               </div>
             </div>
           </div>
