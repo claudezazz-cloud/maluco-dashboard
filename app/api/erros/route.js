@@ -32,6 +32,9 @@ export async function GET(req) {
 
 // Chamado pelo N8N ao capturar erro
 export async function POST(req) {
+  const token = req.headers.get('x-token')
+  const expectedToken = process.env.N8N_POPS_TOKEN || 'MALUCO_POPS_2026'
+  if (token !== expectedToken) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   try {
     await ensureTable()
     const { no_n8n, mensagem_erro, mensagem_usuario, chat_id } = await req.json()
