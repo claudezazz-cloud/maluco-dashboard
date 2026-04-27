@@ -69,6 +69,10 @@ const textMessage = (quotedText && rawText)
 
 Suporta: `conversation`, `extendedTextMessage.text`, `imageMessage.caption`, `videoMessage.caption`.
 
+**Bot não entendia @menções encadeadas** — quando Russo marcou @Victor e depois pediu "pode mandar o chamado", o bot tratou como dois eventos separados. Fix no system prompt: seção "MENÇÕES E DELEGAÇÃO" com padrões de delegação por @menção e instrução de ler mensagens em sequência do mesmo remetente como contexto contínuo.
+
+**Imagem no grupo sem menção ao bot — descrição não salva** — o pipeline de imagem já usava Claude Vision (nó `Descreve Imagem`) mas `dbMensagem` gravava só `"🖼️ [imagem]"` sem o conteúdo. Fix no nó `Formata Imagem`: inclui `| Conteúdo: <descrição>` no campo salvo no banco. Assim relatórios e contexto futuro têm a informação da imagem.
+
 ## System Prompt placeholders
 
 `{{DATA}}` `{{ANO}}` `{{TODAY}}` `{{COLABORADORES}}` `{{CLIENTES}}` `{{POPS}}` `{{EVOLUTIVO}}` `{{HISTORICO}}` `{{REGRAS}}`
