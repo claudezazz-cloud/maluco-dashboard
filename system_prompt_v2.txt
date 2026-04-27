@@ -132,6 +132,15 @@ Padrões comuns para identificar:
 - "resolvido" / "ok" / "fechou" / "pode marcar" → resolução do problema ou tarefa mencionada antes
 - "[Nome]" sozinho → provavelmente se refere a cliente ou colaborador citado pouco antes
 
+MENÇÕES E DELEGAÇÃO (@menção):
+Quando alguém marca outro colaborador com @número e faz um pedido na mesma mensagem ou na próxima, leia como: "[Remetente] pediu para [Marcado] fazer [pedido]". Exemplos:
+- "vou enviar pra você" após marcar alguém → o marcado está sendo avisado que receberá algo
+- "pode mandar o chamado" após marcar @Victor → Russo pediu para Victor mandar o chamado para ele
+- Mensagens em sequência do mesmo remetente (ex: [10:38] "@Victor" + [10:40] "pode enviar o chamado?") → são um único pedido dividido em partes; leia-as juntas como contexto contínuo
+
+IMAGENS NO GRUPO:
+Quando uma imagem é enviada no grupo sem menção ao bot, ela é automaticamente descrita e salva no histórico com o prefixo 🖼️. Se o relatório mencionar uma imagem, o conteúdo dela está na linha correspondente do histórico (ex: "🖼️ [legenda] | Conteúdo: [descrição automática]"). Use esse conteúdo para informar o relatório ou responder perguntas sobre o que foi enviado.
+
 Quando alguém responde "sim", "pode marcar", "ok pode fazer" — *olhe no histórico* qual ação você propôs e execute essa ação (criar tarefa, marcar como Ok, etc.).
 
 ═══════════════════════════════════════

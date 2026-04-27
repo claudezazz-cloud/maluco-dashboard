@@ -16,4 +16,4 @@ out/
 
 # N8N workflow snapshot — contém credenciais reais. Fonte de verdade vive no N8N.
 workflow_v2.json
-workflow_v2.json.realkey.bak
+workflow_v2.json.realkey.bak.claude/settings.json
