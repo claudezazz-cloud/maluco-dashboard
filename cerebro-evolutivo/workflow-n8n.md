@@ -22,6 +22,7 @@ Webhook Evolution API
   → Busca Skills
   → Busca Tarefas Notion
   → Busca Evolutivo        ← novo (abr/2026)
+  → Busca Grupo Atual      ← novo (abr/2026)
   → Monta Prompt
   → Claude API
   → Formata Resposta
@@ -37,6 +38,11 @@ Todos esses precisam de `executeOnce: true`:
 
 **Busca Regras** também precisa `alwaysOutputData: true`.
 **Busca Evolutivo** também precisa `alwaysOutputData: true`.
+
+**Busca Grupo Atual** — NÃO usa `executeOnce`. Precisa de `alwaysOutputData: true`.
+- Query: `SELECT nome, descricao FROM grupos_whatsapp WHERE chat_id = '{{ $('Verifica Mencao').first().json.chatId }}' LIMIT 1`
+- Se o chatId não está na tabela (grupo não cadastrado), retorna vazio e o bot não exibe contexto de grupo.
+- O `monta_prompt.js` injeta `[Contexto: Você está no grupo "Nome" (descrição).]` no início do system prompt.
 
 ## Editar workflow
 
