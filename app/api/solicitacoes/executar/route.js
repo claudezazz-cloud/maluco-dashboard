@@ -21,49 +21,56 @@ export async function POST(request) {
   }
 
   const task = result.rows[0]
+  const chatIds = (task.chat_id || '').split(',').map(s => s.trim()).filter(Boolean)
+  if (chatIds.length === 0) {
+    return NextResponse.json({ error: 'Nenhum grupo configurado nesta solicitação' }, { status: 400 })
+  }
 
-  // Monta mensagem sintética (mesmo formato do Prepara Body no N8N)
-  const body = {
-    event: 'messages.upsert',
-    data: {
-      key: {
-        id: 'manual-' + task.id + '-' + Date.now(),
-        remoteJid: task.chat_id,
-        fromMe: false,
-      },
-      message: {
-        extendedTextMessage: {
-          text: task.comando,
-          contextInfo: {
-            mentionedJid: [BOT_NUMBER],
+  // Envia para cada grupo configurado
+  const erros = []
+  for (const chatId of chatIds) {
+    const body = {
+      event: 'messages.upsert',
+      data: {
+        key: {
+          id: 'manual-' + task.id + '-' + Date.now(),
+          remoteJid: chatId,
+          fromMe: false,
+        },
+        message: {
+          extendedTextMessage: {
+            text: task.comando,
+            contextInfo: {
+              mentionedJid: [BOT_NUMBER],
+            },
           },
         },
+        messageTimestamp: Math.floor(Date.now() / 1000),
+        pushName: 'Dashboard',
       },
-      messageTimestamp: Math.floor(Date.now() / 1000),
-      pushName: 'Dashboard',
-    },
-  }
-
-  // Injeta no webhook do N8N
-  try {
-    const r = await fetch(N8N_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-
-    if (!r.ok) {
-      return NextResponse.json({ error: 'Erro ao enviar para N8N: ' + r.status }, { status: 502 })
     }
 
-    // Marca como executado
-    await query(
-      'UPDATE dashboard_solicitacoes_programadas SET ultimo_executado = NOW() WHERE id = $1',
-      [id]
-    )
-
-    return NextResponse.json({ ok: true })
-  } catch (e) {
-    return NextResponse.json({ error: 'Erro ao conectar com N8N: ' + e.message }, { status: 502 })
+    try {
+      const r = await fetch(N8N_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!r.ok) erros.push(`${chatId}: HTTP ${r.status}`)
+    } catch (e) {
+      erros.push(`${chatId}: ${e.message}`)
+    }
   }
+
+  if (erros.length === chatIds.length) {
+    return NextResponse.json({ error: 'Falha em todos os grupos: ' + erros.join(' | ') }, { status: 502 })
+  }
+
+  // Marca como executado (mesmo que parcial)
+  await query(
+    'UPDATE dashboard_solicitacoes_programadas SET ultimo_executado = NOW() WHERE id = $1',
+    [id]
+  )
+
+  return NextResponse.json({ ok: true, grupos: chatIds.length, erros: erros.length > 0 ? erros : undefined })
 }
