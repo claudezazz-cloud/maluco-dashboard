@@ -5,7 +5,7 @@ Painel Next.js 14 (App Router) rodando em `dashboard.srv1537041.hstgr.cloud` (PM
 ## Páginas principais
 
 - `/` — login
-- `/admin` — painel principal com abas: colaboradores, filiais, métricas
+- `/admin` — painel principal com abas: Filiais, Usuários, Configurações, Solicitações, Grupos, Métricas
 - `/treinamento` — abas: pops, regras, skills, colaboradores, evolutivo
 - `/admin/filiais/[id]` — editar configurações de filial (tokens, IDs externos)
 
@@ -33,6 +33,22 @@ Chaves usadas:
 - outras chaves conforme necessidade
 
 Tabela com constraint UNIQUE em `(filial_id, chave)`.
+
+## Aba Grupos (/admin → Grupos)
+
+Gerencia grupos WhatsApp internos. Tabela `grupos_whatsapp`:
+- `nome`, `chat_id` (JID do grupo, ex: `120363xxxxx@g.us`), `descricao`
+- Toggles: `bom_dia`, `alertas_notion_entrega`, `alertas_notion_ok`
+- Seed automático na primeira abertura: Nego's Internet, Nego's Sub, Migra e Instalação, Diário
+
+API: `/api/grupos` (GET + POST) e `/api/grupos/[id]` (PUT + DELETE).
+
+O N8N usa a tabela para:
+- Enviar Alertas Notion OK → grupos com `alertas_notion_ok = true`
+- Enviar Alertas Entrega → grupos com `alertas_notion_entrega = true`
+- O nó "Busca Grupo Atual" injeta nome+descrição no context do bot por mensagem
+
+Aba Solicitações: ao criar/editar, o campo Chat ID virou dropdown dos grupos cadastrados.
 
 ## Aba Evolutivo (Treinamento)
 

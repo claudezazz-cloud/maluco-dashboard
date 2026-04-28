@@ -84,6 +84,18 @@ try {
   if (historico) historicoSection = `\n\nÚLTIMAS MENSAGENS DO GRUPO:\n${historico}`;
 } catch(e) {}
 
+// GRUPO ATUAL (nome e descrição vindos de grupos_whatsapp)
+let grupoAtualNome = '';
+let grupoAtualDesc = '';
+try {
+  const g = $('Busca Grupo Atual').first().json;
+  grupoAtualNome = (g?.nome || '').trim();
+  grupoAtualDesc = (g?.descricao || '').trim();
+} catch(e) {}
+const grupoCtx = grupoAtualNome
+  ? `[Contexto de localização: Você está respondendo no grupo "${grupoAtualNome}"${grupoAtualDesc ? ' (' + grupoAtualDesc + ')' : ''}.]\n\n`
+  : '';
+
 // 3b. EXTRAI TEXTO DA MENSAGEM (necessário para busca semântica de POPs)
 let _vM_early;
 try { _vM_early = $('Verifica Menção').first().json; if (!_vM_early.chatId) _vM_early = null; } catch(e) {}
@@ -228,9 +240,9 @@ if (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {
     .replace(/\{\{POPS\}\}/g, pops)
     .replace(/\{\{HISTORICO\}\}/g, historicoSection)
     .replace(/\{\{REGRAS\}\}/g, rulesPrompt);
-  systemContent = rulesPrompt + skillContext + chamadosContext + '\n' + systemContent;
+  systemContent = grupoCtx + rulesPrompt + skillContext + chamadosContext + '\n' + systemContent;
 } else {
-  systemContent = rulesPrompt
+  systemContent = grupoCtx + rulesPrompt
     + skillContext
     + '\nVocê é o assistente interno da Zazz Internet, provedor de fibra óptica em Lunardelli-PR. Seu nome é Maluco da IA 👽🍀.\n\n'
     + 'DATA ATUAL: ' + diaSemana + ', ' + dia + '/' + mes + '/' + ano + ' (' + today + '). ANO ATUAL: ' + ano + '.\n\n'
