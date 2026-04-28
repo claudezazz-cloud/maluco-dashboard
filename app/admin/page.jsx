@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
-import { Eye, EyeOff, Clock } from 'lucide-react'
+import { Eye, EyeOff, Clock, Users, MessageSquare, Pencil, Trash2, Plus, Check, X } from 'lucide-react'
 
 // ── Métricas helpers ──────────────────────────────────────────────────────────
 
@@ -260,6 +260,16 @@ export default function AdminPage() {
   const [msgSolicitacao, setMsgSolicitacao] = useState({ texto: '', tipo: '' })
   const [salvandoSolicitacao, setSalvandoSolicitacao] = useState(false)
 
+  // ===== GRUPOS =====
+  const [grupos, setGrupos] = useState([])
+  const [loadingGrupos, setLoadingGrupos] = useState(true)
+  const [editandoGrupo, setEditandoGrupo] = useState(null)
+  const [editGrupoForm, setEditGrupoForm] = useState({})
+  const [mostraNovoGrupo, setMostraNovoGrupo] = useState(false)
+  const [novoGrupo, setNovoGrupo] = useState({ nome: '', chat_id: '', descricao: '', bom_dia: false, alertas_notion_entrega: false, alertas_notion_ok: false })
+  const [salvandoGrupo, setSalvandoGrupo] = useState(false)
+  const [msgGrupos, setMsgGrupos] = useState({ texto: '', tipo: '' })
+
   // Usuarios
   const [usuarios, setUsuarios] = useState([])
   const [loadingUsuarios, setLoadingUsuarios] = useState(true)
@@ -284,6 +294,7 @@ export default function AdminPage() {
     fetchConfig()
     fetchUsuarios()
     fetchSolicitacoes()
+    fetchGrupos()
   }, [router])
 
   async function fetchFiliais() {
@@ -296,6 +307,71 @@ export default function AdminPage() {
     const r = await fetch('/api/solicitacoes')
     if (r.ok) setSolicitacoes(await r.json())
     setLoadingSolicitacoes(false)
+  }
+
+  async function fetchGrupos() {
+    setLoadingGrupos(true)
+    const r = await fetch('/api/grupos')
+    if (r.ok) setGrupos(await r.json())
+    setLoadingGrupos(false)
+  }
+
+  function showMsgGrupos(texto, tipo = 'success') {
+    setMsgGrupos({ texto, tipo })
+    setTimeout(() => setMsgGrupos({ texto: '', tipo: '' }), 3000)
+  }
+
+  async function salvarNovoGrupo() {
+    if (!novoGrupo.nome.trim()) return
+    setSalvandoGrupo(true)
+    const r = await fetch('/api/grupos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(novoGrupo),
+    })
+    setSalvandoGrupo(false)
+    if (r.ok) {
+      setNovoGrupo({ nome: '', chat_id: '', descricao: '', bom_dia: false, alertas_notion_entrega: false, alertas_notion_ok: false })
+      setMostraNovoGrupo(false)
+      showMsgGrupos('Grupo adicionado!')
+      fetchGrupos()
+    } else {
+      const d = await r.json().catch(() => ({}))
+      showMsgGrupos('Erro: ' + (d.error || r.status), 'error')
+    }
+  }
+
+  async function salvarEdicaoGrupo() {
+    setSalvandoGrupo(true)
+    const r = await fetch(`/api/grupos/${editandoGrupo}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editGrupoForm),
+    })
+    setSalvandoGrupo(false)
+    if (r.ok) {
+      setEditandoGrupo(null)
+      showMsgGrupos('Grupo salvo!')
+      fetchGrupos()
+    } else {
+      showMsgGrupos('Erro ao salvar', 'error')
+    }
+  }
+
+  async function toggleGrupo(g, campo) {
+    await fetch(`/api/grupos/${g.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [campo]: !g[campo] }),
+    })
+    fetchGrupos()
+  }
+
+  async function excluirGrupo(id, nome) {
+    if (!confirm(`Excluir o grupo "${nome}"?`)) return
+    await fetch(`/api/grupos/${id}`, { method: 'DELETE' })
+    showMsgGrupos('Grupo removido.')
+    fetchGrupos()
   }
 
   function showMsgSolicitacao(texto, tipo = 'success') {
@@ -507,7 +583,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-surface-raised rounded-lg p-1 w-fit">
-          {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações'], ['solicitacoes', 'Solicitações'], ['metricas', 'Métricas']].map(([key, label]) => (
+          {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações'], ['solicitacoes', 'Solicitações'], ['grupos', 'Grupos'], ['metricas', 'Métricas']].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -810,6 +886,126 @@ export default function AdminPage() {
         )}
 
         {/* Métricas */}
+        {/* ── GRUPOS ─────────────────────────────────────────────────── */}
+        {tab === 'grupos' && (
+          <>
+            {msgGrupos.texto && (
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgGrupos.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
+                {msgGrupos.texto}
+              </div>
+            )}
+
+            <div className="bg-purple-900/20 border border-purple-800 rounded-xl px-5 py-3 mb-6 text-sm text-purple-300">
+              <Users className="w-4 h-4 inline shrink-0 mr-1" />
+              Grupos WhatsApp cadastrados. Configure quais recebem <strong>Bom Dia</strong>, <strong>Alertas de Entrega</strong> e <strong>Notificações de OK</strong>.
+              O chat_id é o JID do grupo (ex: <code className="bg-purple-900/40 px-1 rounded">120363...@g.us</code>).
+            </div>
+
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-white font-semibold">Grupos ({grupos.length})</h2>
+              <button onClick={() => setMostraNovoGrupo(!mostraNovoGrupo)} className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition flex items-center gap-1.5">
+                <Plus className="w-4 h-4" /> {mostraNovoGrupo ? 'Cancelar' : 'Novo Grupo'}
+              </button>
+            </div>
+
+            {mostraNovoGrupo && (
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mb-6">
+                <h3 className="text-white font-medium mb-4">Novo Grupo</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1 block">Nome *</label>
+                    <input value={novoGrupo.nome} onChange={e => setNovoGrupo(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Nego's Sub" className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1 block">Chat ID (JID do grupo)</label>
+                    <input value={novoGrupo.chat_id} onChange={e => setNovoGrupo(p => ({ ...p, chat_id: e.target.value }))} placeholder="120363xxxxx@g.us" className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono placeholder-gray-600 focus:border-brand focus:outline-none" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-gray-400 text-xs mb-1 block">Descrição</label>
+                    <input value={novoGrupo.descricao} onChange={e => setNovoGrupo(p => ({ ...p, descricao: e.target.value }))} placeholder="Ex: Grupo do designer" className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3 mb-4">
+                  {[['bom_dia','☀️ Bom Dia'],['alertas_notion_entrega','📦 Alerta Entrega'],['alertas_notion_ok','✅ Alerta OK']].map(([campo, label]) => (
+                    <button key={campo} type="button" onClick={() => setNovoGrupo(p => ({ ...p, [campo]: !p[campo] }))}
+                      className={`text-xs px-3 py-1.5 rounded-lg border transition ${novoGrupo[campo] ? 'bg-brand border-green-700 text-white' : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={salvarNovoGrupo} disabled={salvandoGrupo || !novoGrupo.nome.trim()} className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm transition">{salvandoGrupo ? 'Salvando...' : 'Criar Grupo'}</button>
+                  <button onClick={() => setMostraNovoGrupo(false)} className="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded-lg text-sm transition">Cancelar</button>
+                </div>
+              </div>
+            )}
+
+            {loadingGrupos ? (
+              <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-20 bg-surface-raised rounded-xl border border-white/[0.06] animate-pulse" />)}</div>
+            ) : grupos.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p>Nenhum grupo cadastrado.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {grupos.map(g => (
+                  <div key={g.id} className="bg-surface-raised rounded-xl border border-white/[0.06] p-4">
+                    {editandoGrupo === g.id ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div><label className="text-gray-400 text-xs mb-1 block">Nome</label><input value={editGrupoForm.nome || ''} onChange={e => setEditGrupoForm(p => ({ ...p, nome: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
+                          <div><label className="text-gray-400 text-xs mb-1 block">Chat ID</label><input value={editGrupoForm.chat_id || ''} onChange={e => setEditGrupoForm(p => ({ ...p, chat_id: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-brand focus:outline-none" /></div>
+                          <div className="md:col-span-2"><label className="text-gray-400 text-xs mb-1 block">Descrição</label><input value={editGrupoForm.descricao || ''} onChange={e => setEditGrupoForm(p => ({ ...p, descricao: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          {[['bom_dia','☀️ Bom Dia'],['alertas_notion_entrega','📦 Alerta Entrega'],['alertas_notion_ok','✅ Alerta OK']].map(([campo, label]) => (
+                            <button key={campo} type="button" onClick={() => setEditGrupoForm(p => ({ ...p, [campo]: !p[campo] }))}
+                              className={`text-xs px-3 py-1.5 rounded-lg border transition ${editGrupoForm[campo] ? 'bg-brand border-green-700 text-white' : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500'}`}>
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={salvarEdicaoGrupo} disabled={salvandoGrupo} className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-sm transition">{salvandoGrupo ? 'Salvando...' : 'Salvar'}</button>
+                          <button onClick={() => setEditandoGrupo(null)} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-sm transition">Cancelar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${g.ativo ? 'bg-green-400' : 'bg-gray-600'}`} />
+                            <span className="text-white font-medium text-sm">{g.nome}</span>
+                            {g.descricao && <span className="text-gray-500 text-xs">{g.descricao}</span>}
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap gap-2">
+                            <code className="text-xs font-mono text-gray-500 bg-gray-800/60 px-2 py-0.5 rounded max-w-xs truncate block">
+                              {g.chat_id || <span className="text-yellow-600 italic">chat_id não configurado</span>}
+                            </code>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {[['bom_dia','☀️ Bom Dia'],['alertas_notion_entrega','📦 Entrega'],['alertas_notion_ok','✅ OK']].map(([campo, label]) => (
+                              <button key={campo} onClick={() => toggleGrupo(g, campo)}
+                                className={`text-xs px-2.5 py-1 rounded-lg border transition ${g[campo] ? 'bg-brand/20 border-green-700 text-brand' : 'bg-transparent border-gray-700 text-gray-600 hover:border-gray-500'}`}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => { setEditandoGrupo(g.id); setEditGrupoForm({ nome: g.nome, chat_id: g.chat_id, descricao: g.descricao, bom_dia: g.bom_dia, alertas_notion_entrega: g.alertas_notion_entrega, alertas_notion_ok: g.alertas_notion_ok }) }} className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">Editar</button>
+                          <button onClick={() => excluirGrupo(g.id, g.nome)} className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg transition">Excluir</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
         {tab === 'metricas' && <MetricasTab />}
 
         {/* Configurações */}
@@ -918,8 +1114,15 @@ export default function AdminPage() {
                       <input type="time" value={novaSolicitacao.hora} onChange={e => setNovaSolicitacao(p => ({ ...p, hora: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" />
                     </div>
                     <div>
-                      <label className="text-gray-400 text-xs mb-1 block">Chat ID (grupo)</label>
-                      <input placeholder="554384924456-1616013394@g.us" value={novaSolicitacao.chat_id} onChange={e => setNovaSolicitacao(p => ({ ...p, chat_id: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:border-brand focus:outline-none" />
+                      <label className="text-gray-400 text-xs mb-1 block">Grupo *</label>
+                      {grupos.filter(g => g.chat_id).length > 0 ? (
+                        <select value={novaSolicitacao.chat_id} onChange={e => setNovaSolicitacao(p => ({ ...p, chat_id: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none">
+                          <option value="">Selecione um grupo...</option>
+                          {grupos.filter(g => g.chat_id).map(g => <option key={g.id} value={g.chat_id}>{g.nome}</option>)}
+                        </select>
+                      ) : (
+                        <input placeholder="120363xxxxx@g.us" value={novaSolicitacao.chat_id} onChange={e => setNovaSolicitacao(p => ({ ...p, chat_id: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono placeholder-gray-600 focus:border-brand focus:outline-none" />
+                      )}
                     </div>
                   </div>
                   <div>
@@ -962,7 +1165,17 @@ export default function AdminPage() {
                           <div><label className="text-gray-400 text-xs mb-1 block">Nome</label><input value={editSolicitacaoForm.nome || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, nome: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
                           <div><label className="text-gray-400 text-xs mb-1 block">Comando</label><input value={editSolicitacaoForm.comando || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, comando: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
                           <div><label className="text-gray-400 text-xs mb-1 block">Horário</label><input type="time" value={editSolicitacaoForm.hora || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, hora: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
-                          <div><label className="text-gray-400 text-xs mb-1 block">Chat ID</label><input value={editSolicitacaoForm.chat_id || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, chat_id: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
+                          <div>
+                            <label className="text-gray-400 text-xs mb-1 block">Grupo</label>
+                            {grupos.filter(g => g.chat_id).length > 0 ? (
+                              <select value={editSolicitacaoForm.chat_id || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, chat_id: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none">
+                                <option value="">Selecione um grupo...</option>
+                                {grupos.filter(g => g.chat_id).map(g => <option key={g.id} value={g.chat_id}>{g.nome}</option>)}
+                              </select>
+                            ) : (
+                              <input value={editSolicitacaoForm.chat_id || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, chat_id: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-brand focus:outline-none" />
+                            )}
+                          </div>
                         </div>
                         <div>
                           <label className="text-gray-400 text-xs mb-1 block">Dias da Semana</label>
