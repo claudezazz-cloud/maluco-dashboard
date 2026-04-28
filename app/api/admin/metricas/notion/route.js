@@ -45,7 +45,7 @@ function propNames() {
 function buildFilter(startDate, endDate) {
   const p = propNames()
   const conditions = [
-    { property: p.tipo, select: { equals: p.internet } },
+    { property: p.tipo, multi_select: { contains: p.internet } },
   ]
   if (startDate) conditions.push({ property: p.date, date: { on_or_after: startDate } })
   if (endDate) conditions.push({ property: p.date, date: { on_or_before: endDate } })
