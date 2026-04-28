@@ -12,7 +12,7 @@ async function ensureTable() {
       id SERIAL PRIMARY KEY,
       nome VARCHAR(100) NOT NULL,
       comando TEXT NOT NULL,
-      chat_id VARCHAR(100) NOT NULL,
+      chat_id TEXT NOT NULL,
       hora VARCHAR(5) NOT NULL,
       dias_semana VARCHAR(50) DEFAULT 'seg,ter,qua,qui,sex',
       ativo BOOLEAN DEFAULT true,
@@ -49,8 +49,19 @@ export async function GET(request) {
        ORDER BY id ASC`,
       [horaAtual, diaAtual]
     )
-    console.log(`[n8n-tasks-get] Sucesso: ${result.rows.length} tarefas encontradas`)
-    return NextResponse.json({ tasks: result.rows })
+    const tasks = []
+    for (const row of result.rows) {
+      const chatIds = (row.chat_id || '').split(',').map(s => s.trim()).filter(Boolean)
+      if (chatIds.length <= 1) {
+        tasks.push(row)
+      } else {
+        for (const cid of chatIds) {
+          tasks.push({ ...row, chat_id: cid })
+        }
+      }
+    }
+    console.log(`[n8n-tasks-get] Sucesso: ${result.rows.length} tarefas → ${tasks.length} envios`)
+    return NextResponse.json({ tasks })
   } catch (e) {
     console.error('[n8n-tasks-get] Erro ao buscar tarefas:', e.message)
     return NextResponse.json({ tasks: [], error: e.message })
