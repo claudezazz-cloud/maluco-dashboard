@@ -6,12 +6,15 @@ const N8N_WEBHOOK = process.env.N8N_WEBHOOK_URL || 'https://n8n.srv1537041.hstgr
 const BOT_NUMBER = '554396543242@s.whatsapp.net'
 
 export async function POST(request) {
+  console.log('[executar] Recebida requisição')
   const session = await getSession()
   if (!session || !requireAdmin(session)) {
+    console.log('[executar] Sem permissão, role:', session?.role)
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
   const { id } = await request.json()
+  console.log('[executar] id:', id)
   if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
 
   // Busca a solicitação
@@ -51,13 +54,16 @@ export async function POST(request) {
     }
 
     try {
+      console.log('[executar] Enviando para N8N chatId:', chatId, 'webhook:', N8N_WEBHOOK)
       const r = await fetch(N8N_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      console.log('[executar] N8N respondeu:', r.status, 'para chatId:', chatId)
       if (!r.ok) erros.push(`${chatId}: HTTP ${r.status}`)
     } catch (e) {
+      console.error('[executar] Erro ao chamar N8N:', e.message)
       erros.push(`${chatId}: ${e.message}`)
     }
   }
