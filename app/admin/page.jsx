@@ -249,6 +249,8 @@ export default function AdminPage() {
   const [salvandoGrupo, setSalvandoGrupo] = useState(false)
   const [grupoNotifOk, setGrupoNotifOk] = useState('')
   const [salvandoNotifOk, setSalvandoNotifOk] = useState(false)
+  const [grupoNotifEntrega, setGrupoNotifEntrega] = useState('')
+  const [salvandoNotifEntrega, setSalvandoNotifEntrega] = useState(false)
 
   // Usuarios
   const [usuarios, setUsuarios] = useState([])
@@ -288,6 +290,10 @@ export default function AdminPage() {
     try {
       const r = await fetch('/api/config/notificacao-ok')
       if (r.ok) { const d = await r.json(); setGrupoNotifOk(d.grupo || '') }
+    } catch {}
+    try {
+      const r = await fetch('/api/config/notificacao-entrega')
+      if (r.ok) { const d = await r.json(); setGrupoNotifEntrega(d.grupo || '') }
     } catch {}
   }
 
@@ -336,6 +342,21 @@ export default function AdminPage() {
       else setMsg('Erro: ' + (d.error || r.status))
     } catch (e) { setMsg('Erro: ' + e.message) }
     finally { setSalvandoNotifOk(false) }
+  }
+
+  async function salvarNotifEntrega() {
+    setSalvandoNotifEntrega(true)
+    try {
+      const r = await fetch('/api/config/notificacao-entrega', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grupo: grupoNotifEntrega.trim() }),
+      })
+      const d = await r.json()
+      if (r.ok) { setMsg('Grupo de alerta de entrega salvo!'); setTimeout(() => setMsg(''), 4000) }
+      else setMsg('Erro: ' + (d.error || r.status))
+    } catch (e) { setMsg('Erro: ' + e.message) }
+    finally { setSalvandoNotifEntrega(false) }
   }
 
   async function criarUsuario() {
@@ -767,7 +788,7 @@ export default function AdminPage() {
 
             <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mt-4">
               <div className="mb-1">
-                <label className="text-white font-medium text-sm">Grupo de Notificação — Tarefa Concluída</label>
+                <label className="text-white font-medium text-sm">Grupo de Notificação — Tarefa Concluída (Ok)</label>
                 <p className="text-gray-500 text-xs mt-0.5 mb-3">
                   Quando uma tarefa for marcada como Ok no Notion, o bot envia um aviso neste grupo. Deixe vazio para desativar. Formato: numero@g.us
                 </p>
@@ -786,6 +807,31 @@ export default function AdminPage() {
                   className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2.5 rounded-lg transition font-medium shrink-0"
                 >
                   {salvandoNotifOk ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mt-4">
+              <div className="mb-1">
+                <label className="text-white font-medium text-sm">Grupo de Notificação — Alerta de Entrega</label>
+                <p className="text-gray-500 text-xs mt-0.5 mb-3">
+                  Quando uma tarefa chegar na data de entrega e ainda estiver pendente, o bot envia um aviso neste grupo. Deixe vazio para desativar. Formato: numero@g.us
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={grupoNotifEntrega}
+                  onChange={e => setGrupoNotifEntrega(e.target.value)}
+                  placeholder="554384924456-1616013394@g.us (vazio = desativado)"
+                  className="flex-1 bg-surface border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none transition"
+                />
+                <button
+                  onClick={salvarNotifEntrega}
+                  disabled={salvandoNotifEntrega}
+                  className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2.5 rounded-lg transition font-medium shrink-0"
+                >
+                  {salvandoNotifEntrega ? 'Salvando...' : 'Salvar'}
                 </button>
               </div>
             </div>
