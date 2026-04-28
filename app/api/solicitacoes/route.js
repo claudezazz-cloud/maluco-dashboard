@@ -8,7 +8,7 @@ async function ensureTable() {
       id SERIAL PRIMARY KEY,
       nome VARCHAR(100) NOT NULL,
       comando TEXT NOT NULL,
-      chat_id VARCHAR(100) NOT NULL,
+      chat_id TEXT NOT NULL,
       hora VARCHAR(5) NOT NULL,
       dias_semana VARCHAR(50) DEFAULT 'seg,ter,qua,qui,sex',
       ativo BOOLEAN DEFAULT true,
@@ -16,6 +16,7 @@ async function ensureTable() {
       criado_em TIMESTAMP DEFAULT NOW()
     )
   `)
+  await query(`ALTER TABLE dashboard_solicitacoes_programadas ALTER COLUMN chat_id TYPE TEXT`).catch(() => {})
 }
 
 export async function GET() {
