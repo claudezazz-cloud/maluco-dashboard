@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Clock } from 'lucide-react'
 
 // ── Métricas helpers ──────────────────────────────────────────────────────────
 
@@ -245,12 +245,20 @@ export default function AdminPage() {
   const [tab, setTab] = useState('filiais')
   const [msg, setMsg] = useState('')
   const [deletingId, setDeletingId] = useState(null)
-  const [grupoId, setGrupoId] = useState('')
-  const [salvandoGrupo, setSalvandoGrupo] = useState(false)
   const [grupoNotifOk, setGrupoNotifOk] = useState('')
   const [salvandoNotifOk, setSalvandoNotifOk] = useState(false)
   const [grupoNotifEntrega, setGrupoNotifEntrega] = useState('')
   const [salvandoNotifEntrega, setSalvandoNotifEntrega] = useState(false)
+
+  // ===== SOLICITAÇÕES =====
+  const [solicitacoes, setSolicitacoes] = useState([])
+  const [loadingSolicitacoes, setLoadingSolicitacoes] = useState(true)
+  const [novaSolicitacao, setNovaSolicitacao] = useState({ nome: '', comando: '', chat_id: '554384924456-1616013394@g.us', hora: '17:00', dias_semana: 'seg,ter,qua,qui,sex' })
+  const [mostraNovaSolicitacao, setMostraNovaSolicitacao] = useState(false)
+  const [editandoSolicitacao, setEditandoSolicitacao] = useState(null)
+  const [editSolicitacaoForm, setEditSolicitacaoForm] = useState({})
+  const [msgSolicitacao, setMsgSolicitacao] = useState({ texto: '', tipo: '' })
+  const [salvandoSolicitacao, setSalvandoSolicitacao] = useState(false)
 
   // Usuarios
   const [usuarios, setUsuarios] = useState([])
@@ -275,6 +283,7 @@ export default function AdminPage() {
     fetchFiliais()
     fetchConfig()
     fetchUsuarios()
+    fetchSolicitacoes()
   }, [router])
 
   async function fetchFiliais() {
@@ -282,11 +291,92 @@ export default function AdminPage() {
     if (r.ok) setFiliais(await r.json())
   }
 
-  async function fetchConfig() {
+  async function fetchSolicitacoes() {
+    setLoadingSolicitacoes(true)
+    const r = await fetch('/api/solicitacoes')
+    if (r.ok) setSolicitacoes(await r.json())
+    setLoadingSolicitacoes(false)
+  }
+
+  function showMsgSolicitacao(texto, tipo = 'success') {
+    setMsgSolicitacao({ texto, tipo })
+    setTimeout(() => setMsgSolicitacao({ texto: '', tipo: '' }), 3000)
+  }
+
+  async function salvarNovaSolicitacao() {
+    if (!novaSolicitacao.nome.trim() || !novaSolicitacao.comando.trim() || !novaSolicitacao.chat_id.trim() || !novaSolicitacao.hora) return
+    setSalvandoSolicitacao(true)
+    const r = await fetch('/api/solicitacoes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(novaSolicitacao),
+    })
+    setSalvandoSolicitacao(false)
+    if (r.ok) {
+      setNovaSolicitacao({ nome: '', comando: '', chat_id: '554384924456-1616013394@g.us', hora: '17:00', dias_semana: 'seg,ter,qua,qui,sex' })
+      setMostraNovaSolicitacao(false)
+      showMsgSolicitacao('Solicitação criada com sucesso!')
+      fetchSolicitacoes()
+    } else {
+      const d = await r.json().catch(() => ({}))
+      showMsgSolicitacao('Erro: ' + (d.error || r.status), 'error')
+    }
+  }
+
+  async function salvarEdicaoSolicitacao() {
+    setSalvandoSolicitacao(true)
+    const r = await fetch(`/api/solicitacoes/${editandoSolicitacao}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editSolicitacaoForm),
+    })
+    setSalvandoSolicitacao(false)
+    if (r.ok) {
+      setEditandoSolicitacao(null)
+      showMsgSolicitacao('Solicitação atualizada!')
+      fetchSolicitacoes()
+    } else {
+      showMsgSolicitacao('Erro ao salvar', 'error')
+    }
+  }
+
+  async function toggleSolicitacaoAtivo(s) {
+    await fetch(`/api/solicitacoes/${s.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...s, ativo: !s.ativo }),
+    })
+    fetchSolicitacoes()
+  }
+
+  async function excluirSolicitacao(id, nome) {
+    if (!confirm(`Excluir a solicitação "${nome}"?`)) return
+    await fetch(`/api/solicitacoes/${id}`, { method: 'DELETE' })
+    showMsgSolicitacao('Solicitação removida.')
+    fetchSolicitacoes()
+  }
+
+  async function executarAgora(s) {
+    showMsgSolicitacao('Executando...', 'info')
     try {
-      const r = await fetch('/api/config/bom-dia')
-      if (r.ok) { const d = await r.json(); setGrupoId(d.grupo || '') }
-    } catch {}
+      const r = await fetch('/api/solicitacoes/executar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: s.id }),
+      })
+      const d = await r.json()
+      if (r.ok) {
+        showMsgSolicitacao(`"${s.nome}" executada com sucesso!`)
+        fetchSolicitacoes()
+      } else {
+        showMsgSolicitacao('Erro: ' + (d.error || r.status), 'error')
+      }
+    } catch (e) {
+      showMsgSolicitacao('Erro: ' + e.message, 'error')
+    }
+  }
+
+  async function fetchConfig() {
     try {
       const r = await fetch('/api/config/notificacao-ok')
       if (r.ok) { const d = await r.json(); setGrupoNotifOk(d.grupo || '') }
@@ -304,29 +394,6 @@ export default function AdminPage() {
       if (r.ok) setUsuarios(await r.json())
     } catch {}
     setLoadingUsuarios(false)
-  }
-
-  async function salvarGrupo() {
-    if (!grupoId.trim()) return
-    setSalvandoGrupo(true)
-    try {
-      const r = await fetch('/api/config/bom-dia', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ grupo: grupoId.trim() }),
-      })
-      const d = await r.json()
-      if (r.ok) {
-        setMsg('Grupo do Bom Dia salvo com sucesso!')
-        setTimeout(() => setMsg(''), 4000)
-      } else {
-        setMsg('Erro: ' + (d.error || r.status))
-      }
-    } catch (e) {
-      setMsg('Erro: ' + e.message)
-    } finally {
-      setSalvandoGrupo(false)
-    }
   }
 
   async function salvarNotifOk() {
@@ -440,7 +507,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-surface-raised rounded-lg p-1 w-fit">
-          {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações'], ['metricas', 'Métricas']].map(([key, label]) => (
+          {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações'], ['solicitacoes', 'Solicitações'], ['metricas', 'Métricas']].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -758,36 +825,6 @@ export default function AdminPage() {
 
             <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5">
               <div className="mb-1">
-                <label className="text-white font-medium text-sm">Grupo do Bom Dia (WhatsApp)</label>
-                <p className="text-gray-500 text-xs mt-0.5 mb-3">
-                  ID do grupo que recebe a mensagem de bom dia. Formato: numero@g.us (ex: 554384924456-1616013394@g.us)
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={grupoId}
-                  onChange={e => setGrupoId(e.target.value)}
-                  placeholder="554384924456-1616013394@g.us"
-                  className="flex-1 bg-surface border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:border-[#008000] focus:outline-none transition"
-                />
-                <button
-                  onClick={salvarGrupo}
-                  disabled={salvandoGrupo || !grupoId.trim()}
-                  className="bg-brand hover:bg-brand-dark disabled:opacity-40 text-white text-sm px-6 py-2.5 rounded-lg transition font-medium shrink-0"
-                >
-                  {salvandoGrupo ? 'Salvando...' : 'Salvar'}
-                </button>
-              </div>
-              <div className="mt-4 pt-4 border-t border-white/[0.06]">
-                <p className="text-xs text-gray-500">
-                  Para encontrar o ID do grupo: abra a Evolution API ou verifique nos logs do webhook. O ID sempre termina com @g.us
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mt-4">
-              <div className="mb-1">
                 <label className="text-white font-medium text-sm">Grupo de Notificação — Tarefa Concluída (Ok)</label>
                 <p className="text-gray-500 text-xs mt-0.5 mb-3">
                   Quando uma tarefa for marcada como Ok no Notion, o bot envia um aviso neste grupo. Deixe vazio para desativar. Formato: numero@g.us
@@ -836,6 +873,143 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Solicitações */}
+        {tab === 'solicitacoes' && (
+          <>
+            {msgSolicitacao.texto && (
+              <div className={`mb-4 text-sm px-4 py-2.5 rounded-lg border ${msgSolicitacao.tipo === 'error' ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-green-900/20 border-green-800 text-brand'}`}>
+                {msgSolicitacao.texto}
+              </div>
+            )}
+
+            <div className="bg-blue-900/20 border border-blue-800 rounded-xl px-5 py-3 mb-6 text-sm text-blue-300">
+              <Clock className="w-4 h-4 inline shrink-0 mr-1" />
+              Solicitações Programadas executam comandos automaticamente no horário definido — sem precisar digitar no WhatsApp.
+              Exemplo: <code className="bg-blue-900/40 px-1 rounded">/relatorio chamados</code> todo dia às 17:00.
+            </div>
+
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-white font-semibold">Agendamentos ({solicitacoes.length})</h2>
+              <button
+                onClick={() => setMostraNovaSolicitacao(!mostraNovaSolicitacao)}
+                className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition"
+              >
+                {mostraNovaSolicitacao ? 'Cancelar' : '+ Nova Solicitação'}
+              </button>
+            </div>
+
+            {mostraNovaSolicitacao && (
+              <div className="bg-surface-raised rounded-xl border border-white/[0.06] p-5 mb-6">
+                <h3 className="text-white font-medium mb-4">Nova Solicitação Programada</h3>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1 block">Nome *</label>
+                    <input placeholder="Ex: Relatório Diário de Chamados" value={novaSolicitacao.nome} onChange={e => setNovaSolicitacao(p => ({ ...p, nome: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:border-brand focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1 block">Comando * (igual ao que você digitaria no WhatsApp)</label>
+                    <input placeholder="Ex: /relatorio chamados" value={novaSolicitacao.comando} onChange={e => setNovaSolicitacao(p => ({ ...p, comando: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:border-brand focus:outline-none" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-gray-400 text-xs mb-1 block">Horário *</label>
+                      <input type="time" value={novaSolicitacao.hora} onChange={e => setNovaSolicitacao(p => ({ ...p, hora: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-gray-400 text-xs mb-1 block">Chat ID (grupo)</label>
+                      <input placeholder="554384924456-1616013394@g.us" value={novaSolicitacao.chat_id} onChange={e => setNovaSolicitacao(p => ({ ...p, chat_id: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:border-brand focus:outline-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-xs mb-1 block">Dias da Semana</label>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {[['todos','Todos'],['seg','Seg'],['ter','Ter'],['qua','Qua'],['qui','Qui'],['sex','Sex'],['sab','Sáb'],['dom','Dom']].map(([val, label]) => {
+                        const isChecked = val === 'todos' ? novaSolicitacao.dias_semana === 'todos' : novaSolicitacao.dias_semana !== 'todos' && novaSolicitacao.dias_semana.split(',').includes(val)
+                        return (
+                          <button key={val} type="button" onClick={() => {
+                            if (val === 'todos') { setNovaSolicitacao(p => ({ ...p, dias_semana: 'todos' })) }
+                            else { const atual = novaSolicitacao.dias_semana === 'todos' ? [] : novaSolicitacao.dias_semana.split(',').filter(Boolean); const novo = isChecked ? atual.filter(d => d !== val) : [...atual, val]; setNovaSolicitacao(p => ({ ...p, dias_semana: novo.length ? novo.join(',') : 'seg' })) }
+                          }} className={`text-xs px-3 py-1.5 rounded-lg transition border ${isChecked ? 'bg-brand border-green-700 text-white' : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500'}`}>{label}</button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button onClick={salvarNovaSolicitacao} disabled={salvandoSolicitacao} className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white px-5 py-2 rounded-lg text-sm transition">{salvandoSolicitacao ? 'Salvando...' : 'Salvar'}</button>
+                  <button onClick={() => setMostraNovaSolicitacao(false)} className="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded-lg text-sm transition">Cancelar</button>
+                </div>
+              </div>
+            )}
+
+            {loadingSolicitacoes ? (
+              <p className="text-gray-500 text-sm">Carregando...</p>
+            ) : solicitacoes.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Clock className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p>Nenhuma solicitação programada.</p>
+                <p className="text-xs mt-1">Clique em "+ Nova Solicitação" para começar.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {solicitacoes.map(s => (
+                  <div key={s.id} className="bg-surface-raised rounded-xl border border-white/[0.06] p-4">
+                    {editandoSolicitacao === s.id ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div><label className="text-gray-400 text-xs mb-1 block">Nome</label><input value={editSolicitacaoForm.nome || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, nome: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
+                          <div><label className="text-gray-400 text-xs mb-1 block">Comando</label><input value={editSolicitacaoForm.comando || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, comando: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
+                          <div><label className="text-gray-400 text-xs mb-1 block">Horário</label><input type="time" value={editSolicitacaoForm.hora || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, hora: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
+                          <div><label className="text-gray-400 text-xs mb-1 block">Chat ID</label><input value={editSolicitacaoForm.chat_id || ''} onChange={e => setEditSolicitacaoForm(p => ({ ...p, chat_id: e.target.value }))} className="w-full bg-surface border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-brand focus:outline-none" /></div>
+                        </div>
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1 block">Dias da Semana</label>
+                          <div className="flex flex-wrap gap-2">
+                            {[['todos','Todos'],['seg','Seg'],['ter','Ter'],['qua','Qua'],['qui','Qui'],['sex','Sex'],['sab','Sáb'],['dom','Dom']].map(([val, label]) => {
+                              const isChecked = val === 'todos' ? editSolicitacaoForm.dias_semana === 'todos' : editSolicitacaoForm.dias_semana !== 'todos' && (editSolicitacaoForm.dias_semana || '').split(',').includes(val)
+                              return (
+                                <button key={val} type="button" onClick={() => {
+                                  if (val === 'todos') { setEditSolicitacaoForm(p => ({ ...p, dias_semana: 'todos' })) }
+                                  else { const atual = editSolicitacaoForm.dias_semana === 'todos' ? [] : (editSolicitacaoForm.dias_semana || '').split(',').filter(Boolean); const novo = isChecked ? atual.filter(d => d !== val) : [...atual, val]; setEditSolicitacaoForm(p => ({ ...p, dias_semana: novo.length ? novo.join(',') : 'seg' })) }
+                                }} className={`text-xs px-3 py-1.5 rounded-lg transition border ${isChecked ? 'bg-brand border-green-700 text-white' : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-500'}`}>{label}</button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={salvarEdicaoSolicitacao} disabled={salvandoSolicitacao} className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-sm transition">{salvandoSolicitacao ? 'Salvando...' : 'Salvar'}</button>
+                          <button onClick={() => setEditandoSolicitacao(null)} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-sm transition">Cancelar</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${s.ativo ? 'bg-green-400' : 'bg-gray-600'}`} />
+                            <span className="text-white font-medium text-sm">{s.nome}</span>
+                            <code className="text-xs bg-gray-800 text-blue-300 px-2 py-0.5 rounded">{s.comando}</code>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                            <span className="text-gray-400 text-xs flex items-center gap-1"><Clock className="w-3 h-3" /> {s.hora}</span>
+                            <span className="text-gray-500 text-xs">{s.dias_semana === 'todos' ? 'Todos os dias' : s.dias_semana.replace(/,/g, ' · ')}</span>
+                            {s.ultimo_executado && <span className="text-gray-600 text-xs">Última execução: {new Date(s.ultimo_executado).toLocaleString('pt-BR')}</span>}
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => executarAgora(s)} className="text-xs text-blue-400 bg-blue-900/20 hover:bg-blue-900/40 px-3 py-1.5 rounded-lg transition">Executar Agora</button>
+                          <button onClick={() => toggleSolicitacaoAtivo(s)} className={`text-xs px-3 py-1.5 rounded-lg transition ${s.ativo ? 'bg-green-900/30 text-brand hover:bg-brand/15' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>{s.ativo ? 'Ativo' : 'Inativo'}</button>
+                          <button onClick={() => { setEditandoSolicitacao(s.id); setEditSolicitacaoForm({ nome: s.nome, comando: s.comando, chat_id: s.chat_id, hora: s.hora, dias_semana: s.dias_semana, ativo: s.ativo }) }} className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">Editar</button>
+                          <button onClick={() => excluirSolicitacao(s.id, s.nome)} className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg transition">Excluir</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
