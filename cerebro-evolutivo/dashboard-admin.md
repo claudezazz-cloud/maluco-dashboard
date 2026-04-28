@@ -48,7 +48,7 @@ O N8N usa a tabela para:
 - Enviar Alertas Entrega → grupos com `alertas_notion_entrega = true`
 - O nó "Busca Grupo Atual" injeta nome+descrição no context do bot por mensagem
 
-Aba Solicitações: ao criar/editar, o campo Chat ID virou dropdown dos grupos cadastrados.
+Aba Solicitações: multi-grupo — ao criar/editar, o campo "Grupos" mostra checkboxes para selecionar múltiplos grupos simultaneamente. O `chat_id` é armazenado como string separada por vírgula (ex: `jid1@g.us,jid2@g.us`). O endpoint N8N `/api/solicitacoes/n8n` expande automaticamente: uma solicitação com 3 grupos vira 3 itens na resposta, um por grupo. O card da solicitação exibe os nomes dos grupos resolvidos da tabela `grupos_whatsapp`.
 
 ## Aba Evolutivo (Treinamento)
 
