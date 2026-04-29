@@ -11,10 +11,14 @@
             "id": "c445c466e5fa33c0",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
+              "type": "markdown",
+              "state": {
+                "file": "memoria-sistema.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "memoria-sistema"
             }
           }
         ]
@@ -49,7 +53,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "",
+                "query": "memoria sistem",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -70,7 +74,8 @@
               "title": "Bookmarks"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "horizontal",
@@ -181,6 +186,7 @@
   },
   "active": "c445c466e5fa33c0",
   "lastOpenFiles": [
+    "memoria-sistema.md",
     "IDEIAS.md",
     "Chamados.md",
     "Resolvidos Hoje.md",
@@ -206,7 +212,6 @@
     "Bom Dia.md",
     "Banco de Dados.md",
     "Autor.md",
-    "Autenticacao.md",
     "Custos.md.tmp.15684.1776816254382",
     "Stack Tecnologica.md.tmp.15684.1776816222012",
     "Maluco da IA.md.tmp.15684.1776798400640",
