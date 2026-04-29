@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 import { Eye, EyeOff, Clock, Users, MessageSquare, Pencil, Trash2, Plus, Check, X, Package, CheckCircle2 } from 'lucide-react'
+import MemoriaTab from '@/components/MemoriaTab'
 
 // ── Métricas helpers ──────────────────────────────────────────────────────────
 
@@ -583,7 +584,7 @@ export default function AdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-surface-raised rounded-lg p-1 w-fit">
-          {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações'], ['solicitacoes', 'Solicitações'], ['grupos', 'Grupos'], ['metricas', 'Métricas']].map(([key, label]) => (
+          {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações'], ['solicitacoes', 'Solicitações'], ['grupos', 'Grupos'], ['metricas', 'Métricas'], ['memoria', 'Memória']].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
@@ -1007,6 +1008,8 @@ export default function AdminPage() {
         )}
 
         {tab === 'metricas' && <MetricasTab />}
+
+        {tab === 'memoria' && <MemoriaTab />}
 
         {/* Configurações */}
         {tab === 'configuracoes' && (
