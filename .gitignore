@@ -16,4 +16,12 @@ out/
 
 # N8N workflow snapshot — contém credenciais reais. Fonte de verdade vive no N8N.
 workflow_v2.json
-workflow_v2.json.realkey.bak.claude/settings.json
+
+# Configuração local do Claude Code (pode conter tokens)
+.claude/
+
+# Arquivos de debug temporários
+monta_prompt_debug.txt
+busca_hist_debug.txt
+*.pyc
+__pycache__/
