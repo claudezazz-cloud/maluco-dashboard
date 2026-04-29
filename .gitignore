@@ -25,3 +25,7 @@ monta_prompt_debug.txt
 busca_hist_debug.txt
 *.pyc
 __pycache__/
+
+# Scripts com tokens embutidos (não subir no git)
+add_alerta_entrega_notion.py
+create_alerta_entrega_notion.py
