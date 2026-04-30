@@ -174,7 +174,9 @@ export default function TreinamentoPage() {
 
   async function fetchNumeros(colabId) {
     const r = await fetch(`/api/colaboradores/${colabId}/numeros`)
-    if (r.ok) setNumerosColab(prev => ({ ...prev, [colabId]: await r.json() }))
+    if (!r.ok) return
+    const data = await r.json()
+    setNumerosColab(prev => ({ ...prev, [colabId]: data }))
   }
 
   async function adicionarNumero(colabId) {
