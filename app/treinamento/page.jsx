@@ -26,6 +26,8 @@ export default function TreinamentoPage() {
   const [editandoColab, setEditandoColab] = useState(null)
   const [editColabForm, setEditColabForm] = useState({})
   const [msgColab, setMsgColab] = useState({ texto: '', tipo: '' })
+  const [numerosColab, setNumerosColab] = useState({}) // { [colabId]: [{id, numero, apelido}] }
+  const [novoNumeroForm, setNovoNumeroForm] = useState({}) // { [colabId]: {numero, apelido} }
 
   // ===== SKILLS =====
   const [skills, setSkills] = useState([])
@@ -125,7 +127,11 @@ export default function TreinamentoPage() {
   // ===== COLABORADORES FUNCS =====
   async function fetchColaboradores() {
     const r = await fetch('/api/colaboradores')
-    if (r.ok) setColaboradores(await r.json())
+    if (r.ok) {
+      const data = await r.json()
+      setColaboradores(data)
+      data.forEach(c => fetchNumeros(c.id))
+    }
   }
 
   function showMsgColab(texto, tipo = 'success') {
@@ -164,6 +170,35 @@ export default function TreinamentoPage() {
     if (!confirm(`Remover ${nome}?`)) return
     await fetch(`/api/colaboradores/${id}`, { method: 'DELETE' })
     fetchColaboradores()
+  }
+
+  async function fetchNumeros(colabId) {
+    const r = await fetch(`/api/colaboradores/${colabId}/numeros`)
+    if (r.ok) setNumerosColab(prev => ({ ...prev, [colabId]: await r.json() }))
+  }
+
+  async function adicionarNumero(colabId) {
+    const f = novoNumeroForm[colabId] || {}
+    if (!f.numero?.trim()) return
+    const r = await fetch(`/api/colaboradores/${colabId}/numeros`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numero: f.numero, apelido: f.apelido }),
+    })
+    if (r.ok) {
+      setNovoNumeroForm(prev => ({ ...prev, [colabId]: { numero: '', apelido: '' } }))
+      fetchNumeros(colabId)
+      showMsgColab('Número adicionado!')
+    } else {
+      const d = await r.json().catch(() => ({}))
+      showMsgColab('Erro: ' + (d.error || r.status), 'error')
+    }
+  }
+
+  async function excluirNumero(numId, colabId) {
+    if (!confirm('Remover este número?')) return
+    await fetch(`/api/colaboradores/numeros/${numId}`, { method: 'DELETE' })
+    fetchNumeros(colabId)
   }
 
   // ===== POPs FUNCS =====
@@ -733,9 +768,30 @@ export default function TreinamentoPage() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-white font-medium">{c.nome}</span>
                               {c.cargo && <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{c.cargo}</span>}
-                              {c.telefone_whatsapp && <span className="text-xs bg-green-900/40 text-green-300 px-2 py-0.5 rounded-full font-mono">📱 {c.telefone_whatsapp}</span>}
                             </div>
                             {c.funcoes && <p className="text-gray-400 text-sm mt-1 leading-relaxed">{c.funcoes}</p>}
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                              {(numerosColab[c.id] || []).map(n => (
+                                <span key={n.id} className="inline-flex items-center gap-1 text-xs bg-green-900/40 text-green-300 px-2 py-0.5 rounded-full font-mono">
+                                  📱 {n.numero}{n.apelido ? ` · ${n.apelido}` : ''}
+                                  <button onClick={() => excluirNumero(n.id, c.id)} className="ml-1 text-red-400 hover:text-red-300" title="Remover">×</button>
+                                </span>
+                              ))}
+                              <input
+                                value={novoNumeroForm[c.id]?.numero || ''}
+                                onChange={e => setNovoNumeroForm(p => ({ ...p, [c.id]: { ...(p[c.id] || {}), numero: e.target.value } }))}
+                                placeholder="5543..."
+                                className="text-xs bg-gray-900 border border-gray-700 text-white px-2 py-0.5 rounded-full w-28 font-mono"
+                              />
+                              <input
+                                value={novoNumeroForm[c.id]?.apelido || ''}
+                                onChange={e => setNovoNumeroForm(p => ({ ...p, [c.id]: { ...(p[c.id] || {}), apelido: e.target.value } }))}
+                                placeholder="apelido"
+                                className="text-xs bg-gray-900 border border-gray-700 text-white px-2 py-0.5 rounded-full w-24"
+                              />
+                              <button onClick={() => adicionarNumero(c.id)}
+                                className="text-xs bg-brand/80 hover:bg-brand text-white px-2 py-0.5 rounded-full">+ número</button>
+                            </div>
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
                             <button onClick={() => { setEditandoColab(c.id); setEditColabForm({nome: c.nome, cargo: c.cargo, funcoes: c.funcoes, telefone_whatsapp: c.telefone_whatsapp || ''}) }}
