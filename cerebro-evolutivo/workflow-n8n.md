@@ -139,6 +139,24 @@ Deploy do system prompt: script `update_system_prompt_db.py` — usa `docker exe
 **Bug corrigido (abr/2026) — Filtra e Decide / Filtra Entrega early exit:**
 Ambos os nós tinham `if (!grupoNotif) return [{ temNovas: false }]` que lia `grupo_notificacao_ok/entrega` da `dashboard_config`. Se a chave estivesse vazia, o fluxo terminava antes de chegar em `Busca Grupos OK/Entrega`. Fix: remover esse gate — os nós agora apenas detectam tarefas novas; os grupos são resolvidos pelos nós Postgres específicos.
 
+## Remetente canônico — múltiplos números por colaborador (abr/2026)
+
+Tabela `colaboradores_numeros (id, colaborador_id, numero, apelido)` mapeia múltiplos JIDs/celulares ao mesmo `dashboard_colaboradores`. Resolve o caso em que a mesma pessoa aparece com pushNames diferentes por aparelho ("Fran", "Franquelin Zazz", etc) — o bot ficava confuso em relatórios e tarefas.
+
+**No Extrai Dados Mensagem:** extrai `senderNumber` do `eData.key.participant` (em grupo) ou `remoteJid` (em DM), só dígitos.
+
+**Nos nós Salva (mensagens, transcrição, imagem):** o INSERT usa subquery COALESCE pra gravar o nome canônico:
+```sql
+remetente = COALESCE(
+  (SELECT c.nome FROM dashboard_colaboradores c
+   JOIN colaboradores_numeros cn ON cn.colaborador_id = c.id
+   WHERE cn.numero = '${senderNumber}' AND c.ativo = true LIMIT 1),
+  '${pushName}'
+)
+```
+
+UI: aba `/treinamento` → Colaboradores. Cada card lista os números cadastrados (com apelido opcional) + input inline pra adicionar/remover. Migração automática do `telefone_whatsapp` antigo no primeiro carregamento.
+
 ## Monta Prompt — cache split
 
 O system prompt é dividido em duas partes pelo marcador `__CACHE_SPLIT__`:
