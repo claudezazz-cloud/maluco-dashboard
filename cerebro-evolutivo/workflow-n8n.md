@@ -23,6 +23,7 @@ Webhook Evolution API
   → Busca Tarefas Notion
   → Busca Evolutivo        ← novo (abr/2026)
   → Busca Grupo Atual      ← novo (abr/2026)
+  → Busca Memoria Contexto ← novo (abr/2026)
   → Monta Prompt
   → Claude API
   → Formata Resposta
@@ -79,11 +80,44 @@ Suporta: `conversation`, `extendedTextMessage.text`, `imageMessage.caption`, `vi
 
 **Imagem no grupo sem menção ao bot — descrição não salva** — o pipeline de imagem já usava Claude Vision (nó `Descreve Imagem`) mas `dbMensagem` gravava só `"🖼️ [imagem]"` sem o conteúdo. Fix no nó `Formata Imagem`: inclui `| Conteúdo: <descrição>` no campo salvo no banco. Assim relatórios e contexto futuro têm a informação da imagem.
 
+## Busca Memoria Contexto (abr/2026)
+
+Nó HTTP Request inserido entre `Busca Grupo Atual` e `Monta Prompt`:
+- `GET https://dashboard.srv1537041.hstgr.cloud/api/memoria/contexto`
+- Header: `x-token: MALUCO_POPS_2026`
+- Query params: `chatId`, `texto`, `incluirOntem=true`
+- `continueOnFail: true` — não trava o bot se memória falhar
+- Retorna `bloco_contexto` injetado no `dynamic` antes do histórico Redis
+
+**Padrão para nós HTTP GET no N8N v4.2:** não especificar `method` nem `authentication` — GET e none são padrão. Incluir esses campos causa 405 em alguns endpoints.
+
+## Workflow de alertas Notion (Urf233bK6RqoSlQs)
+
+Roda a cada 5 minutos. Fluxo OK:
+```
+Schedule → Busca Ok Notion → Busca Visto Redis → Filtra e Decide
+        → Tem Novas? → Busca Grupos OK → Envia WhatsApp Notif → Salva Visto Redis
+```
+
+Fluxo Entrega:
+```
+Schedule → Busca Tarefas Vencendo → Busca Visto Entrega → Filtra Entrega
+        → Tem Entrega? → Busca Grupos Entrega → Envia Alerta Entrega → Salva Visto Entrega
+```
+
+`Busca Grupos OK` e `Busca Grupos Entrega` — nós Postgres que leem `grupos_whatsapp WHERE alertas_notion_ok/entrega = true`.
+
+**Envia WhatsApp Notif:** `jsonBody = {{ JSON.stringify({ number: $json.chat_id, text: $('Filtra e Decide').first().json.msg }) }}`
+**Envia Alerta Entrega:** `jsonBody = {{ JSON.stringify({ number: $json.chat_id, text: $('Filtra Entrega').first().json.msg }) }}`
+
 ## System Prompt placeholders
 
 `{{DATA}}` `{{ANO}}` `{{TODAY}}` `{{COLABORADORES}}` `{{CLIENTES}}` `{{POPS}}` `{{EVOLUTIVO}}` `{{HISTORICO}}` `{{REGRAS}}`
 
 Deploy do system prompt: script `update_system_prompt_db.py` — usa `docker exec psql` direto no banco.
+
+**Bug corrigido (abr/2026) — Filtra e Decide / Filtra Entrega early exit:**
+Ambos os nós tinham `if (!grupoNotif) return [{ temNovas: false }]` que lia `grupo_notificacao_ok/entrega` da `dashboard_config`. Se a chave estivesse vazia, o fluxo terminava antes de chegar em `Busca Grupos OK/Entrega`. Fix: remover esse gate — os nós agora apenas detectam tarefas novas; os grupos são resolvidos pelos nós Postgres específicos.
 
 ## Monta Prompt — cache split
 
