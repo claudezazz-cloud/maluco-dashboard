@@ -29,3 +29,8 @@ __pycache__/
 # Scripts com tokens embutidos (não subir no git)
 add_alerta_entrega_notion.py
 create_alerta_entrega_notion.py
+v3_01_clone.py
+v3_02_replace_claude_api.py
+v3_03_cutover.py
+v3_dump_full.py
+v3_dump/
