@@ -91,6 +91,26 @@ Nó HTTP Request inserido entre `Busca Grupo Atual` e `Monta Prompt`:
 
 **Padrão para nós HTTP GET no N8N v4.2:** não especificar `method` nem `authentication` — GET e none são padrão. Incluir esses campos causa 405 em alguns endpoints.
 
+## Bug crítico — SplitInBatches v3 (abr/2026)
+
+No nó `splitInBatches` v3, **os outputs são invertidos** em relação ao que parece intuitivo:
+- **Output 0 = "done"** (vazio quando o loop termina — usar para continuar fluxo após processar tudo)
+- **Output 1 = "loop"** (cada item individual — conectar ao processamento do batch)
+
+Workflow `5qTcBwOdBeoU1l7i` (memoria-dia) tinha `Por Chat [out0] -> Busca Mensagens Hoje`, o que fazia o loop nunca executar (saía direto pelo "done"). Resultado: workflow completava em 15ms com status=success mas zero linhas em `bot_memoria_dia`. Fix: mover destino de `out0` para `out1`.
+
+## Postgres node v2.5 — interpolação de query
+
+Para queries com chat_id ou outros valores dinâmicos, **usar `{{ $json.campo }}` direto no SQL**, NÃO template literal `=\`...${...}...\``. O backtick com `=` causa `Syntax error at line 1 near "\`"` no Postgres porque o N8N envia o SQL com os backticks literais.
+
+```sql
+-- correto (Busca Mensagens Hoje)
+SELECT chat_id, remetente, mensagem, data_hora FROM mensagens
+WHERE chat_id = '{{ $json.chat_id }}'
+AND data_hora >= (NOW() AT TIME ZONE 'America/Sao_Paulo')::date
+ORDER BY data_hora ASC LIMIT 200
+```
+
 ## Workflow de alertas Notion (Urf233bK6RqoSlQs)
 
 Roda a cada 5 minutos. Fluxo OK:
