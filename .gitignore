@@ -34,3 +34,8 @@ v3_02_replace_claude_api.py
 v3_03_cutover.py
 v3_dump_full.py
 v3_dump/
+v3_04_fix_dup_save.py
+v3_05_apply_phase12.py
+v3_06_pops_top5_and_retry.py
+v3_07_apply_tipos_enum.py
+v3_08_fanout_grupos.py
