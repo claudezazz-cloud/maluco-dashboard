@@ -13,10 +13,15 @@ async function ensureTable() {
       bom_dia BOOLEAN DEFAULT false,
       alertas_notion_entrega BOOLEAN DEFAULT false,
       alertas_notion_ok BOOLEAN DEFAULT false,
+      tipos_filtro_entrega TEXT[] DEFAULT '{}',
+      tipos_filtro_ok TEXT[] DEFAULT '{}',
       criado_em TIMESTAMP DEFAULT NOW(),
       atualizado_em TIMESTAMP DEFAULT NOW()
     )
   `)
+  // migrate existing tables that lack the new columns
+  await query(`ALTER TABLE grupos_whatsapp ADD COLUMN IF NOT EXISTS tipos_filtro_entrega TEXT[] DEFAULT '{}'`)
+  await query(`ALTER TABLE grupos_whatsapp ADD COLUMN IF NOT EXISTS tipos_filtro_ok TEXT[] DEFAULT '{}'`)
 }
 
 const GRUPOS_INICIAIS = [
@@ -66,12 +71,16 @@ export async function POST(req) {
   if (!session || !requireAdmin(session)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   try {
     await ensureTable()
-    const { nome, chat_id = '', descricao = '', bom_dia = false, alertas_notion_entrega = false, alertas_notion_ok = false } = await req.json()
+    const {
+      nome, chat_id = '', descricao = '',
+      bom_dia = false, alertas_notion_entrega = false, alertas_notion_ok = false,
+      tipos_filtro_entrega = [], tipos_filtro_ok = []
+    } = await req.json()
     if (!nome?.trim()) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 })
     const r = await query(
-      `INSERT INTO grupos_whatsapp (nome, chat_id, descricao, bom_dia, alertas_notion_entrega, alertas_notion_ok)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [nome.trim(), (chat_id || '').trim(), descricao.trim(), bom_dia, alertas_notion_entrega, alertas_notion_ok]
+      `INSERT INTO grupos_whatsapp (nome, chat_id, descricao, bom_dia, alertas_notion_entrega, alertas_notion_ok, tipos_filtro_entrega, tipos_filtro_ok)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [nome.trim(), (chat_id || '').trim(), descricao.trim(), bom_dia, alertas_notion_entrega, alertas_notion_ok, tipos_filtro_entrega, tipos_filtro_ok]
     )
     return NextResponse.json(r.rows[0], { status: 201 })
   } catch (e) {

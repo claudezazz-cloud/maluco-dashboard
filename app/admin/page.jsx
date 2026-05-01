@@ -267,9 +267,10 @@ export default function AdminPage() {
   const [editandoGrupo, setEditandoGrupo] = useState(null)
   const [editGrupoForm, setEditGrupoForm] = useState({})
   const [mostraNovoGrupo, setMostraNovoGrupo] = useState(false)
-  const [novoGrupo, setNovoGrupo] = useState({ nome: '', chat_id: '', descricao: '', alertas_notion_entrega: false, alertas_notion_ok: false })
+  const [novoGrupo, setNovoGrupo] = useState({ nome: '', chat_id: '', descricao: '', alertas_notion_entrega: false, alertas_notion_ok: false, tipos_filtro_entrega: [], tipos_filtro_ok: [] })
   const [salvandoGrupo, setSalvandoGrupo] = useState(false)
   const [msgGrupos, setMsgGrupos] = useState({ texto: '', tipo: '' })
+  const [tiposNotion, setTiposNotion] = useState([])
 
   // Usuarios
   const [usuarios, setUsuarios] = useState([])
@@ -296,7 +297,18 @@ export default function AdminPage() {
     fetchUsuarios()
     fetchSolicitacoes()
     fetchGrupos()
+    fetchTiposNotion()
   }, [router])
+
+  async function fetchTiposNotion() {
+    try {
+      const r = await fetch('/api/notion/tipos')
+      if (r.ok) {
+        const d = await r.json()
+        setTiposNotion(d.tipos || [])
+      }
+    } catch {}
+  }
 
   async function fetchFiliais() {
     const r = await fetch('/api/filiais')
@@ -332,7 +344,7 @@ export default function AdminPage() {
     })
     setSalvandoGrupo(false)
     if (r.ok) {
-      setNovoGrupo({ nome: '', chat_id: '', descricao: '', alertas_notion_entrega: false, alertas_notion_ok: false })
+      setNovoGrupo({ nome: '', chat_id: '', descricao: '', alertas_notion_entrega: false, alertas_notion_ok: false, tipos_filtro_entrega: [], tipos_filtro_ok: [] })
       setMostraNovoGrupo(false)
       showMsgGrupos('Grupo adicionado!')
       fetchGrupos()
@@ -967,6 +979,34 @@ export default function AdminPage() {
                             </button>
                           ))}
                         </div>
+                        {[['tipos_filtro_entrega','Tipos de tarefa que disparam alerta de Entrega'], ['tipos_filtro_ok','Tipos de tarefa que disparam alerta de OK']].map(([campo, label]) => {
+                          const sel = editGrupoForm[campo] || []
+                          return (
+                            <div key={campo}>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-gray-400 text-xs">{label}</label>
+                                <span className="text-gray-500 text-xs">{sel.length === 0 ? 'Todos os tipos' : `${sel.length} selecionados`}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto bg-surface border border-gray-700 rounded-lg p-2">
+                                {tiposNotion.map(t => {
+                                  const on = sel.includes(t.name)
+                                  return (
+                                    <button key={t.name} type="button"
+                                      onClick={() => setEditGrupoForm(p => ({
+                                        ...p,
+                                        [campo]: on ? sel.filter(x => x !== t.name) : [...sel, t.name]
+                                      }))}
+                                      className={`text-xs px-2 py-0.5 rounded-md border transition ${on ? 'bg-brand/20 border-brand text-brand' : 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500'}`}>
+                                      {t.name}
+                                    </button>
+                                  )
+                                })}
+                                {tiposNotion.length === 0 && <span className="text-gray-600 text-xs">Carregando tipos do Notion...</span>}
+                              </div>
+                              <p className="text-gray-600 text-[11px] mt-1">Vazio = recebe alertas de qualquer tipo. Selecione tipos para filtrar.</p>
+                            </div>
+                          )
+                        })}
                         <div className="flex gap-2">
                           <button onClick={salvarEdicaoGrupo} disabled={salvandoGrupo} className="bg-brand hover:bg-brand-dark disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-sm transition">{salvandoGrupo ? 'Salvando...' : 'Salvar'}</button>
                           <button onClick={() => setEditandoGrupo(null)} className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded-lg text-sm transition">Cancelar</button>
@@ -986,16 +1026,21 @@ export default function AdminPage() {
                             </code>
                           </div>
                           <div className="flex flex-wrap gap-1.5 mt-2">
-                            {[['alertas_notion_entrega','Entrega',Package],['alertas_notion_ok','OK',CheckCircle2]].map(([campo, label, Icon]) => (
-                              <button key={campo} onClick={() => toggleGrupo(g, campo)}
-                                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition ${g[campo] ? 'bg-brand/20 border-green-700 text-brand' : 'bg-transparent border-gray-700 text-gray-600 hover:border-gray-500'}`}>
-                                <Icon className="w-3 h-3" /> {label}
-                              </button>
-                            ))}
+                            {[['alertas_notion_entrega','Entrega',Package,'tipos_filtro_entrega'],['alertas_notion_ok','OK',CheckCircle2,'tipos_filtro_ok']].map(([campo, label, Icon, tcampo]) => {
+                              const tipos = g[tcampo] || []
+                              const ativo = g[campo]
+                              const tipoLabel = !ativo ? '' : (tipos.length === 0 ? 'todos' : `${tipos.length} tipo${tipos.length>1?'s':''}`)
+                              return (
+                                <button key={campo} onClick={() => toggleGrupo(g, campo)}
+                                  className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border transition ${ativo ? 'bg-brand/20 border-green-700 text-brand' : 'bg-transparent border-gray-700 text-gray-600 hover:border-gray-500'}`}>
+                                  <Icon className="w-3 h-3" /> {label}{tipoLabel && <span className="opacity-70 ml-0.5">· {tipoLabel}</span>}
+                                </button>
+                              )
+                            })}
                           </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
-                          <button onClick={() => { setEditandoGrupo(g.id); setEditGrupoForm({ nome: g.nome, chat_id: g.chat_id, descricao: g.descricao, alertas_notion_entrega: g.alertas_notion_entrega, alertas_notion_ok: g.alertas_notion_ok }) }} className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">Editar</button>
+                          <button onClick={() => { setEditandoGrupo(g.id); setEditGrupoForm({ nome: g.nome, chat_id: g.chat_id, descricao: g.descricao, alertas_notion_entrega: g.alertas_notion_entrega, alertas_notion_ok: g.alertas_notion_ok, tipos_filtro_entrega: g.tipos_filtro_entrega || [], tipos_filtro_ok: g.tipos_filtro_ok || [] }) }} className="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition">Editar</button>
                           <button onClick={() => excluirGrupo(g.id, g.nome)} className="text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 px-3 py-1.5 rounded-lg transition">Excluir</button>
                         </div>
                       </div>
