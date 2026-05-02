@@ -92,6 +92,36 @@ Endpoint `POST /api/memoria/aprender` faz upsert idempotente: se o fato
 (entidade_tipo, entidade_id, fato) já existe, incrementa `ocorrencias` e
 atualiza `ultima_ocorrencia` em vez de duplicar.
 
+### Caminho C — correção pelo usuário (`corrigir_fato`)
+
+6ª tool. Quando alguém aponta que um fato está errado ("isso tá errado", "na
+verdade é X", "esquece o que sabe sobre Y"), o bot chama:
+
+```
+corrigir_fato({
+  entidade_tipo: 'empresa',
+  entidade_id: 'Zazz Internet',
+  busca: 'RBX em momentos de venda',           // ILIKE no fato errado
+  novo_fato: 'Victor pediu pro Franquelin...', // opcional
+  peso: 7
+})
+```
+
+Endpoint `POST /api/memoria/corrigir`:
+1. `UPDATE bot_memoria_longa SET ativo=false WHERE entidade_tipo=X AND entidade_id=Y AND fato ILIKE %busca% AND ativo=true` (preserva histórico).
+2. Se `novo_fato` informado, INSERT com `validado_por='user'` e peso 7+.
+
+A flag `validado_por='user'` é o sinal que protege fatos corrigidos de serem
+sobrescritos pela extração automática batch (Caminho A). Quando o Claude Extrai
+Fatos rodar de novo e tentar inserir o fato errado, o INSERT no upsert vai
+incrementar `ocorrencias` mas **não** vai mudar `validado_por` nem reativar (a
+trigger condicional checa: se `ativo=false AND validado_por='user'`, não
+reativa).
+
+⚠️ Pra a proteção funcionar 100%, a extração batch (Parse Fatos e Deduplica)
+precisa filtrar por `validado_por IS NULL OR validado_por != 'user'` antes de
+mexer. **Verificar isso na próxima manutenção do workflow `tPUy8FowXH8v0skk`.**
+
 ## Como o bot usa
 
 A cada mensagem, o nó **Busca Memoria Contexto** chama
@@ -156,6 +186,7 @@ Botão "Extrair Fatos" dispara o workflow Memoria Longa via webhook
 | `POST /api/memoria/extrair-longa` | UI botão | dispara Bot Memoria Longa |
 | `GET /api/memoria/contexto?chatId&texto` | N8N (bot) | bloco pronto pra system prompt |
 | `POST /api/memoria/aprender` | bot (tool) | upsert de fato (idempotente) |
+| `POST /api/memoria/corrigir` | bot (tool) | desativa fato errado por busca ILIKE + opcional INSERT do correto (validado_por=user) |
 
 ## Configuração
 

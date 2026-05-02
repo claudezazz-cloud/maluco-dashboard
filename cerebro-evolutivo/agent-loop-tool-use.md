@@ -18,7 +18,7 @@ o agent loop completo:
 
 Tem retry automático em 429 (espera 25s — rate limit reseta por minuto).
 
-## 5 tools expostas
+## 6 tools expostas
 
 | name | Função | Endpoint chamado |
 |---|---|---|
@@ -27,6 +27,7 @@ Tem retry automático em 429 (espera 25s — rate limit reseta por minuto).
 | `resolver_tarefa_notion(page_id)` | PATCH `status=Ok` numa tarefa do Notion. | Notion API direto |
 | `listar_tarefas_notion(status?)` | Lista até 50 tarefas do Notion (filtra por status). | Notion API direto |
 | `aprender_fato(...)` | Upsert de fato durável em `bot_memoria_longa`. | dashboard `/api/memoria/aprender` |
+| `corrigir_fato(...)` | Desativa fato errado (ILIKE no texto) e opcionalmente salva versão correta com `validado_por=user`. | dashboard `/api/memoria/corrigir` |
 
 Schemas completos no código do nó Claude API.
 
