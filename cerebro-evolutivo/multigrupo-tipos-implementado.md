@@ -171,3 +171,29 @@ curl -sS "https://api.notion.com/v1/databases/d54e5911e8af43dfaed8f2893e59f6ef" 
   -H "Authorization: Bearer $NOTION_TOKEN" \
   -H "Notion-Version: 2022-06-28" | jq -r '.properties.Tipo.multi_select.options[].name'
 ```
+
+## 2ª rodada de bugs (2026-05-02)
+
+Reportados pelo usuário em produção:
+
+4. **`listar_tarefas_notion` faltava do schema TOOLS**
+   v3_07_apply_tipos_enum.py fez overwrite do jsCode do nó Claude API com o
+   arquivo local `agent_loop_code.js`, que tinha a tool só no handler — não no
+   schema TOOLS. Modelo via 3 tools, dizia "não tenho ferramenta pra listar".
+   Adicionado no schema. Lição: scripts que reaplicam o code inteiro precisam
+   ler o arquivo local atualizado, ou aplicar patches inline no workflow.
+
+5. **`Prepara Body` (mensagens agendadas) não fazia split de chat_ids**
+   `dashboard_solicitacoes_programadas.chat_id` permite múltiplos jids separados
+   por vírgula (ex: `jid1@g.us,jid2@g.us`). O nó enviava tudo como UM remoteJid
+   ao webhook, quebrando a query `Busca Histórico Postgres` (`WHERE chat_id =
+   'jid1,jid2'` = 0 rows) e o modelo respondia "não tenho histórico".
+   Agora o nó dá `String.split(',')` e emite 1 item por chat_id; cada item dispara
+   o webhook independentemente, então o relatório agendado pra N grupos chega em
+   N grupos com seu histórico correto.
+
+6. **Data exibida na MemoriaTab vinha 1 dia atrás (BRT vs UTC)**
+   Função `fmtData` só tratava strings de length=10. Mas a API devolve Postgres
+   `date` serializado como ISO completo (`2026-05-02T00:00:00.000Z`), length=24.
+   Caía no fallback `new Date()`, BRT (UTC-3) puxava pro dia 01. Fix: extrai
+   `YYYY-MM-DD` literal por regex independente do formato de entrada.
