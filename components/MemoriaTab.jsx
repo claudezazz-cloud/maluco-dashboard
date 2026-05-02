@@ -10,8 +10,13 @@ import {
 
 function fmtData(d) {
   if (!d) return '--'
-  const dt = new Date(typeof d === 'string' && d.length === 10 ? d + 'T12:00:00' : d)
-  return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  // Postgres `date` chega serializado como ISO 'YYYY-MM-DDT00:00:00.000Z' (UTC midnight).
+  // Converter direto pra Date local em BRT (UTC-3) perde 3h e cai no dia anterior.
+  // Solucao: extrair YYYY-MM-DD literal sem timezone.
+  const s = typeof d === 'string' ? d : (d instanceof Date ? d.toISOString() : String(d))
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`
+  return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function fmtTs(ts) {
