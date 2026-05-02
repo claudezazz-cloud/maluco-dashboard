@@ -118,17 +118,25 @@ export async function GET(request) {
 
     if (fatosFinais.length > 0) {
       const linhas = fatosFinais.map(f =>
-        `  [${f.entidade_tipo}:${f.entidade_id}] ${f.fato} (visto ${f.ocorrencias}x)`
+        `  [${f.entidade_tipo}:${f.entidade_id}] ${f.fato} (visto ${f.ocorrencias}x, peso ${f.peso})`
       ).join('\n')
-      partes.push(`📌 FATOS CONHECIDOS RELEVANTES:\n${linhas}`)
+      partes.push(
+        `🧠 FATOS QUE VOCÊ JÁ APRENDEU (memória de longa duração — total ${fatosFinais.length}):\n` +
+        `Quando o usuário perguntar "o que você aprendeu / que fatos você sabe / o que você lembra", ` +
+        `LISTE estes fatos. NÃO diga que não tem fatos — você TEM ${fatosFinais.length} aprendizados:\n` +
+        linhas
+      )
     }
 
     let bloco_contexto = ''
     if (partes.length > 0) {
       bloco_contexto =
-        '🧠 MEMÓRIA DA EMPRESA (use como contexto, não como regra absoluta — pode estar desatualizado):\n' +
+        '═══════════════════════════════════════\n' +
+        '🧠 SUA MEMÓRIA (leia antes de dizer "não tenho contexto"):\n' +
+        '═══════════════════════════════════════\n' +
         partes.join('\n\n') +
-        '\n\nFim da memória — priorize informações mais recentes da conversa acima deste bloco.'
+        '\n\n═══════════════════════════════════════\n' +
+        'Fim da memória. Prefira informações mais recentes da conversa quando houver conflito.'
 
       // Limite de segurança: 3000 chars
       if (bloco_contexto.length > 3000) {
