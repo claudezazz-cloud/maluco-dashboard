@@ -8,17 +8,23 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
-  const { tipo, id } = params
+  const { tipo, id } = await params
+  const realId = decodeURIComponent(id)
+  const isAll = realId === '_all_'
 
   try {
-    const result = await query(
-      `SELECT id, entidade_tipo, entidade_id, fato, categoria, peso, ocorrencias,
-              primeira_ocorrencia, ultima_ocorrencia, ativo, validado_por
-       FROM bot_memoria_longa
-       WHERE entidade_tipo = $1 AND entidade_id = $2
-       ORDER BY peso DESC, ocorrencias DESC`,
-      [tipo, decodeURIComponent(id)]
-    )
+    const sql = isAll
+      ? `SELECT id, entidade_tipo, entidade_id, fato, categoria, peso, ocorrencias,
+                primeira_ocorrencia, ultima_ocorrencia, ativo, validado_por
+         FROM bot_memoria_longa
+         WHERE entidade_tipo = $1 AND ativo = true
+         ORDER BY peso DESC, ocorrencias DESC, ultima_ocorrencia DESC`
+      : `SELECT id, entidade_tipo, entidade_id, fato, categoria, peso, ocorrencias,
+                primeira_ocorrencia, ultima_ocorrencia, ativo, validado_por
+         FROM bot_memoria_longa
+         WHERE entidade_tipo = $1 AND entidade_id = $2
+         ORDER BY peso DESC, ocorrencias DESC`
+    const result = await query(sql, isAll ? [tipo] : [tipo, realId])
     return NextResponse.json(result.rows)
   } catch (e) {
     console.error('[memoria/entidade]', e.message)
