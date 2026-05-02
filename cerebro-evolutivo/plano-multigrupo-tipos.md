@@ -1,5 +1,9 @@
 # Plano: Multi-Grupo WhatsApp + Filtro por Tipo de Tarefa
 
+> ✅ **CONCLUÍDO em 2026-05-02.** Documentação do estado atual em
+> [multigrupo-tipos-implementado.md](multigrupo-tipos-implementado.md).
+> Este arquivo fica como histórico do plano original.
+
 **Data:** 2026-05-01
 **Contexto:** Bot v3 (tool_use) já em produção no único grupo "Nego's Internet". Vai expandir
 para outros grupos internos (Designer, Migração, Diário) com regras independentes.
