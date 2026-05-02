@@ -39,3 +39,4 @@ v3_05_apply_phase12.py
 v3_06_pops_top5_and_retry.py
 v3_07_apply_tipos_enum.py
 v3_08_fanout_grupos.py
+v3_09_fix_decide_tipo.py

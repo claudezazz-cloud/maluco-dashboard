@@ -125,3 +125,49 @@ Bot agora roda com:
 - Retry no 429 com 25s de backoff
 
 Por mensagem ~6-8k tokens input. Cabe no tier 1 da Anthropic (50k/min para Haiku).
+
+## Revisão pós-implementação (2026-05-02)
+
+Audit caçando bugs ocultos. Achei 3 reais e corrigi:
+
+1. **Crítico — case mismatch em 5 tipos do enum**
+   `TIPOS_VALIDOS` tinha `Crachá`, `Rifa`, `Lon`, `Panfletos`, `Fichas` (capitalizado),
+   mas o Notion DB tem `crachá`, `rifa`, `lon`, `panfletos`, `fichas` (minúsculo).
+   Multi_select é case-sensitive: o bot estava prestes a criar **opções duplicadas**
+   silenciosamente toda vez que escolhesse um desses 5. Alinhado com o exato case do Notion.
+
+2. **Crítico — Decide Notif Ok lendo tipo do lugar errado**
+   Após troca da query (Postgres groups em vez de config single-row), o `inputData` que
+   chega no nó é uma linha do Postgres, não a resposta do PATCH no Notion. O código lia
+   `inputData.properties` que sempre era undefined → `tipoTarefa=''` sempre →
+   grupos com `tipos_filtro_ok` configurado SEMPRE pulavam (regra: "filtro ativo + tipo
+   vazio = pula"). Resultado prático: a feature não funcionaria pra ninguém com filtro.
+   Corrigido: agora lê via `$('Marca Ok no Notion').all()[i].properties` pareando
+   posicionalmente cada OK com sua resposta do Notion.
+
+3. **Médio — modelo às vezes confirma "✅ criado!" mesmo quando tool retornou erro**
+   Já vimos esse comportamento no teste manual. System prompt agora tem regra explícita
+   no início da seção FERRAMENTAS: "se o tool_result começa com 'Erro:' ou 'Exceção:',
+   NÃO confirme sucesso — repassa o erro pro usuário".
+
+## Audit checklist (verificados como ok)
+
+- ALTER TABLE no GET é idempotente, latência ~50ms aceitável
+- Envia Notif Ok body já estava usando `$json.chat_id` e `$json.msg`
+- COALESCE em PUT trata array vazio `[]` corretamente (preserva como "todos os tipos")
+- Cache `/api/notion/tipos` module-level ok em PM2 single-instance
+- Conexões do pipeline OK: `Tem Ok? → Explode Oks → Marca Ok no Notion → Busca Config Notif Ok → Decide Notif Ok → Envia Notif Ok`
+- Schema Postgres confirmado via `\d grupos_whatsapp`
+
+## Pra atualizar enum de tipos no futuro
+
+Se criar/remover/renomear um tipo no Notion DB, atualizar a constante `TIPOS_VALIDOS`
+no nó "Claude API" do workflow v3 — copiar **com o exato case** do Notion. Senão o bot
+vai criar duplicatas silenciosas.
+
+Comando útil pra listar os tipos atuais:
+```bash
+curl -sS "https://api.notion.com/v1/databases/d54e5911e8af43dfaed8f2893e59f6ef" \
+  -H "Authorization: Bearer $NOTION_TOKEN" \
+  -H "Notion-Version: 2022-06-28" | jq -r '.properties.Tipo.multi_select.options[].name'
+```
