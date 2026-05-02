@@ -55,12 +55,13 @@ export async function GET(request) {
       resumoOntem = ontemRes.rows[0] || null
     }
 
-    // Todos os fatos fortes (peso >= 7 ou ocorrencias >= 3)
+    // Todos os fatos ativos com peso minimo (limiar baixo pra fase inicial;
+    // ranking depois decide o que cabe no bloco final)
     const fatosRes = await query(
       `SELECT entidade_tipo, entidade_id, fato, categoria, peso, ocorrencias
        FROM bot_memoria_longa
-       WHERE ativo = true AND (peso >= 7 OR ocorrencias >= 3)
-       ORDER BY ocorrencias DESC, peso DESC
+       WHERE ativo = true AND peso >= 4
+       ORDER BY peso DESC, ocorrencias DESC, ultima_ocorrencia DESC
        LIMIT 100`
     )
     const todosFatos = fatosRes.rows
@@ -89,7 +90,14 @@ export async function GET(request) {
            !fatosRelevantes.find(r => r.id === f.id)
     ).slice(0, 5)
 
-    const fatosFinais = [...fatosRelevantes, ...fatosGerais].slice(0, 20)
+    // Base ampla: top fatos globais (qualquer tipo) ranqueados por peso+ocorrencias.
+    // Garante que o bot SEMPRE veja algum aprendizado, mesmo sem match no texto.
+    const idsJaIncluidos = new Set([...fatosRelevantes, ...fatosGerais].map(f => f.entidade_tipo + ':' + f.entidade_id + ':' + f.fato))
+    const fatosTop = todosFatos.filter(
+      f => !idsJaIncluidos.has(f.entidade_tipo + ':' + f.entidade_id + ':' + f.fato)
+    ).slice(0, 10)
+
+    const fatosFinais = [...fatosRelevantes, ...fatosGerais, ...fatosTop].slice(0, 25)
 
     // Monta bloco_contexto como string pronta para injeção no system prompt
     const partes = []
