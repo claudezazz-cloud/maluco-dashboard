@@ -218,3 +218,65 @@ Reportados pelo usuário em produção:
    Lição padrão N8N que fica forte: **todo Postgres node usado pra buscar dados que
    PODEM ser vazios precisa de `alwaysOutputData: true`**. Senão o flow morre na
    primeira vez que a query retorna empty.
+
+## 4ª rodada: aprendizado contínuo + alertas Notion centralizados (2026-05-02)
+
+9. **UI mostrava 0 fatos mesmo com a tabela populada**
+   Endpoint `/api/memoria/entidade/[tipo]/[id]` tratava `id='_all_'` como literal
+   (`WHERE entidade_id = '_all_'` = sempre 0). UI usava esse path pra listar todos
+   os fatos por tipo. Adicionado tratamento especial: se id===`_all_`, devolve
+   todos os fatos ativos daquele tipo.
+
+10. **Bot agora aprende ao vivo (tool `aprender_fato`)**
+    Adicionada 5ª tool no agent loop. Bot pode salvar fato durável mid-conversa
+    quando perceber padrão útil ("Dra. Maria sempre pede entrega segunda", "Junior
+    cobre região X"). Endpoint POST `/api/memoria/aprender` faz upsert idempotente
+    (UNIQUE em entidade_tipo+id+fato → incrementa ocorrencias). System prompt
+    instrui o uso proativo, mas só pra fatos não-triviais.
+
+11. **Memória Longa cron 1x/dia → 1x/6h**
+    Agendamento mudou de `0 3 * * *` pra `0 */6 * * *`. Combina extração batch
+    (cobre tudo) com aprendizado real-time (tool). Custa mais tokens/dia mas
+    ainda é barato com Haiku.
+
+12. **Alertas Notion duplicados — workflow polling Urf233 não filtrava por tipo**
+    Existia workflow paralelo "Notificação Tarefa Ok — Notion" (Urf233bK6RqoSlQs)
+    que faz polling no Notion a cada 5min e enviava alertas pra TODOS os grupos
+    com `alertas_notion_ok=true` SEM ler `tipos_filtro_ok`. Resultado: tarefa
+    Carimbo marcada Ok pelo bot chegava no grupo Internet apesar do filtro
+    excluir Carimbo.
+
+    **Fix**: refatorei `Filtra e Decide` e `Filtra Entrega` do polling pra fazer
+    fan-out por grupo lendo `tipos_filtro_*`. Cada grupo só recebe alerta de
+    tarefas cujo tipo bate seu filtro (vazio = todos).
+
+    **Anti-duplicação**: `Decide Notif Ok` do v3 virou no-op (`return []`). Antes
+    ele enviava notificação imediata quando o bot marcava Ok via tool, mas o
+    polling em até 5min cobre o mesmo caso. Centralizar tudo no polling tem
+    bonus: pega marcações feitas direto na UI do Notion (sem passar pelo bot).
+
+## Arquitetura final de aprendizado
+
+```
+Tempo real:         Bot + tool aprender_fato → POST /api/memoria/aprender → bot_memoria_longa
+Diário (madrugada): Bot Memoria Dia (5qTcBwOdBeoU1l7i) → bot_memoria_dia (1 row/chat/dia)
+Cada 6h:            Bot Memoria Longa (tPUy8FowXH8v0skk) → extrai fatos de bot_memoria_dia → bot_memoria_longa
+Em cada conversa:   Busca Memoria Contexto → injeta resumo do dia/ontem + fatos peso>=7 ou ocorrencias>=3
+                    (cross-grupo: empresa/regiao/entidades mencionadas no texto da msg)
+```
+
+Cross-grupo: `bot_memoria_dia` é por chat_id, `bot_memoria_longa` é global. Fatos
+extraídos pela memória longa são compartilhados entre todos os grupos.
+
+## Arquitetura final de alertas Notion
+
+```
+Bot marca tarefa Ok via tool resolver_tarefa_notion → PATCH na page (Notion atualizada)
+                    ↓ (polling a cada 5min vê last_edited_time recente)
+Urf233 polling → Filtra e Decide (fan-out por grupo + filtro tipos_filtro_ok)
+                    ↓
+                   Envia WhatsApp Notif (uma chamada por grupo aplicável)
+```
+
+Mesmo fluxo pra Entrega, com `tipos_filtro_entrega`. Marcações manuais direto no
+Notion (sem passar pelo bot) também disparam o alerta — polling pega tudo.
