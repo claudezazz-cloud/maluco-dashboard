@@ -197,3 +197,24 @@ Reportados pelo usuário em produção:
    `date` serializado como ISO completo (`2026-05-02T00:00:00.000Z`), length=24.
    Caía no fallback `new Date()`, BRT (UTC-3) puxava pro dia 01. Fix: extrai
    `YYYY-MM-DD` literal por regex independente do formato de entrada.
+
+## 3ª rodada (2026-05-02)
+
+7. **Tool `criar_tarefa_notion` sem campo `valor`**
+   Tarefa "Carimbo Dra. Maria - R$ 90" foi criada com Valor=R$ 0 e o preço acabou
+   na descrição/Obs. Adicionado `valor: number` no schema da tool + handler aceita
+   numero ou string ("R$ 90,00" → parse → 90). System prompt reforça: "preço vai em
+   `valor`, NÃO repete em `descricao`/`obs`".
+
+8. **Bot Memoria Longa em catch-22 — nunca aprendia**
+   Workflow `tPUy8FowXH8v0skk` rodava de madrugada: Agendamento 03h → Busca Resumos
+   Semana → **Busca Fatos Existentes** → Prepara Prompt → Claude → Salva. Mas
+   "Busca Fatos Existentes" não tinha `alwaysOutputData=true`. Tabela começa vazia,
+   query devolve 0 rows, fluxo morre antes do Claude. Resultado: **0 fatos
+   aprendidos durante semanas** (UI mostrava "Nenhum fato ainda. O bot aprende
+   automaticamente toda madrugada"). Liguei a flag, disparei via Webhook Longa
+   manualmente, aprendeu 6 fatos de 4 entidades imediatamente.
+
+   Lição padrão N8N que fica forte: **todo Postgres node usado pra buscar dados que
+   PODEM ser vazios precisa de `alwaysOutputData: true`**. Senão o flow morre na
+   primeira vez que a query retorna empty.
