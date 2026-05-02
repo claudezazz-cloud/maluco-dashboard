@@ -40,3 +40,4 @@ v3_06_pops_top5_and_retry.py
 v3_07_apply_tipos_enum.py
 v3_08_fanout_grupos.py
 v3_09_fix_decide_tipo.py
+v3_10_fix_prepara_body_multi.py
