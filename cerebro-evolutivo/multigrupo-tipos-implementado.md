@@ -1,282 +1,145 @@
-# Multi-Grupo + Filtro de Tipos — Como o bot funciona agora
+# Multi-Grupo + Filtro por Tipo de Tarefa
 
-**Implementado em:** 2026-05-01
-**Workflow:** `Pj5SdaxFh9H9EIX4` (Maluco Bot v3 tool_use)
+**Status:** em produção desde 2026-05-01
+**Workflows envolvidos:**
+- `Pj5SdaxFh9H9EIX4` — Maluco Bot v3 (tool_use)
+- `Urf233bK6RqoSlQs` — Notificação Tarefa Ok — Notion (polling 5min)
 
-## Visão geral
+## O problema que isso resolve
 
-O bot agora suporta **N grupos do WhatsApp** com regras independentes,
-e cada grupo escolhe **quais tipos de tarefa** disparam alertas Notion para ele.
-A mesma instância Evolution + mesmo workflow N8N atendem todos.
+Antes: bot atendia 1 grupo só (Nego's Internet), e alertas Notion (OK / Entrega)
+iam pra esse grupo único independente do tipo da tarefa. Quando expandiu pra
+grupo do designer (Carimbo, Adesivo, Fachada…) começou a vazar alerta entre
+grupos.
 
-## Onde tudo vive
+Agora: cada grupo configura na dashboard quais *tipos de tarefa* dispara alerta
+pra ele. Filtro vazio = "todos os tipos".
 
-### Postgres
-- `grupos_whatsapp` — uma linha por grupo:
-  - `chat_id` (JID do grupo)
-  - `bom_dia`, `alertas_notion_entrega`, `alertas_notion_ok` (boolean)
-  - `tipos_filtro_entrega TEXT[]` — tipos que o grupo recebe alerta de Entrega.
-    Vazio (`{}`) = todos os tipos.
-  - `tipos_filtro_ok TEXT[]` — idem para alertas de OK.
-- `mensagens_agendadas` (já existia, sem mudança nesta feature)
+## Schema (Postgres)
 
-### Dashboard `/admin` aba "Grupos"
-- Card por grupo. Botão *Editar* abre form com:
-  - Nome / chat_id / descrição
-  - Toggles **Alerta Entrega** / **Alerta OK**
-  - Multi-select de **Tipos de Entrega** e **Tipos de OK**
-    (se selecionar zero, é "todos os tipos")
-- Tipos do multi-select vêm de `/api/notion/tipos` (cache 5min, lê schema do Notion).
+```sql
+grupos_whatsapp (
+  id, nome, chat_id UNIQUE, descricao, ativo,
+  bom_dia                BOOLEAN,
+  alertas_notion_entrega BOOLEAN,
+  alertas_notion_ok      BOOLEAN,
+  tipos_filtro_entrega   TEXT[],   -- vazio/null = todos os tipos
+  tipos_filtro_ok        TEXT[],   -- idem
+  criado_em, atualizado_em
+)
+```
 
-### Bot (agent loop, nó `Claude API` no v3)
-- Tool `criar_tarefa_notion` agora tem `tipo` com `enum` da lista oficial de tipos válidos
-  (lista hardcoded sincronizada de 2026-05-01 — atualizar quando criar/remover tipos no Notion).
-- Handler valida: se o modelo passar tipo fora do enum, retorna erro descritivo
-  pra ele tentar de novo com um tipo válido.
-- Modelo é instruído: *"escolha SEMANTICAMENTE o mais próximo do pedido. Se não souber, use Outros. NUNCA invente."*
+Migração roda no `ensureTable()` do `dashboard/app/api/grupos/route.js`
+(idempotente via `ALTER TABLE … ADD COLUMN IF NOT EXISTS`).
 
-### Workflow N8N — fan-out
-1. **Tem Ok?** (IF) → **Explode Oks** (1 item por OK detectado)
-2. **Marca Ok no Notion** (PATCH status=Ok) — resposta inclui `properties.Tipo.multi_select`
-3. **Busca Config Notif Ok** (Postgres) — `SELECT chat_id, tipos_filtro_ok FROM grupos_whatsapp WHERE ativo AND alertas_notion_ok AND chat_id<>''`
-4. **Decide Notif Ok** (Code) — pra cada grupo:
-   - Se `tipos_filtro_ok` vazio → manda
-   - Se contém o `tipo` da tarefa → manda
-   - Se filtro tem itens e tipo não bate → pula
-   - Se for o próprio grupo de origem da OK → pula
-5. **Envia Notif Ok** (HTTP Evolution) — usa `{{ $json.chat_id }}` do item gerado pelo Decide
+## API
 
-Cada item gerado pelo Decide vira uma chamada separada à Evolution = 1 mensagem por grupo aplicável.
+| Rota | Método | Função |
+|---|---|---|
+| `/api/grupos` | GET / POST | lista (auto-seed) / cria |
+| `/api/grupos/[id]` | PUT / DELETE | edita / remove |
+| `/api/notion/tipos` | GET | lista tipos válidos da DB Notion (cache 5min) |
 
-## Regras importantes para entender o fluxo
+Auth: `getSession()` + `requireAdmin()` (ou `x-token: MALUCO_POPS_2026` para o bot).
 
-- **A query `Busca Config Notif Ok`** filtra `chat_id <> ''` — grupos cadastrados sem JID
-  (ainda não preenchidos pelo usuário) são ignorados, nunca quebram o pipeline.
-- **`alwaysOutputData: true`** está ativo nesse Postgres, então 0 grupos não trava o flow.
-- **Filtro vazio = todos os tipos.** Isso evita que adicionar um tipo novo no Notion
-  (ex: "Bordado") quebre alertas — grupos com filtro vazio continuam recebendo tudo,
-  e grupos com filtro restrito ignoram o tipo novo até que admin adicione na lista.
-- **Mesmo pipeline serve para Entrega** (não foi alterado nesta v8, vai usar o
-  mesmo padrão quando o usuário precisar — basta clonar a lógica trocando `_ok` por `_entrega`).
+## UI — `/admin` aba "Grupos"
 
-## Limpezas feitas
+- Card por grupo com nome, chat_id, descrição.
+- Toggles **Alerta Entrega** / **Alerta OK**.
+- Pra cada toggle ativo, multi-select com os 34+ tipos do Notion.
+- Botão indica resumo: `OK · todos` ou `OK · 4 tipos`.
 
-- Removido o tipo "teste" do multi_select Tipo no Notion (criado por engano pelo bot
-  antes do enum). Ficaram 34 tipos válidos.
+## Bot — onde o tipo entra
 
-## Como adicionar/remover tipos no futuro
+A tool `criar_tarefa_notion` tem `tipo` com `enum` da lista oficial de tipos
+válidos (constante `TIPOS_VALIDOS` no nó Claude API do v3). Handler valida
+antes de chamar o Notion: tipo fora do enum → retorna erro pro modelo escolher
+um válido.
 
-1. Criar/remover na UI do Notion (database `d54e5911...`)
-2. **Atualizar a constante `TIPOS_VALIDOS`** no nó "Claude API" do workflow v3.
-   Está hardcoded, então o bot só conhece os tipos que estão na constante.
-   Não dá pra confiar 100% em fetch dinâmico porque task-runner mata o cache rápido.
-3. Pra UI da dashboard não precisa mexer — `/api/notion/tipos` lê o schema do Notion direto.
+⚠️ **Case-sensitive**: `Crachá` vs `crachá` são opções DIFERENTES no Notion. A
+constante `TIPOS_VALIDOS` precisa bater EXATAMENTE com o case do Notion. Caso
+contrário, o bot cria opções duplicadas silenciosamente (já aconteceu uma vez
+— removido manualmente).
 
-## Como adicionar um novo grupo
+Pra atualizar o enum:
+```bash
+curl -sS "https://api.notion.com/v1/databases/d54e5911e8af43dfaed8f2893e59f6ef" \
+  -H "Authorization: Bearer $NOTION_TOKEN" -H "Notion-Version: 2022-06-28" \
+  | jq -r '.properties.Tipo.multi_select.options[].name'
+```
+…e copia pro `TIPOS_VALIDOS` no nó Claude API.
 
-1. Criar o grupo no WhatsApp, adicionar o número da Evolution
-2. Pegar o JID (formato `120363xxxxx@g.us`)
-3. `/admin` → aba Grupos → Adicionar grupo (preenche nome, chat_id)
-4. Editar → ativar toggles que quiser → escolher tipos
-5. Pronto
+## Workflow N8N — alertas (fluxo definitivo)
 
-Não precisa mexer em nenhum nó do N8N — o fan-out lê do banco a cada execução.
+**Fonte única de alertas Ok/Entrega:** workflow `Urf233bK6RqoSlQs` (polling
+5min do Notion).
 
-## Pegadinhas
+```
+A cada 5 min  →  Busca Ok Notion (HTTP)
+              →  Busca Visto Redis        ┐
+              →  Busca Grupos OK (Postgres)│ → Filtra e Decide (fan-out por grupo + filtro de tipo)
+                                          ┘                ↓
+                                                          Tem Novas? → Envia WhatsApp Notif (1x por grupo aplicável)
+                                                                    → Salva Visto Redis (dedup)
+```
 
-- **Mudou o tipo da `Marca Ok no Notion`?** Se a resposta do PATCH parar de incluir
-  `properties.Tipo`, o `Decide Notif Ok` recebe `tipoTarefa=''` e grupos com filtro
-  ativo *pulam* (porque sem tipo identificado não há como saber se bate). Então:
-  garantir que o PATCH sempre devolve a página atualizada (Notion devolve por padrão).
-- **chat_id vazio não dispara mensagem**: filtra na query.
-- **Grupo origem da OK não recebe sua própria notificação** (evita duplicar pra quem
-  acabou de mandar a mensagem que disparou o OK).
+Mesmo pipeline pra `Entrega` (nodes `Busca Tarefas Vencendo`, `Filtra Entrega`,
+`Busca Grupos Entrega`, `Envia Alerta Entrega`).
 
-## Validação
+### Lógica do `Filtra e Decide`
+1. Pega tarefas Notion editadas nos últimos 12 min com status Ok.
+2. Pra cada grupo (Busca Grupos OK):
+   - filtro vazio → recebe tudo
+   - filtro com itens → só recebe tarefas cujo `Tipo` está no filtro
+   - tipo da tarefa não identificado + filtro ativo → pula (conservador)
+3. Emite N items (um por grupo aplicável); cada item dispara 1 chamada Evolution.
 
-Roteiro de teste manual:
-1. `/admin` → aba Grupos → 4 grupos pré-cadastrados aparecem
-2. Editar "Nego's Sub" (designer): chat_id, ativar Entrega+OK, escolher tipos
-   (Carimbo, Adesivo, Fachada, etc.)
-3. Pedir ao bot pra criar tarefa "Carimbo da Dr. Ana pra sexta" → tool cria com Tipo=Carimbo
-4. Marcar essa tarefa como OK no Notion → notificação chega só no Designer
-5. Criar tarefa "Internet caiu para cliente X" → Tipo=Internet → OK chega só no grupo Internet
-6. Tentar pedir tipo absurdo "abre tarefa de planeta marte" → tool valida e bot pede
-   esclarecimento
+### Por que polling e não webhook do Notion?
+
+Notion não tem webhook gratuito. Polling 5min cobre dois caminhos:
+- bot marca via `resolver_tarefa_notion` → Notion atualiza → polling vê em ≤5min
+- usuário marca direto na UI do Notion → mesmo flow
+
+### Por que `Decide Notif Ok` do v3 virou no-op?
+
+Antes ele enviava notificação imediata ao bot marcar via tool. Mas o polling em
+≤5min cobre o mesmo caso. Ter as duas fontes = duplicação. Centralizado no
+polling pra ter consistência.
+
+## Como adicionar/configurar um grupo novo
+
+1. Adicionar o número da Evolution no grupo do WhatsApp (admin do grupo).
+2. Pegar o JID (formato `120363xxxxx@g.us` para grupos novos, `xxxxx-yyyyy@g.us`
+   para grupos antigos).
+3. `/admin` → aba **Grupos** → *Adicionar grupo* → nome, chat_id, descrição.
+4. Editar → ligar toggles → escolher tipos no multi-select.
+5. Pronto. Não precisa mexer em nó N8N — o fan-out lê do banco a cada execução.
+
+## Pegadinhas conhecidas
+
+- **`chat_id` vazio** filtra na query (`AND chat_id <> ''`) — grupos
+  recém-cadastrados sem JID não disparam erro, são silenciosamente ignorados.
+- **`alwaysOutputData: true`** está em `Busca Grupos OK` e `Busca Grupos Entrega`
+  pra não travar o flow se 0 grupos.
+- **`tipos_filtro_*` ARRAY[] no PUT**: node-postgres aceita JS array nativamente.
+  COALESCE com `[]` (vazio) trata como "todos", não como null.
+- **Grupo origem da OK não recebe sua própria notificação** quando vinha do
+  `Decide Notif Ok` do v3 (lógica anti-eco). No polling Urf233 essa lógica não
+  existe (não tem como saber qual grupo originou a marcação) — aceitável porque
+  o polling não roda imediato após a marcação, então não há eco perceptível.
+
+## Limpezas históricas
+
+- 2026-05-01: removida opção `teste` do multi_select Tipo no Notion (criada
+  por engano pelo bot antes da validação enum). Restaram 34 tipos válidos.
 
 ## Arquivos relevantes
 
-- `dashboard/app/api/grupos/route.js` — schema (com migrate ALTER TABLE)
-- `dashboard/app/api/grupos/[id]/route.js` — PUT aceita `tipos_filtro_*`
-- `dashboard/app/api/notion/tipos/route.js` — endpoint que lê schema do Notion
+- `dashboard/app/api/grupos/route.js` — schema + seed inicial + GET/POST
+- `dashboard/app/api/grupos/[id]/route.js` — PUT/DELETE
+- `dashboard/app/api/notion/tipos/route.js` — proxy cacheado pro schema do Notion
 - `dashboard/app/admin/page.jsx` — UI da aba Grupos
-- N8N: nó `Claude API` (agent loop, constante `TIPOS_VALIDOS`)
-- N8N: nó `Decide Notif Ok` (fan-out)
-- N8N: nó `Busca Config Notif Ok` (query atualizada)
-
-## Estado dos custos / rate limits
-
-Bot agora roda com:
-- Modelo `claude-haiku-4-5-20251001`
-- POPs limitado a top 5 (era todos os relevantes — antes ~24)
-- Histórico Redis: últimas 8 mensagens (era 20)
-- `chamados.ai_context`: truncado em 8k chars (era 30k)
-- Tarefas Notion: removidas do prefetch, viraram tool `listar_tarefas_notion`
-- Retry no 429 com 25s de backoff
-
-Por mensagem ~6-8k tokens input. Cabe no tier 1 da Anthropic (50k/min para Haiku).
-
-## Revisão pós-implementação (2026-05-02)
-
-Audit caçando bugs ocultos. Achei 3 reais e corrigi:
-
-1. **Crítico — case mismatch em 5 tipos do enum**
-   `TIPOS_VALIDOS` tinha `Crachá`, `Rifa`, `Lon`, `Panfletos`, `Fichas` (capitalizado),
-   mas o Notion DB tem `crachá`, `rifa`, `lon`, `panfletos`, `fichas` (minúsculo).
-   Multi_select é case-sensitive: o bot estava prestes a criar **opções duplicadas**
-   silenciosamente toda vez que escolhesse um desses 5. Alinhado com o exato case do Notion.
-
-2. **Crítico — Decide Notif Ok lendo tipo do lugar errado**
-   Após troca da query (Postgres groups em vez de config single-row), o `inputData` que
-   chega no nó é uma linha do Postgres, não a resposta do PATCH no Notion. O código lia
-   `inputData.properties` que sempre era undefined → `tipoTarefa=''` sempre →
-   grupos com `tipos_filtro_ok` configurado SEMPRE pulavam (regra: "filtro ativo + tipo
-   vazio = pula"). Resultado prático: a feature não funcionaria pra ninguém com filtro.
-   Corrigido: agora lê via `$('Marca Ok no Notion').all()[i].properties` pareando
-   posicionalmente cada OK com sua resposta do Notion.
-
-3. **Médio — modelo às vezes confirma "✅ criado!" mesmo quando tool retornou erro**
-   Já vimos esse comportamento no teste manual. System prompt agora tem regra explícita
-   no início da seção FERRAMENTAS: "se o tool_result começa com 'Erro:' ou 'Exceção:',
-   NÃO confirme sucesso — repassa o erro pro usuário".
-
-## Audit checklist (verificados como ok)
-
-- ALTER TABLE no GET é idempotente, latência ~50ms aceitável
-- Envia Notif Ok body já estava usando `$json.chat_id` e `$json.msg`
-- COALESCE em PUT trata array vazio `[]` corretamente (preserva como "todos os tipos")
-- Cache `/api/notion/tipos` module-level ok em PM2 single-instance
-- Conexões do pipeline OK: `Tem Ok? → Explode Oks → Marca Ok no Notion → Busca Config Notif Ok → Decide Notif Ok → Envia Notif Ok`
-- Schema Postgres confirmado via `\d grupos_whatsapp`
-
-## Pra atualizar enum de tipos no futuro
-
-Se criar/remover/renomear um tipo no Notion DB, atualizar a constante `TIPOS_VALIDOS`
-no nó "Claude API" do workflow v3 — copiar **com o exato case** do Notion. Senão o bot
-vai criar duplicatas silenciosas.
-
-Comando útil pra listar os tipos atuais:
-```bash
-curl -sS "https://api.notion.com/v1/databases/d54e5911e8af43dfaed8f2893e59f6ef" \
-  -H "Authorization: Bearer $NOTION_TOKEN" \
-  -H "Notion-Version: 2022-06-28" | jq -r '.properties.Tipo.multi_select.options[].name'
-```
-
-## 2ª rodada de bugs (2026-05-02)
-
-Reportados pelo usuário em produção:
-
-4. **`listar_tarefas_notion` faltava do schema TOOLS**
-   v3_07_apply_tipos_enum.py fez overwrite do jsCode do nó Claude API com o
-   arquivo local `agent_loop_code.js`, que tinha a tool só no handler — não no
-   schema TOOLS. Modelo via 3 tools, dizia "não tenho ferramenta pra listar".
-   Adicionado no schema. Lição: scripts que reaplicam o code inteiro precisam
-   ler o arquivo local atualizado, ou aplicar patches inline no workflow.
-
-5. **`Prepara Body` (mensagens agendadas) não fazia split de chat_ids**
-   `dashboard_solicitacoes_programadas.chat_id` permite múltiplos jids separados
-   por vírgula (ex: `jid1@g.us,jid2@g.us`). O nó enviava tudo como UM remoteJid
-   ao webhook, quebrando a query `Busca Histórico Postgres` (`WHERE chat_id =
-   'jid1,jid2'` = 0 rows) e o modelo respondia "não tenho histórico".
-   Agora o nó dá `String.split(',')` e emite 1 item por chat_id; cada item dispara
-   o webhook independentemente, então o relatório agendado pra N grupos chega em
-   N grupos com seu histórico correto.
-
-6. **Data exibida na MemoriaTab vinha 1 dia atrás (BRT vs UTC)**
-   Função `fmtData` só tratava strings de length=10. Mas a API devolve Postgres
-   `date` serializado como ISO completo (`2026-05-02T00:00:00.000Z`), length=24.
-   Caía no fallback `new Date()`, BRT (UTC-3) puxava pro dia 01. Fix: extrai
-   `YYYY-MM-DD` literal por regex independente do formato de entrada.
-
-## 3ª rodada (2026-05-02)
-
-7. **Tool `criar_tarefa_notion` sem campo `valor`**
-   Tarefa "Carimbo Dra. Maria - R$ 90" foi criada com Valor=R$ 0 e o preço acabou
-   na descrição/Obs. Adicionado `valor: number` no schema da tool + handler aceita
-   numero ou string ("R$ 90,00" → parse → 90). System prompt reforça: "preço vai em
-   `valor`, NÃO repete em `descricao`/`obs`".
-
-8. **Bot Memoria Longa em catch-22 — nunca aprendia**
-   Workflow `tPUy8FowXH8v0skk` rodava de madrugada: Agendamento 03h → Busca Resumos
-   Semana → **Busca Fatos Existentes** → Prepara Prompt → Claude → Salva. Mas
-   "Busca Fatos Existentes" não tinha `alwaysOutputData=true`. Tabela começa vazia,
-   query devolve 0 rows, fluxo morre antes do Claude. Resultado: **0 fatos
-   aprendidos durante semanas** (UI mostrava "Nenhum fato ainda. O bot aprende
-   automaticamente toda madrugada"). Liguei a flag, disparei via Webhook Longa
-   manualmente, aprendeu 6 fatos de 4 entidades imediatamente.
-
-   Lição padrão N8N que fica forte: **todo Postgres node usado pra buscar dados que
-   PODEM ser vazios precisa de `alwaysOutputData: true`**. Senão o flow morre na
-   primeira vez que a query retorna empty.
-
-## 4ª rodada: aprendizado contínuo + alertas Notion centralizados (2026-05-02)
-
-9. **UI mostrava 0 fatos mesmo com a tabela populada**
-   Endpoint `/api/memoria/entidade/[tipo]/[id]` tratava `id='_all_'` como literal
-   (`WHERE entidade_id = '_all_'` = sempre 0). UI usava esse path pra listar todos
-   os fatos por tipo. Adicionado tratamento especial: se id===`_all_`, devolve
-   todos os fatos ativos daquele tipo.
-
-10. **Bot agora aprende ao vivo (tool `aprender_fato`)**
-    Adicionada 5ª tool no agent loop. Bot pode salvar fato durável mid-conversa
-    quando perceber padrão útil ("Dra. Maria sempre pede entrega segunda", "Junior
-    cobre região X"). Endpoint POST `/api/memoria/aprender` faz upsert idempotente
-    (UNIQUE em entidade_tipo+id+fato → incrementa ocorrencias). System prompt
-    instrui o uso proativo, mas só pra fatos não-triviais.
-
-11. **Memória Longa cron 1x/dia → 1x/6h**
-    Agendamento mudou de `0 3 * * *` pra `0 */6 * * *`. Combina extração batch
-    (cobre tudo) com aprendizado real-time (tool). Custa mais tokens/dia mas
-    ainda é barato com Haiku.
-
-12. **Alertas Notion duplicados — workflow polling Urf233 não filtrava por tipo**
-    Existia workflow paralelo "Notificação Tarefa Ok — Notion" (Urf233bK6RqoSlQs)
-    que faz polling no Notion a cada 5min e enviava alertas pra TODOS os grupos
-    com `alertas_notion_ok=true` SEM ler `tipos_filtro_ok`. Resultado: tarefa
-    Carimbo marcada Ok pelo bot chegava no grupo Internet apesar do filtro
-    excluir Carimbo.
-
-    **Fix**: refatorei `Filtra e Decide` e `Filtra Entrega` do polling pra fazer
-    fan-out por grupo lendo `tipos_filtro_*`. Cada grupo só recebe alerta de
-    tarefas cujo tipo bate seu filtro (vazio = todos).
-
-    **Anti-duplicação**: `Decide Notif Ok` do v3 virou no-op (`return []`). Antes
-    ele enviava notificação imediata quando o bot marcava Ok via tool, mas o
-    polling em até 5min cobre o mesmo caso. Centralizar tudo no polling tem
-    bonus: pega marcações feitas direto na UI do Notion (sem passar pelo bot).
-
-## Arquitetura final de aprendizado
-
-```
-Tempo real:         Bot + tool aprender_fato → POST /api/memoria/aprender → bot_memoria_longa
-Diário (madrugada): Bot Memoria Dia (5qTcBwOdBeoU1l7i) → bot_memoria_dia (1 row/chat/dia)
-Cada 6h:            Bot Memoria Longa (tPUy8FowXH8v0skk) → extrai fatos de bot_memoria_dia → bot_memoria_longa
-Em cada conversa:   Busca Memoria Contexto → injeta resumo do dia/ontem + fatos peso>=7 ou ocorrencias>=3
-                    (cross-grupo: empresa/regiao/entidades mencionadas no texto da msg)
-```
-
-Cross-grupo: `bot_memoria_dia` é por chat_id, `bot_memoria_longa` é global. Fatos
-extraídos pela memória longa são compartilhados entre todos os grupos.
-
-## Arquitetura final de alertas Notion
-
-```
-Bot marca tarefa Ok via tool resolver_tarefa_notion → PATCH na page (Notion atualizada)
-                    ↓ (polling a cada 5min vê last_edited_time recente)
-Urf233 polling → Filtra e Decide (fan-out por grupo + filtro tipos_filtro_ok)
-                    ↓
-                   Envia WhatsApp Notif (uma chamada por grupo aplicável)
-```
-
-Mesmo fluxo pra Entrega, com `tipos_filtro_entrega`. Marcações manuais direto no
-Notion (sem passar pelo bot) também disparam o alerta — polling pega tudo.
+- N8N `Pj5SdaxFh9H9EIX4` nó **Claude API** — constante `TIPOS_VALIDOS`, tool
+  `criar_tarefa_notion` com enum
+- N8N `Urf233bK6RqoSlQs` nós **Filtra e Decide**, **Filtra Entrega**,
+  **Busca Grupos OK/Entrega**
