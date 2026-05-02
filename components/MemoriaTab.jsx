@@ -419,9 +419,108 @@ function EditFatoInline({ fato, onSave, onCancel }) {
 
 // ─── Subaba 3: Por Cliente ────────────────────────────────────────────────────
 
+const CATEGORIA_CONFIG = {
+  problema:    { label: 'Problemas',     color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
+  preferencia: { label: 'Preferências', color: 'text-amber-400',  bg: 'bg-amber-500/10 border-amber-500/20' },
+  historico:   { label: 'Histórico',    color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/20' },
+  processo:    { label: 'Processo',     color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
+  equipamento: { label: 'Equipamento',  color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
+  financeiro:  { label: 'Financeiro',   color: 'text-emerald-400',bg: 'bg-emerald-500/10 border-emerald-500/20' },
+}
+
+function PerfilCliente({ cliente }) {
+  const fatos = cliente.fatos || []
+  const ativos = fatos.filter(f => f.ativo)
+
+  // Agrupa por categoria
+  const porCategoria = {}
+  for (const f of ativos) {
+    const cat = f.categoria || 'historico'
+    if (!porCategoria[cat]) porCategoria[cat] = []
+    porCategoria[cat].push(f)
+  }
+
+  // Score de atenção: clientes com problemas freq ou peso alto
+  const temProblema = (porCategoria.problema || []).some(f => f.ocorrencias >= 2 || f.peso >= 7)
+  const totalOcorrencias = ativos.reduce((s, f) => s + (f.ocorrencias || 1), 0)
+
+  return (
+    <div className="bg-[#1a1a24] border border-gray-800 rounded-xl overflow-hidden">
+      {/* Header do cliente */}
+      <div className="px-4 py-3 border-b border-gray-800/60 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${temProblema ? 'bg-red-500/20' : 'bg-blue-500/20'}`}>
+            <User className={`w-4 h-4 ${temProblema ? 'text-red-400' : 'text-blue-400'}`} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-100 truncate">{cliente.entidade_id}</p>
+            <p className="text-xs text-gray-500">
+              {ativos.length} fato(s) · {totalOcorrencias} ocorrência(s) · último: {fmtTs(cliente.ultima_ocorrencia)}
+            </p>
+          </div>
+        </div>
+        {temProblema && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 flex-shrink-0">
+            ⚠ Atenção
+          </span>
+        )}
+      </div>
+
+      {/* Fatos por categoria */}
+      <div className="p-4 space-y-3">
+        {Object.entries(porCategoria)
+          .sort(([a], [b]) => {
+            const order = ['problema', 'financeiro', 'preferencia', 'equipamento', 'processo', 'historico']
+            return (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99)
+          })
+          .map(([cat, lista]) => {
+            const cfg = CATEGORIA_CONFIG[cat] || { label: cat, color: 'text-gray-400', bg: 'bg-gray-700/20 border-gray-700' }
+            return (
+              <div key={cat} className={`rounded-lg border px-3 py-2.5 ${cfg.bg}`}>
+                <p className={`text-xs font-semibold mb-2 ${cfg.color}`}>{cfg.label}</p>
+                <div className="space-y-2">
+                  {lista.sort((a, b) => b.ocorrencias - a.ocorrencias || b.peso - a.peso).map(f => (
+                    <div key={f.id} className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-200 leading-snug">{f.fato}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {f.ocorrencias > 1 && (
+                            <span className="text-xs text-gray-500">
+                              repetido {f.ocorrencias}× desde {fmtData(f.primeira_ocorrencia)}
+                            </span>
+                          )}
+                          {f.ocorrencias === 1 && (
+                            <span className="text-xs text-gray-600">
+                              {fmtTs(f.ultima_ocorrencia)}
+                            </span>
+                          )}
+                          {f.validado_por && (
+                            <span className="text-xs text-emerald-600">✓ validado</span>
+                          )}
+                        </div>
+                      </div>
+                      <PesoBadge peso={f.peso} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+
+        {/* Fatos inativos colapsados */}
+        {fatos.filter(f => !f.ativo).length > 0 && (
+          <p className="text-xs text-gray-600 italic">
+            + {fatos.filter(f => !f.ativo).length} fato(s) desativado(s) (corrigidos)
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function PorClienteTab() {
-  const [busca, setBusca]   = useState('')
-  const [fatos, setFatos]   = useState([])
+  const [busca, setBusca]     = useState('')
+  const [clientes, setClientes] = useState([])
   const [loading, setLoading] = useState(false)
   const [buscado, setBuscado] = useState('')
 
@@ -430,11 +529,10 @@ function PorClienteTab() {
     setLoading(true)
     setBuscado(busca.trim())
     try {
-      const nome = encodeURIComponent(busca.trim())
-      const r = await fetch(`/api/memoria/entidade/cliente/${nome}`)
+      const r = await fetch(`/api/memoria/cliente?q=${encodeURIComponent(busca.trim())}`)
       const d = await r.json()
-      setFatos(Array.isArray(d) ? d : [])
-    } catch { setFatos([]) }
+      setClientes(Array.isArray(d) ? d : [])
+    } catch { setClientes([]) }
     setLoading(false)
   }
 
@@ -459,39 +557,21 @@ function PorClienteTab() {
 
       {buscado && !loading && (
         <p className="text-xs text-gray-500">
-          {fatos.length} fato(s) sobre "{buscado}"
+          {clientes.length} cliente(s) encontrado(s) para "{buscado}"
         </p>
       )}
 
-      {fatos.length === 0 && buscado && !loading && (
+      {clientes.length === 0 && buscado && !loading && (
         <div className="text-center py-8 text-gray-500">
           <User className="w-8 h-8 mx-auto mb-2 opacity-30" />
-          <p>Nenhum fato registrado para este cliente ainda.</p>
+          <p>Nenhum histórico registrado para este cliente ainda.</p>
+          <p className="text-xs mt-1">O bot aprende automaticamente com as conversas do grupo.</p>
         </div>
       )}
 
-      {fatos.length > 0 && (
-        <div className="space-y-2">
-          <div className="bg-[#1a1a24] border border-gray-800 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-200 mb-3 flex items-center gap-2">
-              <User className="w-4 h-4 text-blue-400" /> {fatos[0]?.entidade_id}
-            </h3>
-            <div className="space-y-2">
-              {fatos
-                .sort((a, b) => b.peso - a.peso)
-                .map(f => (
-                  <div key={f.id} className={`flex items-start gap-3 ${f.ativo ? '' : 'opacity-40'}`}>
-                    <PesoBadge peso={f.peso} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-300 leading-snug">{f.fato}</p>
-                      <p className="text-xs text-gray-600">
-                        {f.categoria} · visto {f.ocorrencias}x · {fmtTs(f.ultima_ocorrencia)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
+      {clientes.length > 0 && (
+        <div className="space-y-4">
+          {clientes.map(c => <PerfilCliente key={c.entidade_id} cliente={c} />)}
         </div>
       )}
 
@@ -499,6 +579,7 @@ function PorClienteTab() {
         <div className="text-center py-12 text-gray-500">
           <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p>Digite o nome do cliente para ver o histórico que o bot aprendeu.</p>
+          <p className="text-xs mt-2 text-gray-600">Problemas recorrentes, preferências, equipamentos, histórico de atendimento.</p>
         </div>
       )}
     </div>
