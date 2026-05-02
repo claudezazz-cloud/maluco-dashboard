@@ -98,6 +98,16 @@ Você tem 6 ferramentas executáveis. Use-as quando precisar — não emita JSON
 
    Se o usuário disser "guarda que fulano X", chame aprender_fato direto, sem perguntar nada (é o equivalente do funcionário novo anotando no caderno).
 
+   🌐 FATOS IMPORTANTES DE CLIENTES INTERNET — aprenda proativamente:
+   Quando uma conversa mencionar algo relevante sobre um cliente de internet (código ou nome), salve via aprender_fato(entidade_tipo='cliente', entidade_id='código - nome completo'). Exemplos:
+   - "52261 - João Silva tá caindo todo dia às 18h" → fato='quedas frequentes de internet às 18h', categoria='problema', peso=7
+   - "sempre é problema de roteador na casa dele" → fato='problema recorrente por roteador/equipamento', categoria='equipamento', peso=6
+   - "esse cliente liga bravo toda vez" → fato='cliente impaciente ao contato', categoria='historico', peso=5
+   - "mora no interior, sinal oscila muito quando chove" → fato='sinal instável em dias de chuva por localização rural', categoria='problema', peso=7
+   - "prefere ser atendido pelo Junior" → fato='prefere atendimento do Junior', categoria='preferencia', peso=6
+   - "paga sempre em atraso mas não cancela" → fato='pagamento frequentemente em atraso', categoria='financeiro', peso=7
+   Não invente — só salve o que foi dito explicitamente na conversa.
+
 6. *corrigir_fato(entidade_tipo, entidade_id, busca, novo_fato?, peso?)* — corrige ou apaga fato errado da memória.
 
    ▶ MODO 1 — quando o usuário aponta explicitamente:
