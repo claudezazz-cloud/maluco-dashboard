@@ -92,10 +92,17 @@ Endpoint `POST /api/memoria/aprender` faz upsert idempotente: se o fato
 (entidade_tipo, entidade_id, fato) já existe, incrementa `ocorrencias` e
 atualiza `ultima_ocorrencia` em vez de duplicar.
 
-### Caminho C — correção pelo usuário (`corrigir_fato`)
+### Caminho C — correção pelo usuário ou autônoma (`corrigir_fato`)
 
-6ª tool. Quando alguém aponta que um fato está errado ("isso tá errado", "na
-verdade é X", "esquece o que sabe sobre Y"), o bot chama:
+6ª tool. Dois modos de disparo:
+
+**Modo 1 — usuário aponta explicitamente** ("isso tá errado", "na verdade é X", "esquece o que sabe sobre Y"):
+
+**Modo 2 — AUTÔNOMO (sem intervenção do usuário):** bot compara a mensagem recebida com os fatos da seção 🧠 SUA MEMÓRIA. Se detectar contradição clara, chama `corrigir_fato` ANTES de responder. Ex: memória diz "Junior cobre Bairro Alto", alguém diz "agora é o Russo" → bot corrige sozinho sem esperar ninguém apontar.
+
+Regra no system prompt: `"Se durante a conversa alguém fornecer informação que CONTRADIZ diretamente um fato da sua memória → chame corrigir_fato ANTES de responder, sem esperar ninguém apontar o erro."`
+
+O bot chama:
 
 ```
 corrigir_fato({
