@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { Brain, Lightbulb, BotMessageSquare, Users, ClipboardList, FileText, ChevronDown, Zap, BookOpen, RefreshCw, CheckCircle, AlertCircle, Wrench } from 'lucide-react'
+import { Brain, Lightbulb, BotMessageSquare, Users, ClipboardList, FileText, ChevronDown, Zap, BookOpen, RefreshCw, CheckCircle, AlertCircle, Wrench, MemoryStick } from 'lucide-react'
+import MemoriaTab from '@/components/MemoriaTab'
 
 const CATEGORIAS = ['Geral', 'Atendimento', 'Técnico', 'Financeiro', 'Comercial', 'RH', 'Outro']
 
@@ -344,7 +345,8 @@ export default function TreinamentoPage() {
     { id: 'colaboradores', label: <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Colaboradores</span>, count: colaboradores.length },
     { id: 'skills', label: <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Skills</span>, count: skills.length },
     { id: 'tools', label: <span className="flex items-center gap-1"><Wrench className="w-3.5 h-3.5" /> Tools</span>, count: 7 },
-    ...(user?.role === 'admin' ? [{ id: 'evolutivo', label: <span className="flex items-center gap-1"><Brain className="w-3.5 h-3.5" /> Evolutivo</span>, count: null }] : []),
+    { id: 'memoria', label: <span className="flex items-center gap-1"><Brain className="w-3.5 h-3.5" /> Memória</span>, count: null },
+    ...(user?.role === 'admin' ? [{ id: 'evolutivo', label: <span className="flex items-center gap-1"><MemoryStick className="w-3.5 h-3.5" /> Evolutivo</span>, count: null }] : []),
   ]
 
   return (
@@ -1006,6 +1008,9 @@ export default function TreinamentoPage() {
 
         {/* ==================== ABA TOOLS ==================== */}
         {tab === 'tools' && <ToolsTab />}
+
+        {/* ==================== ABA MEMÓRIA ==================== */}
+        {tab === 'memoria' && <MemoriaTab />}
 
         {/* ==================== ABA EVOLUTIVO ==================== */}
         {tab === 'evolutivo' && <EvolutivoTab inputCls={inputCls} />}
