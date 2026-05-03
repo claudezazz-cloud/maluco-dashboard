@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { requireAdmin } from '@/lib/auth'
+import { getSession, requireAdmin } from '@/lib/auth'
 
 // GET /api/mensagens-agendadas?status=pendente,processando&limit=100
 export async function GET(req) {
-  const session = await requireAdmin(req)
-  if (!session) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  const session = await getSession()
+  if (!session || !requireAdmin(session)) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const statusFilter = searchParams.get('status') || 'pendente,processando'
@@ -30,8 +30,8 @@ export async function GET(req) {
 
 // DELETE /api/mensagens-agendadas?id=123
 export async function DELETE(req) {
-  const session = await requireAdmin(req)
-  if (!session) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  const session = await getSession()
+  if (!session || !requireAdmin(session)) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
