@@ -19,7 +19,7 @@ Retry automático em 429 (espera 25s).
 
 | # | name | Função | Endpoint |
 |---|---|---|---|
-| 1 | `buscar_cliente(q)` | Lookup de cliente Zazz por nome ou código. | dashboard `/api/clientes/buscar` |
+| 1 | `buscar_cliente(q)` | Lookup de cliente Zazz por nome ou código. Busca por palavras individuais (AND) — "sergio carlos sousa" acha "Sergio Carlos de Sousa". | dashboard `/api/clientes/buscar` |
 | 2 | `criar_tarefa_notion(...)` | Cria tarefa no Notion DB de Tarefas. `tipo` é enum dos tipos válidos. `valor` é number. | Notion API direto |
 | 3 | `resolver_tarefa_notion(page_id)` | PATCH `status=Ok` numa tarefa do Notion. | Notion API direto |
 | 4 | `listar_tarefas_notion(status?)` | Lista até 50 tarefas do Notion (filtra por status). | Notion API direto |
@@ -29,56 +29,47 @@ Retry automático em 429 (espera 25s).
 
 Schemas completos no código do nó Claude API (`v3_dump/agent_loop_code.js` no VPS em `/opt/zazz/dashboard/v3_dump/`).
 
-### Regras importantes
+## Regras importantes das tools
 
-- **`criar_tarefa_notion`**:
-  - `tipo` é enum com `TIPOS_VALIDOS` (case-sensitive). Atualizar quando criar/remover tipo no Notion.
-  - `valor: number` — preço vai aqui, NÃO em descricao/obs.
-  - Se `tipo=Internet` → chamar `buscar_cliente` antes. Se outro tipo (designer/loja) → nome literal do WhatsApp.
+### `criar_tarefa_notion`
+- `tipo` é enum com `TIPOS_VALIDOS` (case-sensitive). Atualizar quando criar/remover tipo no Notion.
+- `valor: number` — preço vai aqui, NÃO em descricao/obs.
+- Se `tipo=Internet` → chamar `buscar_cliente` antes. Se outro tipo (designer/loja) → nome literal do WhatsApp.
 
-- **`aprender_fato`**: bot decide proativamente. Idempotente (UNIQUE entidade_tipo+id+fato → incrementa ocorrencias). Aprende proativamente sobre clientes internet (quedas, equipamento, inadimplência, preferência de técnico).
+### `aprender_fato`
+- Bot decide proativamente. Idempotente (UNIQUE entidade_tipo+id+fato → incrementa ocorrencias).
+- **REGRA OBRIGATÓRIA:** ao criar tarefa de Internet para cliente identificado, chamar `aprender_fato` em paralelo com `criar_tarefa_notion`. Exemplo: tarefa "Sem internet - Sergio Carlos de Sousa" → também `aprender_fato('cliente','30829 - Sergio Carlos de Sousa','relatou sem internet em 03/05/2026',5,'problema')`.
+- Usar `entidade_id` no formato `'código - nome completo'` quando tiver o código.
+- Aprende sobre: quedas, lentidão, equipamento, inadimplência, preferência de técnico.
 
-- **`corrigir_fato`**: dois modos — (1) usuário aponta explicitamente; (2) autônomo: bot detecta contradição entre mensagem e memória e corrige silenciosamente ANTES de responder. Não lista o que corrigiu.
+### `corrigir_fato`
+- Modo 1: usuário aponta erro explicitamente.
+- Modo 2: autônomo — bot detecta contradição entre mensagem atual e memória → corrige ANTES de responder, SEM listar o que corrigiu em texto.
+- Corrigir SOMENTE o que foi explicitamente contradito. Máximo 2-3 chamadas. NÃO inventar correções.
 
-- **`criar_lembrete`**: usa `chatId` do input para resolver o grupo via `/api/lembretes` → insere em `mensagens_agendadas`. Disparado quando bot detecta promessa ("amanhã faço", "deixa comigo", etc.).
+### `criar_lembrete`
+- Usa `chatId` do input para resolver o grupo via `/api/lembretes` → insere em `mensagens_agendadas`.
+- Cron de 1 em 1 minuto no VPS processa e envia via Evolution API.
+- Disparado quando bot detecta promessa ("amanhã faço", "deixa comigo", etc.).
 
-- **`resolver_tarefa_notion`**: NÃO envia notificação imediata. Polling do workflow `Urf233bK6RqoSlQs` (≤5min) detecta e notifica grupos com filtro de tipo.
+### `resolver_tarefa_notion`
+- NÃO envia notificação imediata. Polling do workflow `Urf233bK6RqoSlQs` (≤5min) detecta e notifica.
 
-- **Tools em paralelo**: o modelo pode chamar múltiplas tools no mesmo turno. O loop processa todas antes de chamar Claude de novo. System prompt instrui explicitamente a paralelizar quando as tools não dependem uma da outra.
+### Tools em paralelo
+- O modelo pode chamar múltiplas tools no mesmo turno. O loop processa todas antes de chamar Claude de novo.
+- System prompt instrui explicitamente a paralelizar quando as tools não dependem uma da outra.
+- Exemplo: criar tarefa + aprender_fato podem ser disparadas juntas no mesmo turno.
 
-## Deploy do agent_loop_code.js
+## Calendário de datas relativas (Monta Prompt)
 
-⚠️ O arquivo contém API keys hardcoded — **não vai pro git** (está em `.gitignore`).
+O nó *Monta Prompt* gera `proximosDias` — array dos próximos 8 dias com dia da semana e data — e injeta via placeholder `{{PROXIMOS_DIAS}}` no system prompt. Isso evita que o bot calcule datas manualmente e erre (ex: achar que segunda = dia+1).
 
-Fluxo de deploy:
-```bash
-# No VPS: atualiza o código no SQLite do N8N
-VOLUME=/var/lib/docker/volumes/n8n_data/_data
-docker stop n8n-n8n-1
-cp /opt/zazz/dashboard/v3_dump/agent_loop_code.js /tmp/new_code.js
-python3 /opt/zazz/dashboard/v3_dump/update_n8n_node.py  # se existir
-# OU: editar direto no N8N UI → nó "Claude API" → colar o código
-docker start n8n-n8n-1
+Formato injetado no system prompt:
 ```
-
-Método alternativo (usado em 2026-05-02): copiar SQLite para host, editar via Python + sqlite3, substituir no volume com `chown ubuntu:ubuntu`, reiniciar N8N.
-
-## Deploy do system prompt
-
-N8N API key expira (JWT com exp ~3 meses). Quando expirar, usar deploy direto via psql:
-
-```bash
-ssh root@195.200.7.239 "python3 - <<'PYEOF'
-import subprocess
-with open('/opt/zazz/dashboard/v3_dump/sysprompt_v3.txt', 'r') as f:
-    prompt = f.read()
-escaped = prompt.replace(\"'\", \"''\")
-sql = f\"UPDATE dashboard_config SET valor = '{escaped}' WHERE chave = 'system_prompt';\"
-subprocess.run(['docker', 'exec', '-i', 'n8n-postgres-1', 'psql', '-U', 'zazz', '-d', 'zazzdb'],
-    input=sql.encode(), capture_output=True, timeout=30)
-print('ok')
-PYEOF
-"
+CALENDÁRIO — próximos 8 dias:
+domingo = 03/05/2026
+segunda-feira = 04/05/2026
+...
 ```
 
 ## Arquitetura de prompt (Monta Prompt)
@@ -97,6 +88,47 @@ Dinâmico = histórico + memoria_contexto + skill ativada.
 
 Cache da Anthropic (5min TTL): após o 1º hit, repetições a 0.1× do custo.
 
+Placeholders do system prompt: `{{DATA}}` `{{ANO}}` `{{TODAY}}` `{{PROXIMOS_DIAS}}` `{{COLABORADORES}}` `{{CLIENTES}}` `{{POPS}}` `{{HISTORICO}}` `{{REGRAS}}`
+
+## Deploy do agent_loop_code.js
+
+⚠️ O arquivo contém API keys hardcoded — **não vai pro git** (está em `.gitignore`).
+
+Método via SQLite (quando API key N8N expirada):
+```bash
+VOLUME=/var/lib/docker/volumes/n8n_data/_data
+docker stop n8n-n8n-1
+# editar /opt/zazz/dashboard/v3_dump/agent_loop_code.js
+python3 -c "
+import json, sqlite3
+with open('/opt/zazz/dashboard/v3_dump/agent_loop_code.js') as f: code = f.read()
+con = sqlite3.connect('$VOLUME/database.sqlite')
+cur = con.cursor()
+cur.execute(\"SELECT nodes FROM workflow_entity WHERE id='Pj5SdaxFh9H9EIX4'\")
+nodes = json.loads(cur.fetchone()[0])
+for n in nodes:
+    if n.get('name') == 'Claude API': n['parameters']['jsCode'] = code
+cur.execute(\"UPDATE workflow_entity SET nodes=? WHERE id='Pj5SdaxFh9H9EIX4'\", (json.dumps(nodes),))
+con.commit(); con.close(); print('ok')
+"
+chown ubuntu:ubuntu $VOLUME/database.sqlite
+docker start n8n-n8n-1
+```
+
+## Deploy do system prompt
+
+N8N API key expira (JWT com exp ~3 meses). Quando expirar, usar deploy direto via psql (copiar script para o VPS e rodar):
+
+```python
+import subprocess
+with open('/opt/zazz/dashboard/v3_dump/sysprompt_v3.txt', 'r') as f:
+    prompt = f.read()
+escaped = prompt.replace("'", "''")
+sql = f"UPDATE dashboard_config SET valor = '{escaped}' WHERE chave = 'system_prompt';"
+subprocess.run(['docker', 'exec', '-i', 'n8n-postgres-1', 'psql', '-U', 'zazz', '-d', 'zazzdb'],
+    input=sql.encode(), capture_output=True, timeout=30)
+```
+
 ## Pegadinhas
 
 - Top-level `await` funciona no Code v2 (envelopa em async function).
@@ -106,3 +138,4 @@ Cache da Anthropic (5min TTL): após o 1º hit, repetições a 0.1× do custo.
 - `this.helpers.httpRequest` — não usar `fetch` (sandbox não expõe). Capturado em `_helpers = this.helpers` no top-level.
 - API keys hardcoded no código do nó (NOTION_TOKEN, DASH_TOKEN, API_KEY).
 - `chatId` vem em `$input.first().json.chatId` (output do Monta Prompt confirmado).
+- Modificar o Monta Prompt requer editar o SQLite do N8N e reiniciar o container (`docker restart n8n-n8n-1`).
