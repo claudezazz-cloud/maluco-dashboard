@@ -38,7 +38,8 @@ Schemas completos no código do nó Claude API (`v3_dump/agent_loop_code.js` no 
 
 ### `aprender_fato`
 - Bot decide proativamente. Idempotente (UNIQUE entidade_tipo+id+fato → incrementa ocorrencias).
-- **REGRA OBRIGATÓRIA:** ao criar tarefa de Internet para cliente identificado, chamar `aprender_fato` em paralelo com `criar_tarefa_notion`. Exemplo: tarefa "Sem internet - Sergio Carlos de Sousa" → também `aprender_fato('cliente','30829 - Sergio Carlos de Sousa','relatou sem internet em 03/05/2026',5,'problema')`.
+- **REGRA OBRIGATÓRIA:** ao criar tarefa de Internet para cliente identificado, chamar `aprender_fato` em paralelo com `criar_tarefa_notion`. Exemplo: tarefa "Sem internet - Sergio Carlos de Sousa" → também `aprender_fato('cliente','30829 - Sergio Carlos de Sousa','já relatou sem internet em chamados anteriores',5,'problema')`.
+- Fatos NÃO devem conter datas hardcoded (ex: NÃO usar `'relatou sem internet em 03/05/2026'`). Fatos são duráveis — datas os tornam únicos a cada chamado, inflando a memória com ruído.
 - Usar `entidade_id` no formato `'código - nome completo'` quando tiver o código.
 - Aprende sobre: quedas, lentidão, equipamento, inadimplência, preferência de técnico.
 
