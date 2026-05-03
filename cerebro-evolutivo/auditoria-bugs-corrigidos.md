@@ -250,6 +250,67 @@ Usado em todos os pontos de comparação de datas no sync-snapshot.
 
 ---
 
+---
+
+## Bugs pós-auditoria (03/05/2026 — sessão contínua)
+
+### Bug 17 — Tabela mensagens_agendadas nunca criada
+**Descoberto em:** 03/05/2026 durante teste de criar_lembrete
+
+**Problema:** A tabela `mensagens_agendadas` não existia no banco de produção. Toda chamada à tool `criar_lembrete` fazia POST em `/api/lembretes`, que tentava INSERT e recebia erro 500. O bot recebia o erro, hallucinava "✅ Lembrete criado" ou dizia "a ferramenta não está disponível", nunca criando de verdade.
+
+**Fix:** Tabela criada manualmente via psql:
+```sql
+CREATE TABLE mensagens_agendadas (
+  id SERIAL PRIMARY KEY,
+  grupo_id INTEGER REFERENCES grupos_whatsapp(id),
+  mensagem TEXT NOT NULL,
+  agendar_para TIMESTAMP WITH TIME ZONE NOT NULL,
+  status VARCHAR(20) DEFAULT 'pendente',
+  criado_por VARCHAR(100) DEFAULT 'bot',
+  tentativas INTEGER DEFAULT 0,
+  dedup_key VARCHAR(255),
+  criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT uk_mensagens_dedup UNIQUE (dedup_key)
+);
+CREATE INDEX idx_msg_agendadas_status ON mensagens_agendadas(status, agendar_para);
+```
+
+**Sintomas de hallucinação:** o bot via histórico Redis com 3 tentativas fracassadas e em cada nova tentativa adotava comportamento diferente: fingir sucesso → admitir falha → usar criar_tarefa_notion como workaround. Limpar o Redis (`DEL conv:{chatId}`) resolveu o contexto corrompido.
+
+---
+
+### Bug 18 — sysprompt: criar_lembrete sem instrução anti-hallucination
+**Arquivo:** `v3_dump/sysprompt_v3.txt`
+
+**Problema:** O bot alegava "a ferramenta não está disponível" e oferecia alternativas (criar tarefa no Notion) em vez de chamar `criar_lembrete`. Também não sabia que o lembrete vai para o grupo (não DM), então ficava travado quando pediam lembrete "pros dois".
+
+**Fix:** Adicionado ao prompt:
+- `NUNCA diga que a tool não está disponível — ela sempre funciona. Chame criar_lembrete e ponto.`
+- `O lembrete é sempre enviado neste mesmo grupo. Se precisar cobrar duas pessoas, mencione os dois na mensagem.`
+
+---
+
+### Feature: Solicitações Temporárias no painel admin
+**Arquivos:** `dashboard/app/api/mensagens-agendadas/route.js` (novo), `dashboard/app/admin/page.jsx`
+
+**O que faz:** Seção abaixo dos Agendamentos na aba Solicitações do admin. Lista todas as mensagens `pendente`/`processando` da tabela `mensagens_agendadas` com horário (BRT), grupo, criado_por, tentativas e preview da mensagem. Botão Cancelar por item (muda status para `cancelado`).
+
+**Auth:** `getSession()` + `requireAdmin(session)` — padrão do projeto. IMPORTANTE: `requireAdmin` recebe a session, não o `req`. Erro comum ao criar novas rotas admin.
+
+---
+
+### Melhoria: comandos dos relatórios automáticos
+**Tabela:** `dashboard_solicitacoes_programadas` (IDs 3 e 5)
+
+**Antes:** "caso haja pendencias, marque no notion sem exitar e sem perguntar para o usuário" — ambíguo, bot podia chamar `resolver_tarefa_notion` (marcar Ok) em vez de criar lembrete.
+
+**Depois:**
+- 11:40: cria tarefa no Notion + lembrete para daqui 2 horas cobrando o responsável
+- 17:20: cria tarefa no Notion + lembrete para amanhã 08:15 cobrando o responsável
+
+---
+
 ## Deploy realizado
 
 - Dashboard (Next.js): `git pull && npm run build && pm2 restart maluco-dashboard`
