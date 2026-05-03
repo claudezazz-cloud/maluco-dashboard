@@ -23,6 +23,7 @@ no projeto vira/atualiza um `.md` aqui.** Cron do VPS sincroniza a cada minuto.
 
 ### Histórico (planos concluídos)
 - [plano-multigrupo-tipos.md](plano-multigrupo-tipos.md) — plano original (concluído 2026-05-02)
+- [auditoria-bugs-corrigidos.md](auditoria-bugs-corrigidos.md) — 16 bugs P0+P1 corrigidos em 03/05/2026 (race conditions, timezone, paginação, acentos, snapshot órfão, idempotência)
 
 ## Convenções
 
