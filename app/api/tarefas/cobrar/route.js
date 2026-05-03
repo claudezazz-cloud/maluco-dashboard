@@ -55,9 +55,18 @@ export async function POST(req) {
   const tok = req.headers.get('x-token')
   if (tok !== TOKEN) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
-  // Garante coluna dedup_key para idempotência
+  // Garante coluna e constraint para idempotência
+  // UNIQUE CONSTRAINT (não índice parcial) é necessário para ON CONFLICT (dedup_key) funcionar
   await query(`ALTER TABLE mensagens_agendadas ADD COLUMN IF NOT EXISTS dedup_key VARCHAR(255)`)
-  await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_mensagens_dedup ON mensagens_agendadas(dedup_key) WHERE dedup_key IS NOT NULL`)
+  await query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'uk_mensagens_dedup'
+      ) THEN
+        ALTER TABLE mensagens_agendadas ADD CONSTRAINT uk_mensagens_dedup UNIQUE (dedup_key);
+      END IF;
+    END $$
+  `)
 
   try {
     const hoje = new Date().toISOString().split('T')[0]

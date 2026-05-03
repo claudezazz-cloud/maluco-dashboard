@@ -174,7 +174,8 @@ export async function POST(req) {
     notificacoesPendentes.push({ msg, chatIds: chatIdsDestino })
   }
 
-  // 5. Remove órfãos (tarefas arquivadas/deletadas no Notion) — bug 3
+  // 5. Remove órfãos (tarefas arquivadas/deletadas no Notion)
+  // Só deleta se a lista retornou >= 1 tarefa — protege contra Notion API retornando 200 vazio
   if (pageIdsVistos.size > 0) {
     const ids = [...pageIdsVistos]
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
