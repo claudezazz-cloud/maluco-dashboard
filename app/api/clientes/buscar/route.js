@@ -16,24 +16,38 @@ export async function GET(req) {
   if (!q) return NextResponse.json({ resultados: [] })
 
   try {
-    // ILIKE sobre nome e cod, ranking por relevância (match exato no início > contém)
-    const norm = q.replace(/[%_]/g, '')
+    const norm = q.replace(/[%_]/g, '').trim()
+    // Split words so "sergio carlos sousa" matches "Sergio Carlos de Sousa"
+    const words = norm.split(/\s+/).filter(Boolean)
+
+    // Build per-word AND conditions
+    const wordConditions = words.map((_, i) => `LOWER(nome) LIKE '%' || LOWER($${i + 1}) || '%'`).join(' AND ')
+    const params = [...words, limit]
+    const limitIdx = params.length
+
+    // Score: exact match > starts with first word > all words present > cod match
+    const scoreExpr = `
+      CASE
+        WHEN LOWER(nome) = LOWER($1) THEN 100
+        WHEN cod = $1 THEN 99
+        WHEN LOWER(nome) LIKE LOWER($1) || '%' THEN 90
+        WHEN ${wordConditions} THEN 50
+        WHEN cod LIKE $1 || '%' THEN 40
+        ELSE 1
+      END`
+
+    const codCondition = `cod LIKE '%' || $1 || '%'`
+    const whereClause = words.length > 1
+      ? `(${wordConditions} OR ${codCondition})`
+      : `(LOWER(nome) LIKE '%' || LOWER($1) || '%' OR ${codCondition})`
+
     const r = await query(
-      `SELECT cod, nome,
-        CASE
-          WHEN LOWER(nome) = LOWER($1) THEN 100
-          WHEN cod = $1 THEN 99
-          WHEN LOWER(nome) LIKE LOWER($1) || '%' THEN 90
-          WHEN LOWER(nome) LIKE '%' || LOWER($1) || '%' THEN 50
-          WHEN cod LIKE $1 || '%' THEN 40
-          ELSE 1
-        END AS score
+      `SELECT cod, nome, ${scoreExpr} AS score
        FROM dashboard_clientes
-       WHERE ativo = true
-         AND (LOWER(nome) LIKE '%' || LOWER($1) || '%' OR cod LIKE '%' || $1 || '%')
+       WHERE ativo = true AND ${whereClause}
        ORDER BY score DESC, nome
-       LIMIT $2`,
-      [norm, limit]
+       LIMIT $${limitIdx}`,
+      params
     )
     return NextResponse.json({
       resultados: r.rows.map(row => ({ cod: row.cod, nome: row.nome })),
