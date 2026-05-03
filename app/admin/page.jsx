@@ -260,6 +260,11 @@ export default function AdminPage() {
   const [msgSolicitacao, setMsgSolicitacao] = useState({ texto: '', tipo: '' })
   const [salvandoSolicitacao, setSalvandoSolicitacao] = useState(false)
 
+  // ===== SOLICITAÇÕES TEMPORÁRIAS (mensagens_agendadas) =====
+  const [mensagensAgendadas, setMensagensAgendadas] = useState([])
+  const [loadingAgendadas, setLoadingAgendadas] = useState(false)
+  const [cancelandoAgendada, setCancelandoAgendada] = useState(null)
+
   // ===== GRUPOS =====
   const [grupos, setGrupos] = useState([])
   const [loadingGrupos, setLoadingGrupos] = useState(true)
@@ -319,6 +324,20 @@ export default function AdminPage() {
     const r = await fetch('/api/solicitacoes')
     if (r.ok) setSolicitacoes(await r.json())
     setLoadingSolicitacoes(false)
+  }
+
+  async function fetchAgendadas() {
+    setLoadingAgendadas(true)
+    const r = await fetch('/api/mensagens-agendadas?status=pendente,processando')
+    if (r.ok) { const d = await r.json(); setMensagensAgendadas(d.mensagens || []) }
+    setLoadingAgendadas(false)
+  }
+
+  async function cancelarAgendada(id) {
+    setCancelandoAgendada(id)
+    await fetch(`/api/mensagens-agendadas?id=${id}`, { method: 'DELETE' })
+    setCancelandoAgendada(null)
+    fetchAgendadas()
   }
 
   async function fetchGrupos() {
@@ -598,7 +617,7 @@ export default function AdminPage() {
           {[['filiais', 'Filiais'], ['usuarios', 'Usuários'], ['configuracoes', 'Configurações'], ['solicitacoes', 'Solicitações'], ['grupos', 'Grupos'], ['metricas', 'Métricas']].map(([key, label]) => (
             <button
               key={key}
-              onClick={() => setTab(key)}
+              onClick={() => { setTab(key); if (key === 'solicitacoes') fetchAgendadas() }}
               className={`px-5 py-2 rounded-md text-sm font-medium transition ${tab === key ? 'bg-brand text-white' : 'text-gray-400 hover:text-white'}`}
             >
               {label}
@@ -1299,6 +1318,72 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+
+            {/* ── Solicitações Temporárias ── */}
+            <div className="mt-10">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-white font-semibold">Solicitações Temporárias</h2>
+                  <p className="text-gray-500 text-xs mt-0.5">Mensagens agendadas pelo bot (lembretes, cobranças). Pendentes e em processamento.</p>
+                </div>
+                <button
+                  onClick={fetchAgendadas}
+                  disabled={loadingAgendadas}
+                  className="text-xs text-gray-400 hover:text-white transition"
+                >
+                  {loadingAgendadas ? 'Carregando...' : '↻ Atualizar'}
+                </button>
+              </div>
+
+              {loadingAgendadas ? (
+                <p className="text-gray-500 text-sm">Carregando...</p>
+              ) : mensagensAgendadas.length === 0 ? (
+                <div className="text-center py-10 text-gray-600 border border-white/[0.06] rounded-xl">
+                  <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Nenhuma mensagem temporária pendente.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {mensagensAgendadas.map(m => {
+                    const dt = new Date(m.agendar_para).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                    const isProcessando = m.status === 'processando'
+                    return (
+                      <div key={m.id} className="bg-surface-raised rounded-xl border border-white/[0.06] px-4 py-3 flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className={`text-xs px-2 py-0.5 rounded font-medium ${isProcessando ? 'bg-yellow-900/40 text-yellow-400' : 'bg-green-900/20 text-brand'}`}>
+                              {isProcessando ? 'processando' : 'pendente'}
+                            </span>
+                            <span className="text-gray-400 text-xs flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> {dt}
+                            </span>
+                            {m.grupo_nome && (
+                              <span className="text-gray-500 text-xs flex items-center gap-1">
+                                <Users className="w-3 h-3" /> {m.grupo_nome}
+                              </span>
+                            )}
+                            {m.criado_por && (
+                              <span className="text-gray-600 text-xs">via {m.criado_por}</span>
+                            )}
+                            {m.tentativas > 0 && (
+                              <span className="text-orange-500 text-xs">{m.tentativas}ª tentativa</span>
+                            )}
+                          </div>
+                          <p className="text-gray-300 text-sm leading-snug line-clamp-2">{m.mensagem}</p>
+                        </div>
+                        <button
+                          onClick={() => cancelarAgendada(m.id)}
+                          disabled={cancelandoAgendada === m.id}
+                          className="shrink-0 text-xs text-red-400 bg-red-900/20 hover:bg-red-900/40 disabled:opacity-40 px-3 py-1.5 rounded-lg transition"
+                        >
+                          {cancelandoAgendada === m.id ? '...' : 'Cancelar'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </>
         )}
       </main>
