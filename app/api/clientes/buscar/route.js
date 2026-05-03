@@ -17,20 +17,21 @@ export async function GET(req) {
 
   try {
     const norm = q.replace(/[%_]/g, '').trim()
-    // Split words so "sergio carlos sousa" matches "Sergio Carlos de Sousa"
     const words = norm.split(/\s+/).filter(Boolean)
 
-    // Build per-word AND conditions
-    const wordConditions = words.map((_, i) => `LOWER(nome) LIKE '%' || LOWER($${i + 1}) || '%'`).join(' AND ')
+    // Guard: query só com chars especiais vira lista vazia de words → SQL inválido
+    if (words.length === 0) return NextResponse.json({ resultados: [], total: 0 })
+
+    // Build per-word AND conditions using unaccent para achar "Sérgio" com "sergio"
+    const wordConditions = words.map((_, i) => `unaccent(LOWER(nome)) LIKE '%' || unaccent(LOWER($${i + 1})) || '%'`).join(' AND ')
     const params = [...words, limit]
     const limitIdx = params.length
 
-    // Score: exact match > starts with first word > all words present > cod match
     const scoreExpr = `
       CASE
-        WHEN LOWER(nome) = LOWER($1) THEN 100
+        WHEN unaccent(LOWER(nome)) = unaccent(LOWER($1)) THEN 100
         WHEN cod = $1 THEN 99
-        WHEN LOWER(nome) LIKE LOWER($1) || '%' THEN 90
+        WHEN unaccent(LOWER(nome)) LIKE unaccent(LOWER($1)) || '%' THEN 90
         WHEN ${wordConditions} THEN 50
         WHEN cod LIKE $1 || '%' THEN 40
         ELSE 1
@@ -39,7 +40,7 @@ export async function GET(req) {
     const codCondition = `cod LIKE '%' || $1 || '%'`
     const whereClause = words.length > 1
       ? `(${wordConditions} OR ${codCondition})`
-      : `(LOWER(nome) LIKE '%' || LOWER($1) || '%' OR ${codCondition})`
+      : `(unaccent(LOWER(nome)) LIKE '%' || unaccent(LOWER($1)) || '%' OR ${codCondition})`
 
     const r = await query(
       `SELECT cod, nome, ${scoreExpr} AS score
