@@ -2,11 +2,12 @@
 
 ## Projeto
 Bot WhatsApp interno da Zazz Internet (fibra óptica, Lunardelli-PR).
-- N8N workflow `DiInHUnddtFACSmj` (`workflow_v2.json`) — orquestra o bot
-- Dashboard Next.js 14 (App Router) — painel admin
+- N8N workflow `Pj5SdaxFh9H9EIX4` (Maluco Bot v3 tool_use) — orquestra o bot
+- Dashboard Next.js 14 (App Router) — painel admin em `/opt/zazz/dashboard`
+- v2 legacy: `DiInHUnddtFACSmj` (desativado)
 
-## Stack rápido
-N8N · Claude Sonnet 4.6 · Whisper (áudio) · Evolution API v2 · PostgreSQL · Redis · Notion API · Next.js/React/Tailwind · JWT · PM2 no VPS
+## Stack
+N8N · Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) · Whisper (áudio) · Evolution API v2 · PostgreSQL · Redis · Notion API · Next.js/React/Tailwind · JWT · PM2 no VPS
 
 ## Comandos essenciais
 ```bash
@@ -26,24 +27,90 @@ ssh root@195.200.7.239 "cd /opt/zazz/dashboard && git pull origin main && npm ru
 
 Não esperar o usuário pedir — deploy faz parte da entrega.
 
+## Deploy do system prompt
+
+N8N API key expira (~3 meses). `deploy_system_prompt.py` usa JWT que pode estar vencido. Usar sempre o método direto via psql:
+
+```bash
+ssh root@195.200.7.239 "cd /opt/zazz/dashboard && git pull origin main -q && python3 - <<'PYEOF'
+import subprocess
+with open('/opt/zazz/dashboard/v3_dump/sysprompt_v3.txt', 'r') as f:
+    prompt = f.read()
+escaped = prompt.replace(\"'\", \"''\")
+sql = f\"UPDATE dashboard_config SET valor = '{escaped}' WHERE chave = 'system_prompt'; SELECT length(valor) FROM dashboard_config WHERE chave='system_prompt';\"
+r = subprocess.run(['docker', 'exec', '-i', 'n8n-postgres-1', 'psql', '-U', 'zazz', '-d', 'zazzdb'],
+    input=sql.encode(), capture_output=True, timeout=30)
+print(r.stdout.decode()[:200])
+PYEOF
+"
+```
+
+## Deploy do agent_loop_code.js (nó Claude API)
+
+O arquivo `v3_dump/agent_loop_code.js` contém API keys hardcoded — **não vai pro git**.
+O arquivo fica no VPS em `/opt/zazz/dashboard/v3_dump/agent_loop_code.js` (não sincronizado via git).
+
+Para atualizar o nó no N8N via SQLite (quando API key N8N estiver expirada):
+```bash
+# 1. Editar o arquivo local e copiar via SCP
+scp v3_dump/agent_loop_code.js root@195.200.7.239:/opt/zazz/dashboard/v3_dump/
+
+# 2. No VPS: parar N8N, substituir SQLite, reiniciar
+VOLUME=/var/lib/docker/volumes/n8n_data/_data
+docker stop n8n-n8n-1
+python3 -c "
+import json, sqlite3
+with open('/opt/zazz/dashboard/v3_dump/agent_loop_code.js') as f: code = f.read()
+con = sqlite3.connect('$VOLUME/database.sqlite')
+cur = con.cursor()
+cur.execute(\"SELECT nodes FROM workflow_entity WHERE id='Pj5SdaxFh9H9EIX4'\")
+nodes = json.loads(cur.fetchone()[0])
+for n in nodes:
+    if n.get('name') == 'Claude API': n['parameters']['jsCode'] = code
+cur.execute(\"UPDATE workflow_entity SET nodes=? WHERE id='Pj5SdaxFh9H9EIX4'\", (json.dumps(nodes),))
+con.commit(); con.close(); print('ok')
+"
+chown ubuntu:ubuntu $VOLUME/database.sqlite
+docker start n8n-n8n-1
+```
+
 ## Infra (Hostinger VPS 195.200.7.239)
 - N8N: https://n8n.srv1537041.hstgr.cloud
 - Evolution: https://evolution.srv1537041.hstgr.cloud
 - Dashboard: https://dashboard.srv1537041.hstgr.cloud
 - PM2 name: `maluco-dashboard`
+- SQLite N8N: `/var/lib/docker/volumes/n8n_data/_data/database.sqlite`
 
-## Editar workflow N8N
-Scripts Python `fix_*.py` — padrão: GET workflow → editar nodes[] → PUT → deactivate → activate.
-N8N avalia `{{ }}` nos campos — nunca coloque placeholders do sistema neles diretamente.
-Após PUT sempre fazer deactivate+activate para invalidar cache de jsCode.
+## Workflows N8N principais
+
+| ID | Nome | Função |
+|---|---|---|
+| `Pj5SdaxFh9H9EIX4` | Maluco Bot v3 (tool_use) | Bot principal — recebe mensagens e processa com agent loop |
+| `Urf233bK6RqoSlQs` | Alertas Notion | Polling Notion a cada 5min — envia alertas OK/Entrega por grupo+tipo |
+| `tPUy8FowXH8v0skk` | Bot Memoria Longa | Extração batch de fatos a cada 6h |
+| `5qTcBwOdBeoU1l7i` | Bot Memoria Dia | Resumo diário por chat (~02h) |
+
+## 7 tools do agent loop
+
+| Tool | Função |
+|---|---|
+| `buscar_cliente(q)` | Lookup cliente Zazz por nome/código |
+| `criar_tarefa_notion(...)` | Cria tarefa no Notion |
+| `resolver_tarefa_notion(page_id)` | Marca tarefa como Ok |
+| `listar_tarefas_notion(status?)` | Lista tarefas (Parado/Ok/Todas) |
+| `aprender_fato(...)` | Salva fato em bot_memoria_longa |
+| `corrigir_fato(...)` | Corrige fato errado (manual ou autônomo) |
+| `criar_lembrete(mensagem, agendar_para)` | Agenda follow-up no grupo atual |
 
 ## Nodes críticos (executeOnce: true obrigatório)
 Busca POPs, Busca System Prompt, Busca Colaboradores, Busca Histórico 10, Busca Histórico Redis, Busca Chamados Redis, Busca Clientes, Busca Regras.
 **Busca Regras** também precisa `alwaysOutputData: true`.
+**Busca Fatos Existentes** (Bot Memoria Longa) precisa `alwaysOutputData: true`.
 
 ## System Prompt placeholders
 `{{DATA}}` `{{ANO}}` `{{TODAY}}` `{{COLABORADORES}}` `{{CLIENTES}}` `{{POPS}}` `{{HISTORICO}}` `{{REGRAS}}`
-Deploy via `deploy_system_prompt.py` (cria wf temporário Webhook→Code→Postgres, executa, deleta).
+
+Arquivo local: `v3_dump/sysprompt_v3.txt` (vai pro git via `git add -f`).
 
 ## Banco PostgreSQL — tabelas principais
 - `mensagens` — message_id UNIQUE, remetente, mensagem, chat_id
@@ -53,11 +120,20 @@ Deploy via `deploy_system_prompt.py` (cria wf temporário Webhook→Code→Postg
 - `regras` — regra TEXT
 - `bot_conversas` — log de interações com tokens
 - `bot_erros` — erros do N8N
+- `grupos_whatsapp` — grupos internos com toggles bom_dia, alertas, tipos_filtro_entrega[], tipos_filtro_ok[]
+- `mensagens_agendadas` — mensagens programadas por grupo (status: pendente/enviado/erro/cancelado)
+- `bot_memoria_dia` — resumos diários por chat_id
+- `bot_memoria_longa` — fatos duráveis cross-grupo (UNIQUE: entidade_tipo+entidade_id+fato)
 
 ## Redis keys
-- `conv:{chatId}` — histórico (20 msgs)
+- `conv:{chatId}` — histórico (últimas 8 msgs após corte de tokens)
 - `chamados:data` — chamados importados (TTL 24h)
-- `config:bom_dia_grupo` — JID do grupo WhatsApp
+- `config:bom_dia_grupo` — JID legado (substituído por grupos_whatsapp)
+
+## Crons no VPS
+- `15 8 * * 1-6` — `/api/tarefas/cobrar` (cobrança automática de tarefas vencidas)
+- `* * * * *` — `sync-evolutivo.sh` (sincroniza cerebro-evolutivo/)
+- `0 4 * * *` — purge chamados_snapshots > 30 dias
 
 ## POPs — convenção de título
 - Começa com `LEIA SEMPRE:` → incluído em TODAS as respostas
@@ -78,14 +154,18 @@ UI, banco e variáveis em Português (BR). Código: mix PT/EN conforme existente
 
 ## Notas do Obsidian (cerebro-evolutivo/)
 
-**Regra obrigatória:** ao implementar qualquer alteração significativa no projeto (nova feature, correção de bug importante, mudança de arquitetura, novo padrão), criar ou atualizar o arquivo `.md` correspondente em `cerebro-evolutivo/`.
+**Regra obrigatória:** ao implementar qualquer alteração significativa (nova feature, bug importante, mudança de arquitetura), criar ou atualizar o `.md` correspondente em `cerebro-evolutivo/`.
 
-Essas notas são indexadas automaticamente e injetadas como contexto no bot — é a memória evolutiva do sistema.
+Essas notas são indexadas e injetadas como contexto no bot — é a memória evolutiva do sistema.
 
-Pastas/arquivos existentes:
-- `workflow-n8n.md` — estrutura do workflow, nodes, padrões de edição, bugs conhecidos
-- `dashboard-admin.md` — páginas, padrões de código, deploy, configurações
-- `treinamento-evolutivo.md` — como funciona o sistema de notas Obsidian
+Arquivos existentes:
+- `agent-loop-tool-use.md` — 7 tools, agent loop, deploy do nó Claude API, deploy do system prompt
+- `memoria-evolutiva.md` — 3 camadas de memória (Redis/dia/longa), caminhos A/B/C de aprendizado
+- `dashboard-admin.md` — páginas, APIs, tabelas, crons, padrões de código
+- `multigrupo-tipos-implementado.md` — multi-grupo com filtro por tipo de tarefa
+- `workflow-n8n.md` — estrutura do workflow, nodes, padrões de edição
 - `metricas-notion.md` — feature de métricas de tarefas do Notion
+- `treinamento-evolutivo.md` — como funciona o sistema de notas Obsidian
+- `README.md` — índice de navegação
 
-Ao adicionar uma nota nova, fazer commit e push — o cron do VPS sincroniza automaticamente (a cada minuto).
+Ao adicionar nota nova: commit e push — cron do VPS sincroniza a cada minuto.
