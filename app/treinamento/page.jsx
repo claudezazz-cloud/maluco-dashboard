@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import { Brain, Lightbulb, BotMessageSquare, Users, ClipboardList, FileText, ChevronDown, Zap, BookOpen, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
+import { Brain, Lightbulb, BotMessageSquare, Users, ClipboardList, FileText, ChevronDown, Zap, BookOpen, RefreshCw, CheckCircle, AlertCircle, Wrench } from 'lucide-react'
 
 const CATEGORIAS = ['Geral', 'Atendimento', 'Técnico', 'Financeiro', 'Comercial', 'RH', 'Outro']
 
@@ -343,6 +343,7 @@ export default function TreinamentoPage() {
     { id: 'pops', label: <span className="flex items-center gap-1"><ClipboardList className="w-3.5 h-3.5" /> POPs</span>, count: pops.length },
     { id: 'colaboradores', label: <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> Colaboradores</span>, count: colaboradores.length },
     { id: 'skills', label: <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> Skills</span>, count: skills.length },
+    { id: 'tools', label: <span className="flex items-center gap-1"><Wrench className="w-3.5 h-3.5" /> Tools</span>, count: 7 },
     ...(user?.role === 'admin' ? [{ id: 'evolutivo', label: <span className="flex items-center gap-1"><Brain className="w-3.5 h-3.5" /> Evolutivo</span>, count: null }] : []),
   ]
 
@@ -1003,7 +1004,9 @@ export default function TreinamentoPage() {
           </>
         )}
 
-        {/* ==================== ABA SOLICITAÇÕES ==================== */}
+        {/* ==================== ABA TOOLS ==================== */}
+        {tab === 'tools' && <ToolsTab />}
+
         {/* ==================== ABA EVOLUTIVO ==================== */}
         {tab === 'evolutivo' && <EvolutivoTab inputCls={inputCls} />}
 
@@ -1013,6 +1016,201 @@ export default function TreinamentoPage() {
 }
 
 // ── Treinamento Evolutivo (Obsidian) ─────────────────────────────────────────
+// ─── Aba Tools ────────────────────────────────────────────────────────────────
+
+const TOOLS_LIST = [
+  {
+    name: 'buscar_cliente(q)',
+    cor: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+    badge: 'bg-blue-500/20 text-blue-300',
+    descricao: 'Busca clientes ativos da Zazz por nome ou código.',
+    quando: 'Sempre que um cliente for mencionado e precisar do código exato para criar tarefa de Internet.',
+    exemplos: ['"Dra. Maria"', '"52261"', '"joao da rua das flores"'],
+    retorno: 'Até 10 matches no formato "código - nome completo". Se >1 resultado, o bot pergunta qual é.',
+    obs: 'Só para tarefas de tipo Internet. Para carimbo/adesivo/gráfica, usa o nome literal do WhatsApp.',
+  },
+  {
+    name: 'criar_tarefa_notion(...)',
+    cor: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
+    badge: 'bg-purple-500/20 text-purple-300',
+    descricao: 'Cria uma tarefa nova no Notion da Zazz.',
+    quando: '"agendar", "criar", "registrar", "abrir chamado", "anota aí".',
+    campos: [
+      { k: 'descricao', v: 'Título da tarefa (obrigatório)' },
+      { k: 'tipo', v: 'Carimbo, Adesivo, Internet, Gráfica... (enum fixo)' },
+      { k: 'cliente', v: 'código - nome (Internet) ou nome literal (outros)' },
+      { k: 'valor', v: 'Número puro (ex: 90). NÃO em obs ou descrição.' },
+      { k: 'responsavel', v: 'junior, franquelin, luiz, negos, victor' },
+      { k: 'entrega', v: 'YYYY-MM-DD' },
+    ],
+    obs: 'Pode chamar múltiplas vezes no mesmo turno para criar várias tarefas de uma vez.',
+  },
+  {
+    name: 'resolver_tarefa_notion(page_id)',
+    cor: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+    badge: 'bg-emerald-500/20 text-emerald-300',
+    descricao: 'Marca uma tarefa como Ok (resolvida) no Notion.',
+    quando: '"resolveu", "fechou", "terminou", "pode marcar", "concluiu".',
+    exemplos: ['Precisa do [id:...] que vem de listar_tarefas_notion.', 'Se não souber o id, chama listar primeiro.'],
+    obs: 'Não envia notificação imediata — o workflow de polling (≤5min) detecta e notifica os grupos automaticamente.',
+  },
+  {
+    name: 'listar_tarefas_notion(status?)',
+    cor: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+    badge: 'bg-amber-500/20 text-amber-300',
+    descricao: 'Lista até 50 tarefas do Notion com filtro de status.',
+    quando: '"quais tarefas", "o que fulano tem pra fazer", "tarefas paradas", "listar pendências".',
+    campos: [
+      { k: 'status', v: 'Parado (default) | Ok | Cancelado | Terminado | Todas' },
+    ],
+    obs: 'Cada tarefa retorna com [id:...] para uso interno. O bot NUNCA mostra o id ao usuário.',
+  },
+  {
+    name: 'aprender_fato(...)',
+    cor: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400',
+    badge: 'bg-cyan-500/20 text-cyan-300',
+    descricao: 'Salva um fato durável na memória longa do bot (bot_memoria_longa).',
+    quando: 'Bot percebe padrão útil proativamente, OU usuário pede "guarda isso", "anota aí", "lembra disso".',
+    campos: [
+      { k: 'entidade_tipo', v: 'cliente | colaborador | empresa | equipamento | processo | outro' },
+      { k: 'entidade_id', v: 'Ex: "52261 - João Silva", "Junior", "Zazz Internet"' },
+      { k: 'fato', v: 'Descrição curta do fato' },
+      { k: 'peso', v: '1-10 (default 5). ≥7 aparece em todos os contextos.' },
+      { k: 'categoria', v: 'preferencia | problema | historico | processo | equipamento | financeiro' },
+    ],
+    obs: 'Idempotente — fato já existente incrementa o contador de ocorrências. Fatos aparecem em qualquer grupo (cross-grupo).',
+  },
+  {
+    name: 'corrigir_fato(...)',
+    cor: 'bg-red-500/10 border-red-500/20 text-red-400',
+    badge: 'bg-red-500/20 text-red-300',
+    descricao: 'Desativa fato errado da memória e opcionalmente salva a versão corrigida.',
+    quando: '(1) Usuário diz "isso tá errado", "na verdade é X", "esquece o que você sabe sobre Y". (2) Bot detecta autonomamente que uma informação nova contradiz um fato salvo.',
+    campos: [
+      { k: 'busca', v: 'Trecho do fato errado (ILIKE). Seja específico.' },
+      { k: 'novo_fato', v: 'Versão corrigida (opcional). Omitir para só desativar.' },
+      { k: 'peso', v: 'Default 7. Fatos com validado_por=user não são sobrescritos pelo batch.' },
+    ],
+    obs: 'Fatos corrigidos ganham validado_por="user" — protegidos da extração automática.',
+  },
+  {
+    name: 'criar_lembrete(mensagem, agendar_para)',
+    cor: 'bg-orange-500/10 border-orange-500/20 text-orange-400',
+    badge: 'bg-orange-500/20 text-orange-300',
+    descricao: 'Agenda uma mensagem automática no grupo atual para follow-up de compromissos.',
+    quando: 'Alguém faz uma promessa com prazo: "amanhã ligo", "semana que vem verifico", "deixa comigo até quinta".',
+    campos: [
+      { k: 'mensagem', v: 'Texto do lembrete. Pode incluir @numero para marcar o responsável.' },
+      { k: 'agendar_para', v: 'ISO 8601 com horário comercial. Ex: "2026-05-04T09:00:00".' },
+      { k: 'criado_por', v: 'Nome de quem fez a promessa (opcional).' },
+    ],
+    obs: 'A mensagem entra em mensagens_agendadas e é enviada automaticamente pelo N8N. Apenas para promessas de colaboradores humanos.',
+  },
+]
+
+function ToolsTab() {
+  const [aberta, setAberta] = useState(null)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-gray-100 flex items-center gap-2">
+            <Wrench className="w-4 h-4 text-gray-400" /> Tools disponíveis
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Capacidades que o bot pode executar autonomamente. Clique para ver detalhes.
+          </p>
+        </div>
+        <span className="text-xs bg-[#071DE3]/20 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-full font-medium">
+          {TOOLS_LIST.length} tools ativas
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        {TOOLS_LIST.map((t, i) => (
+          <div key={i} className={`border rounded-xl overflow-hidden transition-all ${t.cor}`}>
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-left hover:opacity-80 transition"
+              onClick={() => setAberta(aberta === i ? null : i)}
+            >
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${t.badge} font-bold`}>
+                  {i + 1}
+                </span>
+                <code className="text-sm font-mono font-medium">{t.name}</code>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-400 hidden sm:block">{t.descricao}</span>
+                {aberta === i
+                  ? <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                  : <ChevronDown className="w-4 h-4 flex-shrink-0 -rotate-90" />}
+              </div>
+            </button>
+
+            {aberta === i && (
+              <div className="px-4 pb-4 space-y-3 border-t border-white/10 pt-3 bg-black/20">
+                <p className="text-sm text-gray-300">{t.descricao}</p>
+
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Quando usar</p>
+                  <p className="text-sm text-gray-300">{t.quando}</p>
+                </div>
+
+                {t.campos && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Campos</p>
+                    <div className="space-y-1">
+                      {t.campos.map((c, j) => (
+                        <div key={j} className="flex gap-2 text-sm">
+                          <code className="text-gray-400 font-mono text-xs flex-shrink-0 pt-0.5">{c.k}</code>
+                          <span className="text-gray-400">—</span>
+                          <span className="text-gray-300">{c.v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {t.exemplos && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Exemplos de input</p>
+                    <div className="flex flex-wrap gap-2">
+                      {t.exemplos.map((e, j) => (
+                        <code key={j} className="text-xs bg-black/30 px-2 py-1 rounded text-gray-300">{e}</code>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {t.retorno && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Retorno</p>
+                    <p className="text-sm text-gray-300">{t.retorno}</p>
+                  </div>
+                )}
+
+                {t.obs && (
+                  <div className="bg-black/20 rounded-lg px-3 py-2">
+                    <p className="text-xs text-gray-400">⚠️ {t.obs}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-[#1a1a24] border border-gray-800 rounded-xl p-4 text-xs text-gray-500 space-y-1">
+        <p className="font-semibold text-gray-400">Como funciona o agent loop</p>
+        <p>O bot pode chamar <strong className="text-gray-300">múltiplas tools no mesmo turno</strong> (paralelo). Limite de 5 rodadas por mensagem.</p>
+        <p>Tools que não dependem uma da outra são disparadas simultaneamente — ex: criar tarefa + aprender fato ao mesmo tempo.</p>
+        <p>O nó <code className="bg-black/30 px-1 rounded">Claude API</code> no workflow <code className="bg-black/30 px-1 rounded">Pj5SdaxFh9H9EIX4</code> gerencia todo o loop.</p>
+      </div>
+    </div>
+  )
+}
+
 function EvolutivoTab({ inputCls }) {
   const [config, setConfig] = useState({ nome: 'Cerebro Evolutivo', pasta: 'cerebro-evolutivo', ignorar: '.obsidian,templates,lixeira,trash' })
   const [status, setStatus] = useState(null)
