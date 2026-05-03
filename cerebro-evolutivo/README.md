@@ -13,6 +13,7 @@ no projeto vira/atualiza um `.md` aqui.** Cron do VPS sincroniza a cada minuto.
 ### Features
 - [multigrupo-tipos-implementado.md](multigrupo-tipos-implementado.md) — N grupos WhatsApp + filtro por tipo de tarefa nos alertas Notion
 - [metricas-notion.md](metricas-notion.md) — métricas de tarefas do Notion na dashboard
+- [notion-sync-snapshot.md](notion-sync-snapshot.md) — detecção de edições no Notion (responsável, entrega, status) com notificação WhatsApp a cada 5min
 
 ### Dashboard
 - [dashboard-admin.md](dashboard-admin.md) — páginas, padrões, deploy

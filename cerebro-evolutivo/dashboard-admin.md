@@ -5,15 +5,17 @@ Painel Next.js 14 (App Router) rodando em `dashboard.srv1537041.hstgr.cloud` (PM
 ## Páginas principais
 
 - `/` — login
-- `/admin` — painel principal com abas: Filiais, Usuários, Configurações, Solicitações, Grupos, Métricas, Memória
-- `/treinamento` — abas: pops, regras, skills, colaboradores, evolutivo
+- `/admin` — painel principal com abas: Filiais, Usuários, Configurações, Solicitações, Grupos, Métricas
+- `/treinamento` — abas: Regras, POPs, Colaboradores, Skills, Tools (7), Memória, Evolutivo
 - `/admin/filiais/[id]` — editar configurações de filial (tokens, IDs externos)
+
+**Nota:** a aba Memória foi movida de /admin para /treinamento em 2026-05-02.
 
 ## Padrões de código
 
 - Auth: `getSession()` + `requireAdmin()` de `lib/auth.js`
 - DB: `query(sql, params)` de `lib/db.js` — sempre parametrizado com `$1`, `$2`...
-- Schema auto-gerenciado: `ensureTables()` chamado dentro da rota API
+- Schema auto-gerenciado: `ensureTable()` chamado dentro da rota API
 - Tema: bg `#0f0f13`, cards `#1a1a24`, brand `#071DE3`
 
 ## Deploy
@@ -27,7 +29,7 @@ ssh root@195.200.7.239 "cd /opt/zazz/dashboard && git pull origin main && npm ru
 Gerencia grupos WhatsApp internos. Tabela `grupos_whatsapp`:
 - `nome`, `chat_id` (JID ex: `120363xxxxx@g.us`), `descricao`
 - `bom_dia BOOLEAN` — recebe mensagem automática 7h30
-- `alertas_notion_entrega BOOLEAN` — recebe alertas de nova tarefa criada
+- `alertas_notion_entrega BOOLEAN` — recebe alertas de nova tarefa criada e edições de tarefa
 - `alertas_notion_ok BOOLEAN` — recebe alertas de tarefa marcada Ok
 - `tipos_filtro_entrega TEXT[]` — filtra por tipo de tarefa nos alertas de entrega
 - `tipos_filtro_ok TEXT[]` — filtra por tipo de tarefa nos alertas de ok
@@ -35,9 +37,9 @@ Gerencia grupos WhatsApp internos. Tabela `grupos_whatsapp`:
 
 API: `/api/grupos` (GET + POST) e `/api/grupos/[id]` (PUT + DELETE).
 
-Solicitações (mensagens agendadas): campo "Grupos" permite múltiplos grupos simultaneamente. `chat_id` armazenado como string separada por vírgula. Endpoint N8N `/api/solicitacoes/n8n` expande automaticamente por grupo.
+Solicitações (mensagens agendadas): campo "Grupos" permite múltiplos grupos simultaneamente.
 
-## Aba Memória (/admin → Memória)
+## Aba Memória (/treinamento → Memória)
 
 Componente `MemoriaTab.jsx`. 3 sub-abas:
 
@@ -48,14 +50,13 @@ Componente `MemoriaTab.jsx`. 3 sub-abas:
 **Por Cliente** — busca ILIKE em `entidade_id` via `/api/memoria/cliente?q=`. Exibe perfil rico agrupado por categoria:
 - 🔴 Problemas, 💰 Financeiro, 🟡 Preferências, 🟠 Equipamento, 🟣 Processo, 🔵 Histórico
 - Badge "⚠ Atenção" se problemas frequentes (ocorrências ≥ 2 ou peso ≥ 7)
-- Data de `primeira_ocorrencia` e contador de repetições por fato
 
 ## APIs de memória
 
 | Rota | Método | Função |
 |---|---|---|
 | `/api/memoria/resumos` | GET | lista `bot_memoria_dia` |
-| `/api/memoria/entidade/[tipo]/[id]` | GET | fatos de entidade (`_all_` = todos do tipo) |
+| `/api/memoria/entidade/[tipo]/[id]` | GET | fatos de entidade |
 | `/api/memoria/fato/[id]` | PATCH | edita peso/ativo/validado_por |
 | `/api/memoria/extrair-dia` | POST | dispara Bot Memoria Dia |
 | `/api/memoria/extrair-longa` | POST | dispara Bot Memoria Longa |
@@ -69,9 +70,10 @@ Componente `MemoriaTab.jsx`. 3 sub-abas:
 | Rota | Método | Função |
 |---|---|---|
 | `/api/lembretes` | POST | cria mensagem agendada a partir de chat_id (tool criar_lembrete) |
-| `/api/tarefas/cobrar` | POST | busca tarefas Notion vencidas e insere notificações por grupo. Chamado via cron VPS 8h15 seg-sáb |
-| `/api/mensagens-agendadas/processar` | POST | lê mensagens_agendadas pendentes com agendar_para <= NOW(), envia via Evolution API, marca enviado/erro. Cron a cada minuto. |
-| `/api/clientes/buscar` | GET | lookup de clientes (tool buscar_cliente) |
+| `/api/mensagens-agendadas/processar` | POST | lê `mensagens_agendadas` pendentes com `agendar_para <= NOW()`, envia via Evolution API, marca enviado/erro. Chamado a cada minuto via cron. |
+| `/api/tarefas/cobrar` | POST | busca tarefas Notion vencidas e insere notificações por grupo. Chamado via cron VPS 8h15 seg-sáb. |
+| `/api/notion/sync-snapshot` | POST | compara tarefas ativas do Notion com snapshot; detecta edições de responsável/entrega/status; notifica grupos via WhatsApp; atualiza `notion_tarefas_snapshot`. Cron a cada 5 min. |
+| `/api/clientes/buscar` | GET | lookup de clientes — busca por palavras individuais (AND), encontra "Sergio Carlos de Sousa" buscando "sergio carlos sousa" |
 | `/api/notion/tipos` | GET | lista tipos do Notion DB (cache 5min) |
 
 ## Crons no VPS
@@ -82,6 +84,9 @@ Componente `MemoriaTab.jsx`. 3 sub-abas:
 
 # Envio de mensagens agendadas (a cada minuto)
 * * * * * curl -s -X POST https://dashboard.srv1537041.hstgr.cloud/api/mensagens-agendadas/processar -H "x-token: MALUCO_POPS_2026" >> /var/log/mensagens-processar.log 2>&1
+
+# Sync/diff de edições no Notion (a cada 5 min)
+*/5 * * * * curl -s -X POST https://dashboard.srv1537041.hstgr.cloud/api/notion/sync-snapshot -H "x-token: MALUCO_POPS_2026" >> /var/log/notion-snapshot.log 2>&1
 
 # Sync cerebro-evolutivo (a cada minuto)
 * * * * * /opt/zazz/dashboard/sync-evolutivo.sh
@@ -103,6 +108,7 @@ Componente `MemoriaTab.jsx`. 3 sub-abas:
 - `mensagens_agendadas` — mensagens programadas (grupo_id FK, status: pendente/enviado/erro/cancelado)
 - `bot_memoria_dia` — resumos diários por chat_id
 - `bot_memoria_longa` — fatos duráveis cross-grupo (entidade_tipo, entidade_id, fato UNIQUE)
+- `notion_tarefas_snapshot` — snapshot das tarefas ativas do Notion (page_id PK, titulo, status, responsavel, entrega, tipo, snapshot_em)
 
 ## Aba Evolutivo (Treinamento)
 
