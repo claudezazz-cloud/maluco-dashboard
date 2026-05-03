@@ -6,6 +6,9 @@ Painel Next.js 14 (App Router) rodando em `dashboard.srv1537041.hstgr.cloud` (PM
 
 - `/` — login
 - `/admin` — painel principal com abas: Filiais, Usuários, Configurações, Solicitações, Grupos, Métricas
+  - **Aba Solicitações** tem duas seções:
+    - *Agendamentos* — comandos recorrentes por horário/dias (tabela `dashboard_solicitacoes_programadas`)
+    - *Solicitações Temporárias* — mensagens pontuais agendadas pelo bot (`mensagens_agendadas`), com botão Cancelar por item
 - `/treinamento` — abas: Regras, POPs, Colaboradores, Skills, Tools (7), Memória, Evolutivo
 - `/admin/filiais/[id]` — editar configurações de filial (tokens, IDs externos)
 
@@ -70,6 +73,8 @@ Componente `MemoriaTab.jsx`. 3 sub-abas:
 | Rota | Método | Função |
 |---|---|---|
 | `/api/lembretes` | POST | cria mensagem agendada a partir de chat_id (tool criar_lembrete) |
+| `/api/mensagens-agendadas` | GET | lista mensagens agendadas pendentes/processando (painel admin) |
+| `/api/mensagens-agendadas` | DELETE | cancela mensagem agendada por id (status → cancelado) |
 | `/api/mensagens-agendadas/processar` | POST | lê `mensagens_agendadas` pendentes com `agendar_para <= NOW()`, envia via Evolution API, marca enviado/erro. Chamado a cada minuto via cron. |
 | `/api/tarefas/cobrar` | POST | busca tarefas Notion vencidas e insere notificações por grupo. Chamado via cron VPS 8h15 seg-sáb. |
 | `/api/notion/sync-snapshot` | POST | compara tarefas ativas do Notion com snapshot; detecta edições de responsável/entrega/status; notifica grupos via WhatsApp; atualiza `notion_tarefas_snapshot`. Cron a cada 5 min. |
@@ -105,7 +110,9 @@ Componente `MemoriaTab.jsx`. 3 sub-abas:
 - `bot_conversas` — log de interações com tokens
 - `bot_erros` — erros do N8N
 - `grupos_whatsapp` — grupos internos com toggles de automação e filtros por tipo
-- `mensagens_agendadas` — mensagens programadas (grupo_id FK, status: pendente/enviado/erro/cancelado)
+- `mensagens_agendadas` — mensagens programadas (grupo_id FK, mensagem, agendar_para TIMESTAMPTZ, status: pendente/processando/enviado/erro/cancelado, tentativas INT, dedup_key VARCHAR UNIQUE)
+  - **Criada manualmente em 03/05/2026** — não existia antes, causava falha silenciosa em criar_lembrete
+  - Idempotência via `dedup_key` + `CONSTRAINT uk_mensagens_dedup UNIQUE (dedup_key)` — ON CONFLICT DO NOTHING
 - `bot_memoria_dia` — resumos diários por chat_id
 - `bot_memoria_longa` — fatos duráveis cross-grupo (entidade_tipo, entidade_id, fato UNIQUE)
 - `notion_tarefas_snapshot` — snapshot das tarefas ativas do Notion (page_id PK, titulo, status, responsavel, entrega, tipo, snapshot_em)
