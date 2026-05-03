@@ -11,10 +11,14 @@ export async function POST(req) {
   if (tok !== TOKEN) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
   try {
-    const { chat_id, mensagem, agendar_para, criado_por } = await req.json()
-    if (!chat_id || !mensagem || !agendar_para) {
+    const { chat_id, mensagem, agendar_para: agendarRaw, criado_por } = await req.json()
+    if (!chat_id || !mensagem || !agendarRaw) {
       return NextResponse.json({ error: 'chat_id, mensagem e agendar_para obrigatorios' }, { status: 400 })
     }
+    // Se agendar_para vier sem offset/Z (ex: "2026-05-03T09:00:00"), o servidor UTC interpreta errado.
+    // Tratamos como horário de Brasília adicionando -03:00 defensivamente.
+    const hasOffset = /[Zz]|[+-]\d{2}:\d{2}$/.test(agendarRaw)
+    const agendar_para = hasOffset ? agendarRaw : `${agendarRaw}-03:00`
 
     // Resolve grupo pelo chat_id
     const gRes = await query(
