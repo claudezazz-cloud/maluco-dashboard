@@ -70,6 +70,7 @@ Componente `MemoriaTab.jsx`. 3 sub-abas:
 |---|---|---|
 | `/api/lembretes` | POST | cria mensagem agendada a partir de chat_id (tool criar_lembrete) |
 | `/api/tarefas/cobrar` | POST | busca tarefas Notion vencidas e insere notificações por grupo. Chamado via cron VPS 8h15 seg-sáb |
+| `/api/mensagens-agendadas/processar` | POST | lê mensagens_agendadas pendentes com agendar_para <= NOW(), envia via Evolution API, marca enviado/erro. Cron a cada minuto. |
 | `/api/clientes/buscar` | GET | lookup de clientes (tool buscar_cliente) |
 | `/api/notion/tipos` | GET | lista tipos do Notion DB (cache 5min) |
 
@@ -78,6 +79,9 @@ Componente `MemoriaTab.jsx`. 3 sub-abas:
 ```
 # Cobrança automática de tarefas vencidas (seg-sáb 8h15)
 15 8 * * 1-6 curl -s -X POST https://dashboard.srv1537041.hstgr.cloud/api/tarefas/cobrar -H "x-token: MALUCO_POPS_2026" >> /var/log/cobrar-tarefas.log 2>&1
+
+# Envio de mensagens agendadas (a cada minuto)
+* * * * * curl -s -X POST https://dashboard.srv1537041.hstgr.cloud/api/mensagens-agendadas/processar -H "x-token: MALUCO_POPS_2026" >> /var/log/mensagens-processar.log 2>&1
 
 # Sync cerebro-evolutivo (a cada minuto)
 * * * * * /opt/zazz/dashboard/sync-evolutivo.sh
