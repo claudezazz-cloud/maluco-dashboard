@@ -21,19 +21,26 @@ async function ensureTable() {
   `)
 }
 
+// Normaliza qualquer string de data (ISO datetime ou date-only) para YYYY-MM-DD
+function toDateOnly(d) {
+  if (!d) return null
+  return String(d).split('T')[0]
+}
+
 function parseTask(p) {
   const props = p.properties || {}
   const titulo = props['Descrição']?.title?.map(t => t.plain_text).join('') || '(sem título)'
   const status = props['status']?.select?.name || ''
   const responsavel = (props['Responsável']?.people || []).map(pe => pe.name).join(', ') || ''
-  const entrega = props['Entrega']?.date?.start || null
+  const entrega = toDateOnly(props['Entrega']?.date?.start) // sempre YYYY-MM-DD
   const tipo = (props['Tipo']?.multi_select || []).map(t => t.name).join(', ') || ''
   return { page_id: p.id, titulo, status, responsavel, entrega, tipo }
 }
 
 function fmtDate(d) {
   if (!d) return '—'
-  const [y, m, day] = d.split('-')
+  const date = toDateOnly(d) // garante que não tem horário
+  const [y, m, day] = date.split('-')
   return `${day}/${m}/${y}`
 }
 
@@ -97,11 +104,14 @@ export async function POST(req) {
     }
 
     const diffs = []
-    if (old.responsavel !== t.responsavel)
+    const oldEntrega = toDateOnly(old.entrega)
+    const newEntrega = toDateOnly(t.entrega)
+
+    if ((old.responsavel || '') !== (t.responsavel || ''))
       diffs.push(`Responsável: *${old.responsavel || '—'}* → *${t.responsavel || '—'}*`)
-    if ((old.entrega?.toISOString?.().split('T')[0] || old.entrega || '') !== (t.entrega || ''))
-      diffs.push(`Entrega: *${fmtDate(old.entrega?.toISOString?.().split('T')[0] || old.entrega)}* → *${fmtDate(t.entrega)}*`)
-    if (old.status !== t.status)
+    if (oldEntrega !== newEntrega)
+      diffs.push(`Entrega: *${fmtDate(oldEntrega)}* → *${fmtDate(newEntrega)}*`)
+    if ((old.status || '') !== (t.status || ''))
       diffs.push(`Status: *${old.status || '—'}* → *${t.status || '—'}*`)
 
     if (diffs.length === 0) continue
