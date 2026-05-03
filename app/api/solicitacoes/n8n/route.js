@@ -29,11 +29,15 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Hora atual no Brasil (UTC-3)
-  const now = new Date(Date.now() - 3 * 60 * 60 * 1000)
-  const horaAtual = now.toTimeString().slice(0, 5)
-  const diasMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab']
-  const diaAtual = diasMap[now.getDay()]
+  // Hora e dia atuais em America/Sao_Paulo (robusto a horário de verão e TZ do servidor)
+  const brtFormatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit', minute: '2-digit', weekday: 'short', hour12: false,
+  })
+  const parts = Object.fromEntries(brtFormatter.formatToParts(new Date()).map(p => [p.type, p.value]))
+  const horaAtual = `${parts.hour}:${parts.minute}`
+  const diasMap = { 'dom': 'dom', 'seg': 'seg', 'ter': 'ter', 'qua': 'qua', 'qui': 'qui', 'sex': 'sex', 'sáb': 'sab' }
+  const diaAtual = diasMap[parts.weekday] || parts.weekday
 
   console.log(`[n8n-tasks-get] Consultando para ${diaAtual} às ${horaAtual}`)
 
@@ -43,7 +47,7 @@ export async function GET(request) {
       `SELECT * FROM dashboard_solicitacoes_programadas
        WHERE ativo = true
          AND hora = $1
-         AND (dias_semana = 'todos' OR dias_semana LIKE '%' || $2 || '%')
+         AND (dias_semana = 'todos' OR $2 = ANY(string_to_array(dias_semana, ',')))
          AND (ultimo_executado IS NULL
               OR ultimo_executado < NOW() - INTERVAL '50 minutes')
        ORDER BY id ASC`,
