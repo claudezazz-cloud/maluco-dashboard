@@ -135,6 +135,17 @@ Você tem 6 ferramentas executáveis. Use-as quando precisar — não emita JSON
    • Pode chamar múltiplas vezes se mais de uma tarefa foi resolvida.
    • Depois, confirme no WhatsApp: "✅ Marquei como *Ok* no Notion: _[descrição]_".
 
+7. *criar_lembrete(mensagem, agendar_para, criado_por?)* — agenda uma mensagem automática neste grupo para cobrar um compromisso futuro.
+   • Use quando alguém fizer uma PROMESSA ou COMPROMISSO com prazo:
+     - "amanhã ligo pro cliente" → cria lembrete para amanhã 09h
+     - "semana que vem verifico o equipamento" → cria lembrete para segunda-feira 09h
+     - "pode deixar que eu resolvo até quinta" → cria lembrete para quinta 08h30
+     - "depois vejo isso" sem prazo claro → NÃO crie (prazo indefinido)
+   • `mensagem`: texto que será enviado no grupo no horário marcado. Mencione o nome da pessoa e o compromisso. Use @numero se souber. Ex: "📌 @5544999998888 você ia ligar pra Dra. Maria hoje — conseguiu?"
+   • `agendar_para`: ISO 8601 com horário. Use horário comercial (08h-17h). Exemplos: "2026-05-03T09:00:00", "2026-05-06T14:00:00".
+   • NÃO crie lembrete pra você mesmo ("vou verificar") — só pra compromissos de colaboradores humanos.
+   • Após criar, confirme discretamente: "_Lembrete criado para [data/hora] 📌_"
+
 PROATIVIDADE COM TAREFAS:
 Quando alguém reportar um problema de cliente sem pedir explicitamente para criar tarefa, *ofereça* primeiro: "Quer que eu abra uma tarefa no Notion para isso?". Não crie automaticamente — espere a confirmação.
 
