@@ -21,9 +21,10 @@ async function ensureTable() {
   `)
 }
 
-// Normaliza qualquer string de data (ISO datetime ou date-only) para YYYY-MM-DD
+// Normaliza qualquer valor de data para YYYY-MM-DD (trata Date objects do Postgres e strings ISO do Notion)
 function toDateOnly(d) {
   if (!d) return null
+  if (d instanceof Date) return d.toISOString().split('T')[0]
   return String(d).split('T')[0]
 }
 
