@@ -4,9 +4,32 @@
 
 // HISTORICO REDIS
 let redisHistory = [];
+// Bug 19 (reincidência): respostas antigas do bot dizendo "ferramenta fora/indisponível"
+// vão como turnos `assistant` reais nas messages — Claude copia o padrão e responde
+// sem chamar a tool. Scrub agressivo aqui (vetor mais forte que o histórico em texto).
+const FAIL_CONTAMINATION_REDIS = /(ferramenta|tool)[\s\S]{0,40}(fora\s+do\s+ar|fora\s+no\s+momento|indispon[ií]vel|n[ãa]o\s+respond|n[ãa]o\s+est[áa]\s+funcion|off\s*line|tá fora|ta fora)/i;
 try {
   const rv = $('Busca Histórico Redis').first().json?.propertyName || $('Busca Histórico Redis').first().json?.value;
-  if (rv) redisHistory = JSON.parse(rv).filter(m => m.content && (typeof m.content === 'string' ? m.content.trim() : true));
+  if (rv) {
+    redisHistory = JSON.parse(rv).filter(m => m.content && (typeof m.content === 'string' ? m.content.trim() : true));
+    // Reescreve respostas contaminantes do assistant
+    redisHistory = redisHistory.map(m => {
+      if (m.role !== 'assistant') return m;
+      if (typeof m.content === 'string' && FAIL_CONTAMINATION_REDIS.test(m.content)) {
+        return { ...m, content: '[turno anterior removido — bug de ferramenta corrigido, agora funciona]' };
+      }
+      if (Array.isArray(m.content)) {
+        const newContent = m.content.map(c => {
+          if (c && c.type === 'text' && typeof c.text === 'string' && FAIL_CONTAMINATION_REDIS.test(c.text)) {
+            return { ...c, text: '[turno anterior removido — bug de ferramenta corrigido, agora funciona]' };
+          }
+          return c;
+        });
+        return { ...m, content: newContent };
+      }
+      return m;
+    });
+  }
 } catch(e) {}
 
 // CHAMADOS
