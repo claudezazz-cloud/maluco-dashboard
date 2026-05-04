@@ -332,6 +332,10 @@ CREATE INDEX idx_msg_agendadas_status ON mensagens_agendadas(status, agendar_par
 
 **Causa secundária:** sysprompt atualizado (linhas 165-167 com "lembrete pessoal") nunca tinha sido deployado ao DB. Deploy realizado em 2026-05-04 via psql.
 
+**Reincidência (2026-05-04 11h):** Mesmo após o fix do sysprompt, o bug voltou. A regra textual no prompt não foi suficiente — Haiku continuou copiando o padrão "ferramenta tá fora" do histórico de mensagens do grupo (`Busca Histórico 10` puxa do PostgreSQL `mensagens`, não só do Redis).
+
+**Fix definitivo:** scrub no `Monta_Prompt.js` — qualquer linha do histórico que contenha o regex `/(ferramenta|tool).{0,40}(fora do ar|indisponível|não respond|offline)/i` é substituída por `[resposta antiga do bot removida — bug de ferramenta corrigido]` antes de ser injetada no prompt. Defesa em profundidade: prompt + filtro de contexto. Deploy via SQLite do N8N (`docker stop` → patch nodes → `docker start`).
+
 ---
 
 ### Bug 20 — Bot resolve no Notion a tarefa que acabou de criar (2026-05-04)
