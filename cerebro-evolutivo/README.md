@@ -23,7 +23,8 @@ no projeto vira/atualiza um `.md` aqui.** Cron do VPS sincroniza a cada minuto.
 - [dashboard-admin.md](dashboard-admin.md) — todas as páginas, APIs, tabelas, crons, padrões de código
 
 ### Qualidade e evolução
-- [auditoria-bugs-corrigidos.md](auditoria-bugs-corrigidos.md) — 18 bugs corrigidos em maio/2026 (race conditions, timezone, paginação, tabela faltante, hallucination)
+- [auditoria-bugs-corrigidos.md](auditoria-bugs-corrigidos.md) — 23 bugs corrigidos em maio/2026 (race conditions, timezone, paginação, tabela faltante, hallucination, n8n cache)
+- [lembretes-standby.md](lembretes-standby.md) — ⚠️ tool `criar_lembrete` desativada em 2026-05-04 (rate limit + hallucination crônica). Plano de reativação documentado.
 - [ideias-melhorias.md](ideias-melhorias.md) — backlog de melhorias: memória, confiabilidade, proatividade, observabilidade
 
 ### Sistema de notas

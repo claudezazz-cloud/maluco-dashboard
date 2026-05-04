@@ -376,6 +376,23 @@ Ganho colateral: Sonnet tem um caminho a menos pra confundir lembrete/tarefa.
 
 ---
 
+### Bug 24 — Decisão: `criar_lembrete` desativada (STANDBY) em 2026-05-04
+**Arquivos:** `v3_dump/agent_loop_code.js`, `v3_dump/sysprompt_v3.txt`
+
+**Decisão:** Após 5h tentando consertar a sequência de bugs 19→21→22→23, quando finalmente o `tool_choice` rodou com o código certo (Bug 22 fixed), bati no rate limit `429: 30k input tokens/min` da org Anthropic — o detector de hallucination re-iterava com sysprompt de 22k chars, multiplicando custo. Insustentável no plano atual.
+
+**Standby ativado:**
+- Tool `criar_lembrete` removida do array `TOOLS` no agent loop
+- Handler `if (name === 'criar_lembrete')` removido
+- Lógica `forceLembrete` / `tool_choice` / `hallucinaLembrete` removida
+- Sysprompt instruído a oferecer "anote no Notion como tarefa" como alternativa
+
+**O que NÃO foi tocado:** endpoint `/api/lembretes` no dashboard (continua funcionando), tabela `mensagens_agendadas` (usada pelo cron de cobrança), cron de envio. Reativação é só restaurar o código removido + plano de redesign.
+
+**Plano de reativação:** ver [lembretes-standby.md](lembretes-standby.md). TL;DR: rotear lembretes pro Haiku (rate limit maior, custo menor) via classifier de 1 stage antes do agent loop, em vez de usar Sonnet pra decisão simples.
+
+---
+
 ### Bug 20 — Bot resolve no Notion a tarefa que acabou de criar (2026-05-04)
 **Arquivo:** `v3_dump/sysprompt_v3.txt`
 
