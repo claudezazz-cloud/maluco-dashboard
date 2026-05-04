@@ -524,10 +524,22 @@ function PorClienteTab() {
   const [loading, setLoading] = useState(false)
   const [buscado, setBuscado] = useState('')
 
-  async function buscarCliente() {
-    if (!busca.trim()) return
+  useEffect(() => { carregarTodos() }, [])
+
+  async function carregarTodos() {
     setLoading(true)
-    setBuscado(busca.trim())
+    setBuscado('todos')
+    try {
+      const r = await fetch('/api/memoria/cliente?q=')
+      const d = await r.json()
+      setClientes(Array.isArray(d) ? d : [])
+    } catch { setClientes([]) }
+    setLoading(false)
+  }
+
+  async function buscarCliente() {
+    setLoading(true)
+    setBuscado(busca.trim() || 'todos')
     try {
       const r = await fetch(`/api/memoria/cliente?q=${encodeURIComponent(busca.trim())}`)
       const d = await r.json()
@@ -575,13 +587,7 @@ function PorClienteTab() {
         </div>
       )}
 
-      {!buscado && (
-        <div className="text-center py-12 text-gray-500">
-          <Search className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p>Digite o nome do cliente para ver o histórico que o bot aprendeu.</p>
-          <p className="text-xs mt-2 text-gray-600">Problemas recorrentes, preferências, equipamentos, histórico de atendimento.</p>
-        </div>
-      )}
+      {loading && <p className="text-gray-500 text-sm text-center py-8">Carregando...</p>}
     </div>
   )
 }
