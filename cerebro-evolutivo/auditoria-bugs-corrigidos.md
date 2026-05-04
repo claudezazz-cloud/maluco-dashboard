@@ -336,6 +336,15 @@ CREATE INDEX idx_msg_agendadas_status ON mensagens_agendadas(status, agendar_par
 
 **Fix definitivo:** scrub no `Monta_Prompt.js` — qualquer linha do histórico que contenha o regex `/(ferramenta|tool).{0,40}(fora do ar|indisponível|não respond|offline)/i` é substituída por `[resposta antiga do bot removida — bug de ferramenta corrigido]` antes de ser injetada no prompt. Defesa em profundidade: prompt + filtro de contexto. Deploy via SQLite do N8N (`docker stop` → patch nodes → `docker start`).
 
+**Reincidência 2 (2026-05-04 11h18):** scrub do histórico em texto não bastou — o vetor real é o `redisHistory` indo como turnos `assistant` reais nas `messages` da API. Aplicado mesmo scrub no `redisHistory` (Monta_Prompt.js).
+
+**Reincidência 3 / Bug 21 (2026-05-04 11h18 também):** após limpar contaminação de erro, surgiu hallucination de **sucesso** — Sonnet escreveu "📌 Lembrete criado para terça-feira 05/05 às 10:00" com `stop_reason: end_turn` e ZERO `tool_use` no turno. Confirmado via inspeção do `execution_data` no SQLite (execution 50641). O modelo copiou o padrão de resposta de turnos passados em vez de chamar a tool.
+
+**Fix tripla camada (agent_loop_code.js):**
+1. **`tool_choice` forçado** — regex `/me lembr|me avis|lembra eu|lembrete|fa[çc]a um lembret/` na última msg do user → injeta `tool_choice: { type: 'tool', name: 'criar_lembrete' }` na 1ª iteração. Sonnet obrigado a chamar a tool.
+2. **Detector de hallucination** — se `end_turn` com texto "Lembrete criado/agendado/marcado" e sem `tool_use` no turno, reinjeta como user `"Você afirmou que criou um lembrete mas não chamou a tool"` e re-itera.
+3. Scrub do `redisHistory` mantido como defesa upstream.
+
 ---
 
 ### Bug 20 — Bot resolve no Notion a tarefa que acabou de criar (2026-05-04)
