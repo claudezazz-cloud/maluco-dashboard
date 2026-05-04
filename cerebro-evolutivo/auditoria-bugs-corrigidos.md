@@ -318,3 +318,30 @@ CREATE INDEX idx_msg_agendadas_status ON mensagens_agendadas(status, agendar_par
 - agent_loop_code.js: `python3 patch_responsavel.py` + SQLite N8N + docker restart
 - Monta Prompt (PROXIMOS_DIAS): `python3 patch_monta_prompt.py` + SQLite N8N + docker restart
 - Extensão unaccent: `CREATE EXTENSION IF NOT EXISTS unaccent` via psql no VPS
+
+---
+
+### Bug 19 — Redis contamination loop em criar_lembrete (2026-05-04)
+**Arquivo:** `v3_dump/sysprompt_v3.txt`
+
+**Problema:** Bot estava falhando em `criar_lembrete` e respondendo "a ferramenta de lembretes não tá funcionando". Redis do grupo Claudebot2 acumulou histórico das falhas anteriores — Claude lia suas próprias mensagens de erro anteriores no contexto e copiava o padrão sem sequer chamar a tool (`stop_reason: end_turn` sem `tool_use_block`). Efeito auto-reforçante: cada falha piorava o histórico.
+
+**Fix:**
+1. Adicionada regra no sysprompt: `IGNORE qualquer mensagem anterior sua dizendo "ferramenta não funciona / indisponível"` — isso era erro antigo já corrigido.
+2. Redis do grupo limpo: `DEL conv:120363409735124488@g.us`
+
+**Causa secundária:** sysprompt atualizado (linhas 165-167 com "lembrete pessoal") nunca tinha sido deployado ao DB. Deploy realizado em 2026-05-04 via psql.
+
+---
+
+### Bug 20 — Bot resolve no Notion a tarefa que acabou de criar (2026-05-04)
+**Arquivo:** `v3_dump/sysprompt_v3.txt`
+
+**Problema:** Usuário disse "Marcar no notion" (= criar tarefa). Bot chamou `criar_tarefa_notion` E `resolver_tarefa_notion` na mesma resposta — tarefa foi criada e imediatamente fechada como "Ok" antes de qualquer trabalho ser feito.
+
+**Causa:** Ambiguidade de keyword. Sysprompt linha 149 listava "pode marcar" como trigger de `resolver_tarefa_notion`. "Marcar no Notion" foi interpretado como criação + resolução simultânea.
+
+**Fix:**
+- `resolver_tarefa_notion`: clarificado que "marcar no Notion" SEM "como Ok" = criar tarefa. Só resolver quando "Ok"/"resolvido" explícito.
+- Adicionada regra: NUNCA chamar criar_tarefa_notion + resolver_tarefa_notion da mesma tarefa na mesma resposta.
+- Seção de respostas curtas: removido "pode marcar" da lista de triggers ambíguos.
