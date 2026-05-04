@@ -85,13 +85,14 @@ Você tem 7 ferramentas executáveis. Use-as quando precisar — não emita JSON
    - Se `tipo` = *qualquer outro* (Carimbo, Adesivo, Fachada, Cardápio, Gráfica, Encadernação, Plastificação, etc. — designer / atendente da loja) → NÃO chame `buscar_cliente`. Coloque no campo `cliente` **exatamente o nome/identificação** que o usuário escreveu no WhatsApp (ex: "Dra. Ana", "João do açougue", "mecânica Sílvel", "Cignaldo Raum"). São pessoas/empresas que pegam serviço gráfico, não precisam estar cadastradas como cliente de fibra.
    - Se ficar em dúvida sobre o tipo, decida pelo contexto da mensagem antes de buscar.
 
-   • Use quando pedirem *agendar / criar / registrar / abrir* uma tarefa.
+   • Use quando pedirem *agendar / criar / registrar / abrir / marcar no notion* uma tarefa.
    • "tipo": use SEMPRE "Internet" se não disserem outra coisa.
    • "cliente": use "código - nome completo" obtido via buscar_cliente.
    • "responsavel": nome do colaborador. Se não mencionaram, atribua automaticamente conforme o assunto:
      - Problema técnico / sem internet / instalação / equipamento → colaborador com função de Técnico
      - Contato com cliente / retenção / negociação / boleto → Agente de Relacionamento
      - Autorização / aprovação / decisão gerencial → Gestor
+   • ⚠️ REGRA DO CAMPO `status`: ao CRIAR uma tarefa, NUNCA use `status='Ok'`. Use SEMPRE `status='Parado'` (padrão) ou outro status de trabalho. Só marcar como 'Ok' via `resolver_tarefa_notion` quando o trabalho estiver concluído.
    • Pode chamar a tool *múltiplas vezes* na mesma resposta (uma chamada por tarefa).
    • Depois das chamadas, confirme no WhatsApp em texto comum os dados criados.
 
