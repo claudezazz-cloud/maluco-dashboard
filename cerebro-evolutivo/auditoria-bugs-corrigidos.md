@@ -347,6 +347,35 @@ CREATE INDEX idx_msg_agendadas_status ON mensagens_agendadas(status, agendar_par
 
 ---
 
+### Bug 22 — n8n não recarrega Code node após patch direto no SQLite (2026-05-04)
+**Arquivo:** procedimento de deploy (CLAUDE.md, deploy_system_prompt scripts)
+
+**Problema:** Ao patchar `nodes` JSON em `workflow_entity` via SQLite + `docker stop`/`docker start`, n8n inicia mas continua executando o código antigo do Code node. Verificado: SQLite tem o código novo (lido de volta), mas execution_data mostra comportamento velho. Os 3 fixes anteriores do Bug 19/21 ficaram inertes por isso — `tool_choice` nunca chegou no Anthropic API.
+
+**Causa:** n8n só recompila Code nodes quando o workflow é (re)ativado. `updatedAt` é o sinal canônico de mudança; um UPDATE só na coluna `nodes` não dispara invalidação. Além disso, o WAL do SQLite pode reter alterações se n8n estava com a connection aberta no momento do patch.
+
+**Fix (novo procedimento de deploy):**
+1. `docker stop n8n-n8n-1`
+2. `rm -f /var/lib/docker/volumes/n8n_data/_data/database.sqlite-{shm,wal}` — força flush
+3. UPDATE atualiza `nodes`, `updatedAt=now()`, `active=0`
+4. UPDATE separado: `active=1`
+5. `docker start n8n-n8n-1`
+
+Com toggle 0→1 + bump de `updatedAt` + WAL limpo, n8n re-registra triggers e recompila Code nodes. Confirmado nos logs: `Activated workflow "Maluco Bot v3 (tool_use)"`.
+
+---
+
+### Bug 23 — Caminho legacy `|||NOTION|||` no Parse_Resposta criava tarefa sem tool_use (2026-05-04)
+**Arquivo:** `v3_dump/Parse_Resposta.js`
+
+**Problema:** Bot estava criando tarefas Notion mesmo quando o usuário pedia lembrete. Inspeção mostrou que era um path totalmente paralelo ao agent loop: Sonnet emitia marcador `|||NOTION|||{json}|||FIM|||` no texto, e Parse_Resposta extraía o JSON e POSTava no Notion API direto. Bypass total das tools. Sysprompt v3 nem menciona o marcador, mas Sonnet o copiava por padrão histórico/treino.
+
+**Fix:** Removido o bloco que parseava `|||NOTION|||` e chamava `buildNotionBody`. Agora o marcador é só removido do texto (caso Sonnet ainda emita) e logado como warning. Criação de tarefa Notion passa a ser **exclusivamente** via tool `criar_tarefa_notion` no agent loop. Marcador `|||NOTION_OK|||` (resolve) preservado por enquanto, será migrado depois.
+
+Ganho colateral: Sonnet tem um caminho a menos pra confundir lembrete/tarefa.
+
+---
+
 ### Bug 20 — Bot resolve no Notion a tarefa que acabou de criar (2026-05-04)
 **Arquivo:** `v3_dump/sysprompt_v3.txt`
 
