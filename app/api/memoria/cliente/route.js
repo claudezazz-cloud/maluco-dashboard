@@ -14,17 +14,15 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const q = (searchParams.get('q') || '').trim()
 
-  if (!q) return NextResponse.json([])
-
   try {
     const result = await query(
       `SELECT id, entidade_id, fato, categoria, peso, ocorrencias,
               primeira_ocorrencia, ultima_ocorrencia, ativo, validado_por
        FROM bot_memoria_longa
        WHERE entidade_tipo = 'cliente'
-         AND entidade_id ILIKE '%' || $1 || '%'
+         ${q ? "AND entidade_id ILIKE '%' || $1 || '%'" : ''}
        ORDER BY entidade_id, peso DESC, ocorrencias DESC`,
-      [q]
+      q ? [q] : []
     )
 
     // Agrupa por entidade_id
