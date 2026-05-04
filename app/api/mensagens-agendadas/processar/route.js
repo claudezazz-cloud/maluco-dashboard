@@ -13,10 +13,16 @@ export async function POST(req) {
   // Adiciona coluna tentativas se ainda não existe (migração segura)
   await query(`ALTER TABLE mensagens_agendadas ADD COLUMN IF NOT EXISTS tentativas INT DEFAULT 0`)
 
+  // Recupera mensagens travadas em 'processando' há mais de 5 min (cron anterior crashou)
+  await query(`
+    UPDATE mensagens_agendadas SET status='pendente'
+    WHERE status='processando' AND atualizado_em < NOW() - interval '5 minutes'
+  `)
+
   // Atomic claim: marca 'processando' atomicamente via FOR UPDATE SKIP LOCKED
   // Evita que dois crons concorrentes processem a mesma mensagem
   const claimed = await query(`
-    UPDATE mensagens_agendadas SET status='processando'
+    UPDATE mensagens_agendadas SET status='processando', atualizado_em=NOW()
     WHERE id IN (
       SELECT id FROM mensagens_agendadas
       WHERE status='pendente' AND agendar_para <= NOW()
