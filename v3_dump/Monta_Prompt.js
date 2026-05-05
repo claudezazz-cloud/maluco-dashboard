@@ -183,7 +183,9 @@ for (const p of allPopsInputs) {
 const uniquePops = Array.from(popMap.values());
 
 // Relevância: conta palavras da mensagem que aparecem no POP
-const stopwords = ['que','para','como','com','uma','por','dos','das','nao','mas','tem','sao','foi','ele','ela','isso','esse','esta','voce','aqui','hoje','fazer','pode','sobre','mais','tambem','quando','onde','qual','quais','muito','cada','todos','todo','ainda','acho','gente','nosso','nossa','vamos','bom','dia'];
+const stopwords = ['que','para','como','com','uma','por','dos','das','nao','mas','tem','sao','foi','ele','ela','isso','esse','esta','voce','aqui','hoje','fazer','pode','sobre','mais','tambem','quando','onde','qual','quais','muito','cada','todos','todo','ainda','acho','gente','nosso','nossa','vamos','bom','dia',
+  // termos genéricos do domínio ISP — aparecem em todos os POPs e não ajudam na seleção
+  'internet','servico','servicos','cliente','clientes','fibra','wifi','rede','zazz','conexao','provedor','suporte','contrato','plano','planos','atendimento','solucao','problema','acesso'];
 const normaliza = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const msgPalavras = [...new Set(normaliza(textMessage || quotedText).split(/\s+/).filter(w => w.length > 2 && !stopwords.includes(w)))];
 
@@ -224,11 +226,11 @@ for (const pop of uniquePops) {
   }
 }
 
-// Só POPs com pelo menos 1 palavra em comum com a mensagem, máximo 5
+// POPs com score >= 2 (palavras específicas), máximo 4
 scoredPops.sort((a, b) => b.score - a.score);
 const relevantNonClientPops = [
   ...importantePops,
-  ...scoredPops.filter(s => s.score > 0).slice(0, 5).map(s => s.pop)
+  ...scoredPops.filter(s => s.score >= 2).slice(0, 4).map(s => s.pop)
 ];
 
 // 5. COLABORADORES
