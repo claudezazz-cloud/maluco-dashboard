@@ -240,31 +240,26 @@ const diasSemana = ['domingo','segunda-feira','terça-feira','quarta-feira','qui
 const diaSemana = diasSemana[brt.getDay()];
 const msgLower = textMessage.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-// 7. MONTAGEM DOS POPs
+// 7. MONTAGEM DOS POPs — apenas títulos (conteúdo via tool buscar_pop)
 const isListingPops = msgLower === '/pops' || msgLower.includes('listar pops') || msgLower.includes('quais pops') || msgLower.includes('quais procedimentos') || msgLower.startsWith('lista de pop');
 let pops = '';
 
-// POPs "LEIA SEMPRE" — aparecem em TODAS as respostas
-if (leiasSemprePops.length > 0) {
-  pops += '📌 LEIA ANTES DE RESPONDER:\n\n';
-  for (const pop of leiasSemprePops) {
-    pops += '=== ' + pop.titulo + ' ===\n' + pop.conteudo + '\n\n';
+// Todos os POPs: só títulos — conteúdo via tool buscar_pop sob demanda
+const todosOsPops = [...leiasSemprePops, ...importantePops, ...scoredPops.map(s => s.pop)];
+if (todosOsPops.length > 0 && !isListingPops) {
+  pops += '📋 POPs DISPONÍVEIS (use buscar_pop para ler o conteúdo antes de orientar):\n';
+  for (const pop of todosOsPops) {
+    const marcador = (pop.prioridade || '').toLowerCase() === 'sempre' ? '⚠️ ' : '• ';
+    pops += marcador + pop.titulo + (pop.categoria ? ` [${pop.categoria}]` : '') + '\n';
   }
-  pops += '---\n\n';
+  pops += '\nREGRAS:\n'
+    + '- POPs marcados com ⚠️ são OBRIGATÓRIOS — chame buscar_pop para eles SEMPRE antes de responder.\n'
+    + '- Para outros POPs: chame buscar_pop antes de dar instruções de qualquer processo.\n'
+    + '- Se buscar_pop não retornar o que precisa, tente outro POP relacionado.\n'
+    + '- NUNCA oriente de memória sem chamar a tool.\n';
 }
 
-// POPs não-LEIA SEMPRE: apenas lista de títulos — Claude busca o conteúdo via tool buscar_pop
-if (todosNaoLeiasSempre.length > 0 && !isListingPops) {
-  pops += '\n📋 POPs DISPONÍVEIS (use a tool buscar_pop para ler o conteúdo completo antes de orientar):\n';
-  for (const pop of todosNaoLeiasSempre) {
-    pops += `• ${pop.titulo}` + (pop.categoria ? ` [${pop.categoria}]` : '') + '\n';
-  }
-  pops += '\nREGRA: SEMPRE chame buscar_pop antes de dar instruções de um processo. Nunca oriente de memória.\n';
-}
-
-const popsUsados = isListingPops
-  ? ''
-  : leiasSemprePops.map(p => p.titulo).join(', ');
+const popsUsados = '';
 
 // 8. CLIENTES
 let totalClientes = 0;
@@ -339,7 +334,7 @@ if (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {
     .replace(/\{\{EVOLUTIVO\}\}/g, evolutivoSection)
     .replace(/\{\{HISTORICO\}\}/g, '__CACHE_SPLIT__')
     .replace(/\{\{REGRAS\}\}/g, rulesPrompt);
-  systemContent = chamadosContext + resolvidosContext + '\n' + systemContent;
+  systemContent = chamadosContext + '\n' + systemContent;
 } else {
   systemContent = rulesPrompt
 
@@ -356,8 +351,8 @@ if (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {
     + 'POPs DA EMPRESA:\n' + pops
     + historicoSection
     + chamadosContext
-    + tarefasContext
-    + resolvidosContext;
+    + resolvidosContext
+    + tarefasContext;
 }
 
 // 10. LIMITE DE SEGURANÇA
@@ -383,7 +378,7 @@ return [{
   const marker = "__CACHE_SPLIT__";
   if (systemContent.includes(marker)) {
     const [stable, afterMarker] = systemContent.split(marker);
-    const dynamic = (memoriaContext + tarefasContext + historicoSection + (afterMarker || "") + skillContext).trim();
+    const dynamic = (memoriaContext + resolvidosContext + tarefasContext + historicoSection + (afterMarker || "") + skillContext).trim();
     const blocks = [ { type: "text", text: stable, cache_control: { type: "ephemeral" } } ];
     if (dynamic) blocks.push({ type: "text", text: dynamic });
     return blocks;
