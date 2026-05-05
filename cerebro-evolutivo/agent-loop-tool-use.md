@@ -15,19 +15,39 @@ O nó `Claude API` do v3 é um **Code node** que roda o agent loop completo:
 
 Retry automático em 429 (espera 25s).
 
-## 7 tools expostas
+## 9 tools expostas (mai/2026)
 
 | # | name | Função | Endpoint |
 |---|---|---|---|
-| 1 | `buscar_cliente(q)` | Lookup de cliente Zazz por nome ou código. Busca por palavras individuais (AND) — "sergio carlos sousa" acha "Sergio Carlos de Sousa". | dashboard `/api/clientes/buscar` |
-| 2 | `criar_tarefa_notion(...)` | Cria tarefa no Notion DB de Tarefas. `tipo` é enum dos tipos válidos. `valor` é number. | Notion API direto |
-| 3 | `resolver_tarefa_notion(page_id)` | PATCH `status=Ok` numa tarefa do Notion. | Notion API direto |
-| 4 | `listar_tarefas_notion(status?)` | Lista até 50 tarefas do Notion (filtra por status). | Notion API direto |
-| 5 | `aprender_fato(...)` | Upsert de fato durável em `bot_memoria_longa`. | dashboard `/api/memoria/aprender` |
-| 6 | `corrigir_fato(...)` | Desativa fato errado (ILIKE) + salva versão corrigida com `validado_por=user`. | dashboard `/api/memoria/corrigir` |
-| 7 | `criar_lembrete(mensagem, agendar_para, criado_por?)` | Agenda mensagem automática no grupo atual para follow-up de promessas. | dashboard `/api/lembretes` |
+| 1 | `buscar_pop(titulo)` | Busca conteúdo completo de um POP da Zazz. Usa exact→ILIKE→ts_rank. | dashboard `/api/pops/buscar` |
+| 2 | `buscar_chamados()` | Busca status dos chamados técnicos (suporte de internet). Sem parâmetros. | dashboard `/api/chamados/buscar` |
+| 3 | `buscar_cliente(q)` | Lookup de cliente Zazz por nome ou código. Busca por palavras individuais (AND). | dashboard `/api/clientes/buscar` |
+| 4 | `criar_tarefa_notion(...)` | Cria tarefa no Notion DB. `tipo` é enum. `valor` é number. | Notion API direto |
+| 5 | `resolver_tarefa_notion(page_id)` | PATCH `status=Ok` numa tarefa do Notion. | Notion API direto |
+| 6 | `listar_tarefas_notion(status?)` | Lista até 50 tarefas do Notion (filtra por status). | Notion API direto |
+| 7 | `aprender_fato(...)` | Upsert de fato durável em `bot_memoria_longa`. | dashboard `/api/memoria/aprender` |
+| 8 | `corrigir_fato(...)` | Desativa fato errado (ILIKE) + salva versão corrigida com `validado_por=user`. | dashboard `/api/memoria/corrigir` |
+| 9 | `criar_lembrete(...)` | ⚠️ EM STANDBY desde 04/05/2026. | dashboard `/api/lembretes` |
 
 Schemas completos no código do nó Claude API (`v3_dump/agent_loop_code.js` no VPS em `/opt/zazz/dashboard/v3_dump/`).
+
+## Arquitetura: contextos como tools (mai/2026)
+
+Para evitar 429 por excesso de tokens (o N8N estava injetando 62k tokens/request), migramos contextos grandes para tools sob demanda:
+
+| Contexto | Antes | Agora |
+|---|---|---|
+| POPs | ~45k chars injetados (todos os POPs) | Só títulos (~500 chars) + tool `buscar_pop` |
+| Chamados | ~30k chars injetados sempre | Removido do prompt + tool `buscar_chamados` |
+
+**Monta_Prompt.js:**
+- `chamadosContext` = vazio (não injeta mais)
+- `tarefasContext` = limita a 6k chars
+- POPs = apenas títulos (com LEIA SEMPRE completos)
+
+**Resultado esperado:** de ~62k → ~20-30k tokens por request.
+
+**Regra:** se aparecerem novos contextos grandes (>5k chars sempre presentes), migrar para tool.
 
 ## Regras importantes das tools
 
