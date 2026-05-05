@@ -206,6 +206,10 @@ Verificar WAL size `database.sqlite-wal` = 0 bytes após o stop. Se não for 0, 
 
 ---
 
+## Monta Prompt — dois nós, mesmo código (mai/2026)
+
+`Monta Prompt` e `Monta Prompt Relatório` usam o **mesmo** `Monta_Prompt.js`. Atualizar os dois juntos sempre que alterar. Usar o script `deploy_both_prompts.py` (ver CLAUDE.md deploy section).
+
 ## Monta Prompt — cache split
 
 O system prompt é dividido em duas partes pelo marcador `__CACHE_SPLIT__`:
