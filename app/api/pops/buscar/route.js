@@ -14,22 +14,23 @@ export async function GET(req) {
   const titulo = (searchParams.get('titulo') || '').trim()
   if (!titulo) return NextResponse.json({ error: 'titulo obrigatório' }, { status: 400 })
 
-  // 1. Exact match
+  // 1. Exact match (unaccent para ignorar acentos)
   const exact = await query(
     `SELECT titulo, categoria, conteudo FROM dashboard_pops
-     WHERE ativo = true AND LOWER(titulo) = LOWER($1) LIMIT 1`,
+     WHERE ativo = true
+       AND LOWER(unaccent(titulo)) = LOWER(unaccent($1)) LIMIT 1`,
     [titulo]
   )
   if (exact.rows.length > 0) {
     return NextResponse.json({ found: true, pop: exact.rows[0] })
   }
 
-  // 2. ILIKE — título contém a busca OU busca contém o título
+  // 2. ILIKE sem acentos — título contém a busca OU busca contém o título
   const ilike = await query(
     `SELECT titulo, categoria, conteudo FROM dashboard_pops
      WHERE ativo = true
-       AND (LOWER(titulo) ILIKE '%' || LOWER($1) || '%'
-            OR LOWER($1) ILIKE '%' || LOWER(titulo) || '%')
+       AND (LOWER(unaccent(titulo)) ILIKE '%' || LOWER(unaccent($1)) || '%'
+            OR LOWER(unaccent($1)) ILIKE '%' || LOWER(unaccent(titulo)) || '%')
      LIMIT 1`,
     [titulo]
   )
