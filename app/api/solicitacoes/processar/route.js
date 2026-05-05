@@ -19,8 +19,9 @@ export async function POST(req) {
   })
   const parts = Object.fromEntries(brtFmt.formatToParts(new Date()).map(p => [p.type, p.value]))
   const horaAtual = `${parts.hour}:${parts.minute}`
-  const diasMap = { 'dom': 'dom', 'seg': 'seg', 'ter': 'ter', 'qua': 'qua', 'qui': 'qui', 'sex': 'sex', 'sáb': 'sab' }
-  const diaAtual = diasMap[parts.weekday] || parts.weekday
+  const diasMap = { 'dom': 'dom', 'seg': 'seg', 'ter': 'ter', 'qua': 'qua', 'qui': 'qui', 'sex': 'sex', 'sab': 'sab', 'sáb': 'sab' }
+  const weekdayClean = (parts.weekday || '').replace(/\./g, '').toLowerCase()
+  const diaAtual = diasMap[weekdayClean] || weekdayClean
 
   const result = await query(
     `SELECT * FROM dashboard_solicitacoes_programadas
