@@ -339,7 +339,7 @@ if (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {
     .replace(/\{\{EVOLUTIVO\}\}/g, evolutivoSection)
     .replace(/\{\{HISTORICO\}\}/g, '__CACHE_SPLIT__')
     .replace(/\{\{REGRAS\}\}/g, rulesPrompt);
-  systemContent = chamadosContext + tarefasContext + resolvidosContext + '\n' + systemContent;
+  systemContent = chamadosContext + resolvidosContext + '\n' + systemContent;
 } else {
   systemContent = rulesPrompt
 
@@ -383,7 +383,7 @@ return [{
   const marker = "__CACHE_SPLIT__";
   if (systemContent.includes(marker)) {
     const [stable, afterMarker] = systemContent.split(marker);
-    const dynamic = (memoriaContext + historicoSection + (afterMarker || "") + skillContext).trim();
+    const dynamic = (memoriaContext + tarefasContext + historicoSection + (afterMarker || "") + skillContext).trim();
     const blocks = [ { type: "text", text: stable, cache_control: { type: "ephemeral" } } ];
     if (dynamic) blocks.push({ type: "text", text: dynamic });
     return blocks;
@@ -391,7 +391,7 @@ return [{
   return systemContent;
 })(),
       messages: [
-        ...redisHistory.slice(-20),
+        ...redisHistory.slice(-10),
         { role: "user", content: ((_vM_early.allImages && _vM_early.allImages.length) ? [ { type: "text", text: userMsg }, ..._vM_early.allImages.map(i => ({ type: "image", source: { type: "base64", media_type: i.mimetype, data: i.base64 } })) ] : (_vM_early.imageBase64 ? [ { type: "text", text: userMsg }, { type: "image", source: { type: "base64", media_type: _vM_early.imageMimetype, data: _vM_early.imageBase64 } } ] : userMsg)) }
       ]
     }
