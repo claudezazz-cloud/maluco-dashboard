@@ -40,14 +40,17 @@ Para evitar 429 por excesso de tokens (o N8N estava injetando 62k tokens/request
 | POPs | ~45k chars injetados (todos os POPs) | Só títulos (~500 chars) + tool `buscar_pop` |
 | Chamados | ~30k chars injetados sempre | Removido do prompt + tool `buscar_chamados` |
 
-**Monta_Prompt.js:**
-- `chamadosContext` = vazio (não injeta mais)
-- `tarefasContext` = limita a 6k chars
-- POPs = apenas títulos (com LEIA SEMPRE completos)
+**Monta_Prompt.js e Monta_Prompt_Relatorio (mai/2026):**
+- `chamadosContext` = vazio (não injeta mais) — ambos os nós sincronizados
+- `tarefasContext` = movido para o bloco DINÂMICO (após __CACHE_SPLIT__) — não invalida cache
+- POPs = apenas títulos no bloco estável (LEIA SEMPRE completos)
+- `redisHistory.slice(-10)` (era -20)
 
-**Resultado esperado:** de ~62k → ~20-30k tokens por request.
+**Por que o cache importa:** o bloco estável do system prompt vai com `cache_control: ephemeral`. Se dados dinâmicos (chamados, tarefas) ficam no bloco estável, o cache invalida a cada request → todos os tokens contam como input (era 30k-60k tokens). Com cache funcionando, só o bloco dinâmico (~4-6k tokens) vai como input real.
 
-**Regra:** se aparecerem novos contextos grandes (>5k chars sempre presentes), migrar para tool.
+**Resultado esperado:** de ~50-60k → ~4-6k tokens_input por request (resto vem do cache).
+
+**Regra:** dados dinâmicos (que mudam entre requests) NÃO devem ficar no bloco estável. Migrar para bloco dinâmico ou para tool.
 
 ## Regras importantes das tools
 
