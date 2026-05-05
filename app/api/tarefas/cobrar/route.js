@@ -121,10 +121,8 @@ export async function POST(req) {
     for (const { grupo, tarefas: lista } of Object.values(msgsPorGrupo)) {
       const linhas = lista.map(t => {
         const atraso = t.atraso > 0 ? ` _(${t.atraso}d atraso)_` : ''
-        const cli = t.cli ? ` | ${t.cli}` : ''
-        const resp = t.resp ? ` → ${t.resp}` : ''
-        const tipos = t.tipos.length ? ` [${t.tipos.join('/')}]` : ''
-        return `• *${t.desc}*${cli}${tipos}${resp}${atraso}`
+        const resp = t.resp ? ` — ${t.resp}` : ''
+        return `• *${t.desc}*${resp}${atraso}`
       }).join('\n')
 
       const mensagem = `⚠️ *Tarefas vencidas — ${new Date().toLocaleDateString('pt-BR')}*\n\n${linhas}\n\n_Verificar e atualizar no Notion._`
