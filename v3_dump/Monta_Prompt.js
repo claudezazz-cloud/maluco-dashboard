@@ -226,12 +226,8 @@ for (const pop of uniquePops) {
   }
 }
 
-// POPs com score >= 2 (palavras específicas), máximo 4
-scoredPops.sort((a, b) => b.score - a.score);
-const relevantNonClientPops = [
-  ...importantePops,
-  ...scoredPops.filter(s => s.score >= 2).slice(0, 4).map(s => s.pop)
-];
+// POPs não-LEIA SEMPRE: só títulos (conteúdo disponível via tool buscar_pop)
+const todosNaoLeiasSempre = [...importantePops, ...scoredPops.map(s => s.pop)];
 
 // 5. COLABORADORES
 let colaboradoresArray = [];
@@ -269,16 +265,18 @@ if (leiasSemprePops.length > 0) {
   pops += '---\n\n';
 }
 
-if (relevantNonClientPops.length > 0 && !isListingPops) {
-  pops += '\n--- PROCEDIMENTOS (POPs) ---\nREGRA: Voce TEM todos os POPs abaixo. NUNCA diga que nao localizou POP. Use este mapa para associar chamados aos POPs:\n- Perca de Equipamento = POP explicativo do processo de retira de equipamentos\n- Retencao / SPC / Cobranca = Processos Operacionais junto ao CCR\n- Mudanca de Contrato / Modificacao = Mudanca Contratual\n- Servico Instavel / Instabilidade = Reclamacao Servico com Instabilidade\n- Servico Indisponivel = Reclamacao Servico Indisponivel\n- Divergencia Financeira / Boletos = Alteracao e Correcao de Financeiro\n- Assinatura / Contrato / Vendas = Processo e fluxograma de uma nova venda\n- Mudanca de Endereco = Mudanca de Endereco\n- Mudanca de Senha = Mudanca de Senha Wifi\n- Instalacao / Modificacao tecnica = Modificacao da Instalacao\n- Comprovante = Comprovante de Pagamento\n- Desconto = Descontos de indicacao\nSempre aplique os PASSOS do POP correspondente.\n\n';
-  for (const pop of relevantNonClientPops) {
-    pops += '=== ' + pop.titulo + ' (' + (pop.categoria || 'Geral') + ') ===\n' + pop.conteudo + '\n\n';
+// POPs não-LEIA SEMPRE: apenas lista de títulos — Claude busca o conteúdo via tool buscar_pop
+if (todosNaoLeiasSempre.length > 0 && !isListingPops) {
+  pops += '\n📋 POPs DISPONÍVEIS (use a tool buscar_pop para ler o conteúdo completo antes de orientar):\n';
+  for (const pop of todosNaoLeiasSempre) {
+    pops += `• ${pop.titulo}` + (pop.categoria ? ` [${pop.categoria}]` : '') + '\n';
   }
+  pops += '\nREGRA: SEMPRE chame buscar_pop antes de dar instruções de um processo. Nunca oriente de memória.\n';
 }
 
 const popsUsados = isListingPops
   ? ''
-  : [...leiasSemprePops, ...relevantNonClientPops].map(p => p.titulo).join(', ');
+  : leiasSemprePops.map(p => p.titulo).join(', ');
 
 // 8. CLIENTES
 let totalClientes = 0;
