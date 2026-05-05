@@ -32,21 +32,9 @@ try {
   }
 } catch(e) {}
 
-// CHAMADOS
+// CHAMADOS — disponíveis via tool buscar_chamados (não injeta no prompt para economizar tokens)
 let chamadosContext = '';
-try {
-  const cv = $('Busca Chamados Redis').first().json?.propertyName || $('Busca Chamados Redis').first().json?.value;
-  if (cv) {
-    const chamadosData = JSON.parse(cv);
-    if (chamadosData.ai_context) {
-      chamadosContext = '\n\n⚠️ CHAMADOS DO SISTEMA (ATUALIZADOS AGORA - DADOS OFICIAIS):\n'
-        + 'REGRAS OBRIGATORIAS SOBRE CHAMADOS:\n'
-        + '1. Os numeros no resumo abaixo sao EXATOS e PRE-CALCULADOS. NUNCA reconte.\n'
-        + '2. Confie no resumo. NAO diga que precisa acessar outro sistema.\n\n'
-        + chamadosData.ai_context.substring(0, 30000);
-    }
-  }
-} catch(e) {}
+// Chamados agora são buscados sob demanda via tool buscar_chamados no agent loop.
 
 
 // TAREFAS NOTION
@@ -85,7 +73,7 @@ try {
       + '|||NOTION_OK|||{"page_id":"<id da tarefa>","titulo":"<descricao curta>","cliente":"<nome cliente>"}|||FIM|||\n'
       + 'Use SEMPRE o id exato da lista abaixo (sem traços). Nao invente ids. Se ambiguo, pergunte qual.\n'
       + 'Se for confirmar acao do usuario ("Sim", "pode marcar"), olhe no historico qual tarefa estava sendo discutida e use o id dela.\n\n'
-      + linhas;
+      + linhas.substring(0, 6000);
   }
 } catch(e) {}
 
