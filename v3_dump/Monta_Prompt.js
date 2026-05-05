@@ -224,11 +224,11 @@ for (const pop of uniquePops) {
   }
 }
 
-// Todos os POPs recebem conteúdo completo (~44k chars = ok para Claude)
+// Só POPs com pelo menos 1 palavra em comum com a mensagem, máximo 5
 scoredPops.sort((a, b) => b.score - a.score);
 const relevantNonClientPops = [
   ...importantePops,
-  ...scoredPops.map(s => s.pop)
+  ...scoredPops.filter(s => s.score > 0).slice(0, 5).map(s => s.pop)
 ];
 
 // 5. COLABORADORES
@@ -389,7 +389,7 @@ return [{
     popsUsados,
     chamadosCarregados: chamadosContext.length > 0 ? 'SIM (' + chamadosContext.length + ' chars)' : 'NAO',
     claudeBody: {
-      model: "claude-sonnet-4-6",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 4096,
       system: (function(){
   const marker = "__CACHE_SPLIT__";
