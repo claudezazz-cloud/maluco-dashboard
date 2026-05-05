@@ -178,6 +178,32 @@ Sem o `chown`, o n8n pode subir com SQLite read-only e travar (SQLITE_READONLY).
 
 *Identificado em mai/2026: execução 54048 enviou `claude-sonnet-4-6` mesmo com SQLite já tendo `claude-haiku-4-5-20251001`, porque o restart anterior ocorreu antes da edição.*
 
+### SQLite WAL — edições concorrentes perdem para o N8N
+
+O SQLite do N8N usa modo WAL (`database.sqlite-wal`). O N8N mantém o WAL ativo enquanto está rodando. Se você editar o `database.sqlite` (arquivo principal) com Python enquanto o N8N está UP, o N8N pode sobrescrever sua edição no WAL com uma versão mais recente (via execuções, statistics, etc.).
+
+**Procedimento à prova de falhas:**
+```bash
+docker stop n8n-n8n-1           # para o N8N — WAL é automaticamente checkpointado
+# WAL deve ficar com (0,0,0) frames
+python3 -c "
+import sqlite3, json
+con = sqlite3.connect('/var/lib/docker/volumes/n8n_data/_data/database.sqlite')
+cur = con.cursor()
+cur.execute('PRAGMA wal_checkpoint(TRUNCATE)')  # garante WAL vazio
+# ... editar workflow_entity ...
+con.commit()
+cur.execute('PRAGMA wal_checkpoint(TRUNCATE)')  # consolida
+con.close()
+"
+docker start n8n-n8n-1
+chown 1000:1000 /var/lib/docker/volumes/n8n_data/_data/database.sqlite*
+```
+
+Verificar WAL size `database.sqlite-wal` = 0 bytes após o stop. Se não for 0, aguardar o N8N terminar graciosamente (SIGTERM) ou forçar com `kill -9` apenas se necessário.
+
+*Confirmado em mai/2026: WAL de 4.3MB com versões antigas de Sonnet sobrescrevia edições Python mesmo após restart. Solução: stop → checkpoint TRUNCATE → edita → checkpoint TRUNCATE → start.*
+
 ---
 
 ## Monta Prompt — cache split
