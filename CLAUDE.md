@@ -152,20 +152,12 @@ Arquivo local: `v3_dump/sysprompt_v3.txt` (vai pro git via `git add -f`).
 ## Idioma
 UI, banco e variáveis em Português (BR). Código: mix PT/EN conforme existente.
 
-## Notas do Obsidian (cerebro-evolutivo/)
+## Notas do Obsidian (cerebro/)
 
-**Regra obrigatória:** ao implementar qualquer alteração significativa (nova feature, bug importante, mudança de arquitetura), criar ou atualizar o `.md` correspondente em `cerebro-evolutivo/`.
+**Regra obrigatória:** atualizar o Obsidian após QUALQUER alteração, por menor que seja — novo usuário, mudança de configuração, correção de bug, novo inbox, reset de senha, deploy, etc. Não esperar o usuário pedir.
 
-Essas notas são indexadas e injetadas como contexto no bot — é a memória evolutiva do sistema.
+Todas as notas ficam em `cerebro/` — pasta única, sem subpastas.
 
-Arquivos existentes:
-- `agent-loop-tool-use.md` — 7 tools, agent loop, deploy do nó Claude API, deploy do system prompt
-- `memoria-evolutiva.md` — 3 camadas de memória (Redis/dia/longa), caminhos A/B/C de aprendizado
-- `dashboard-admin.md` — páginas, APIs, tabelas, crons, padrões de código
-- `multigrupo-tipos-implementado.md` — multi-grupo com filtro por tipo de tarefa
-- `workflow-n8n.md` — estrutura do workflow, nodes, padrões de edição
-- `metricas-notion.md` — feature de métricas de tarefas do Notion
-- `treinamento-evolutivo.md` — como funciona o sistema de notas Obsidian
-- `README.md` — índice de navegação
+Essas notas são indexadas e injetadas como contexto no bot — é a memória evolutiva do sistema. O cron do VPS sincroniza a cada minuto via `sync-evolutivo.sh`.
 
-Ao adicionar nota nova: commit e push — cron do VPS sincroniza a cada minuto.
+Ao adicionar nota nova: commit e push — cron do VPS sincroniza automaticamente.

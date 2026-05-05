@@ -15,6 +15,7 @@
 | Dashboard | `https://dashboard.srv1537041.hstgr.cloud` | 3001 | PM2 |
 | N8N | `https://n8n.srv1537041.hstgr.cloud` | 5678 | Docker |
 | Evolution API | `https://evolution.srv1537041.hstgr.cloud` | 8080 | Docker |
+| Chatwoot | `https://chatwoot.srv1537041.hstgr.cloud` | 3000 | Docker |
 | PostgreSQL | `localhost:5432` | - | Docker |
 | Redis | `localhost:6379` | - | Docker |
 

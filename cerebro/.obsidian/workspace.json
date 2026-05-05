@@ -4,21 +4,20 @@
     "type": "split",
     "children": [
       {
-        "id": "85032fa3e69cb5f0",
+        "id": "34e316fc3ca9f2c0",
         "type": "tabs",
         "children": [
           {
-            "id": "c445c466e5fa33c0",
+            "id": "f7fa5c3d89eb8467",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "bases",
               "state": {
-                "file": "memoria-sistema.md",
-                "mode": "source",
-                "source": false
+                "file": "Untitled.base",
+                "viewName": "Table"
               },
-              "icon": "lucide-file",
-              "title": "memoria-sistema"
+              "icon": "lucide-table",
+              "title": "Untitled"
             }
           }
         ]
@@ -53,7 +52,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "memoria sistem",
+                "query": "",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -184,34 +183,35 @@
       "bases:Create new base": false
     }
   },
-  "active": "c445c466e5fa33c0",
+  "active": "f7fa5c3d89eb8467",
   "lastOpenFiles": [
-    "memoria-sistema.md",
+    "workflow-n8n.md",
+    "treinamento-evolutivo.md",
+    "treinamento-evolutivo-sistema.md",
+    "solicitacoes-programadas.md",
+    "skills-sistema.md",
+    "plano-multigrupo-tipos.md",
+    "notion-sync-snapshot.md",
+    "multigrupo-tipos-implementado.md",
+    "metricas-notion.md",
+    "memoria-evolutiva.md",
+    "lembretes-standby.md",
+    "ideias-melhorias.md",
+    "dashboard-admin.md",
+    "chamados-sistema.md",
+    "auditoria-bugs-corrigidos.md",
+    "agent-loop-tool-use.md",
+    "README.md",
+    "Chatwoot.md",
+    "Untitled.base",
+    "Chatwoot Usuarios.md",
+    "Chatwoot Inboxes.md",
     "IDEIAS.md",
-    "Chamados.md",
     "Resolvidos Hoje.md",
-    "Skills.md",
-    "Relatorios.md",
-    "Regras de Treinamento.md",
-    "Prompt Caching.md",
-    "POPs.md",
-    "Objetivo.md",
-    "Notion.md",
     "Maluco da IA.md",
-    "Infraestrutura.md",
-    "Funcionalidades.md",
-    "Fluxo de Imagem.md",
-    "Fluxo de Audio.md",
-    "Filiais.md",
-    "Error Trigger.md",
-    "Deploy.md",
-    "Dashboard.md",
-    "Custos.md",
-    "Clientes.md",
-    "Chat Dashboard.md",
-    "Bom Dia.md",
-    "Banco de Dados.md",
-    "Autor.md",
+    "wikilinks.md",
+    "memoria-sistema.md",
+    "Chamados.md",
     "Custos.md.tmp.15684.1776816254382",
     "Stack Tecnologica.md.tmp.15684.1776816222012",
     "Maluco da IA.md.tmp.15684.1776798400640",
@@ -220,7 +220,6 @@
     "Custos.md.tmp.15684.1776798341590",
     "System Prompt.md.tmp.15684.1776798190337",
     "Bom Dia.md.tmp.15684.1776798166774",
-    "Relatorios.md.tmp.15684.1776798147029",
-    "Notion.md.tmp.15684.1776798128784"
+    "Relatorios.md.tmp.15684.1776798147029"
   ]
 }
