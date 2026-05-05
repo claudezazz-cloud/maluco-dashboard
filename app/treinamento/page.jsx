@@ -1025,6 +1025,25 @@ export default function TreinamentoPage() {
 
 const TOOLS_LIST = [
   {
+    name: 'buscar_pop(titulo)',
+    cor: 'bg-green-500/10 border-green-500/20 text-green-400',
+    badge: 'bg-green-500/20 text-green-300',
+    descricao: 'Busca o conteúdo completo de um POP (Procedimento Operacional Padrão) da Zazz.',
+    quando: 'SEMPRE antes de orientar qualquer atendimento que envolva um processo da empresa. Nunca de memória.',
+    exemplos: ['"Reclamação Serviço Indisponível"', '"Mudança de Senha"', '"Cancelamento"'],
+    retorno: 'Conteúdo completo do POP. Se não encontrar, retorna mensagem de não encontrado.',
+    obs: 'Pode chamar múltiplas vezes se o atendimento envolver mais de um procedimento.',
+  },
+  {
+    name: 'buscar_chamados()',
+    cor: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400',
+    badge: 'bg-yellow-500/20 text-yellow-300',
+    descricao: 'Busca o status atual dos chamados técnicos de suporte de internet da Zazz.',
+    quando: '"quantos chamados abertos", "fila do fulano", "cidades com problema", "chamados pendentes".',
+    retorno: 'Resumo de chamados importados pela manhã (até 10k chars). Dados pré-calculados — nunca recontabilize.',
+    obs: 'Não precisa de parâmetros. Não chame sem necessidade — só quando chamados/suporte forem relevantes.',
+  },
+  {
     name: 'buscar_cliente(q)',
     cor: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
     badge: 'bg-blue-500/20 text-blue-300',
