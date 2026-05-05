@@ -8,7 +8,7 @@
 |-----------|-----------|-----|
 | Automação | **N8N** self-hosted | Orquestra fluxo do bot ([[Workflow N8N]]) + [[Solicitacoes Programadas]] |
 | WhatsApp | **Evolution API v2** | Envia/recebe mensagens, hospedada no VPS |
-| IA | **Claude Sonnet 4.6** (`claude-sonnet-4-6`) | Texto + Vision nativo ([[Fluxo de Imagem]]) — ver [[Custos]] |
+| IA | **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`) | Texto + Vision nativo ([[Fluxo de Imagem]]) — ver [[Custos]] |
 | Transcrição áudio | **Groq Whisper-large-v3** | API compatível OpenAI — [[Fluxo de Audio]] |
 | Banco | **PostgreSQL** (Docker) | Persistência — ver [[Banco de Dados]] |
 | Cache/Histórico | **Redis** (Docker) | Histórico conversa, chamados, config |
@@ -20,7 +20,7 @@
 ## Por que essas escolhas
 
 - **N8N** → editor visual, trigger de webhook, fácil de iterar (ver [[Deploy]])
-- **Claude Sonnet 4.6** → maior qualidade de raciocínio para POPs e relatórios, Vision nativo. Migrou de Haiku 4.5 em abr/2026 — custo passou de ~US$ 3/mês pra ~US$ 9/mês (com cache ativo). Ver [[Custos]]
+- **Claude Haiku 4.5** → velocidade + custo baixo (~US$ 3/mês com cache ativo). Usou Sonnet 4.6 brevemente em abr/2026 mas reverteu para Haiku em mai/2026 por rate limit e custo. Ver [[Custos]]
 - **Groq** → substituiu o OpenAI Whisper (mais rápido e free tier generoso)
 - **Postgres + Redis** → clássico: Postgres pro que precisa persistir, Redis pro que é efêmero/rápido
 - **Next.js 14 App Router** → server components, API routes, deploy simples

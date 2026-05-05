@@ -157,6 +157,29 @@ remetente = COALESCE(
 
 UI: aba `/treinamento` → Colaboradores. Cada card lista os números cadastrados (com apelido opcional) + input inline pra adicionar/remover. Migração automática do `telefone_whatsapp` antigo no primeiro carregamento.
 
+## Regra operacional — edições no SQLite exigem restart do N8N
+
+O N8N lê os workflows do SQLite **apenas no boot** e mantém em memória durante toda a execução. Edições diretas no `database.sqlite` (via Python/sqlite3) ficam num "limbo" até o próximo restart.
+
+**Antes de assumir que uma edição entrou em vigor:**
+1. Verificar `docker inspect n8n-n8n-1 -f '{{.State.StartedAt}}'` → hora do último boot do container.
+2. Verificar `stat database.sqlite` → `mtime`.
+3. Se `mtime` > `StartedAt`, as edições ainda não foram lidas — é necessário novo restart.
+
+**Procedimento correto:**
+```bash
+docker stop n8n-n8n-1
+# editar database.sqlite aqui
+docker start n8n-n8n-1
+chown 1000:1000 /var/lib/docker/volumes/n8n_data/_data/database.sqlite*
+```
+
+Sem o `chown`, o n8n pode subir com SQLite read-only e travar (SQLITE_READONLY).
+
+*Identificado em mai/2026: execução 54048 enviou `claude-sonnet-4-6` mesmo com SQLite já tendo `claude-haiku-4-5-20251001`, porque o restart anterior ocorreu antes da edição.*
+
+---
+
 ## Monta Prompt — cache split
 
 O system prompt é dividido em duas partes pelo marcador `__CACHE_SPLIT__`:
