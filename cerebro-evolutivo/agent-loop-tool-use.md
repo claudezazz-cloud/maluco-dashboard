@@ -41,16 +41,21 @@ Para evitar 429 por excesso de tokens (o N8N estava injetando 62k tokens/request
 | Chamados | ~30k chars injetados sempre | Removido do prompt + tool `buscar_chamados` |
 
 **Monta_Prompt.js e Monta_Prompt_Relatorio (mai/2026):**
-- `chamadosContext` = vazio (não injeta mais) — ambos os nós sincronizados
-- `tarefasContext` = movido para o bloco DINÂMICO (após __CACHE_SPLIT__) — não invalida cache
-- POPs = apenas títulos no bloco estável (LEIA SEMPRE completos)
+- `chamadosContext` = vazio — tool `buscar_chamados` sob demanda
+- `tarefasContext` = bloco DINÂMICO (não invalida cache)
+- `resolvidosContext` = bloco DINÂMICO (não invalida cache)
+- POPs = APENAS TÍTULOS para TODOS os POPs (incluindo LEIA SEMPRE)
+  - LEIA SEMPRE marcados com ⚠️ → bot chama buscar_pop obrigatoriamente antes de responder
+  - Outros POPs → bot chama buscar_pop antes de orientar qualquer processo
 - `redisHistory.slice(-10)` (era -20)
+- Ambos os nós usam o MESMO código — atualizar sempre juntos
 
-**Por que o cache importa:** o bloco estável do system prompt vai com `cache_control: ephemeral`. Se dados dinâmicos (chamados, tarefas) ficam no bloco estável, o cache invalida a cada request → todos os tokens contam como input (era 30k-60k tokens). Com cache funcionando, só o bloco dinâmico (~4-6k tokens) vai como input real.
+**Por que o cache importa:** bloco estável vai com `cache_control: ephemeral`. Se dados dinâmicos (tarefas Notion, chamados resolvidos) ficam no estável, o cache invalida a cada request → todos os tokens contam como input (era 30k-60k). Com cache funcionando: só ~4-6k tokens_input.
 
-**Resultado esperado:** de ~50-60k → ~4-6k tokens_input por request (resto vem do cache).
+**Bloco estável (cacheable):** system prompt + POPs títulos + colaboradores = ~26k chars
+**Bloco dinâmico (input real):** memoria + resolvidosHoje + tarefas + histórico + regras = ~8-12k chars
 
-**Regra:** dados dinâmicos (que mudam entre requests) NÃO devem ficar no bloco estável. Migrar para bloco dinâmico ou para tool.
+**Regra:** qualquer dado que muda entre requests NÃO deve ficar no bloco estável. Mover para dinâmico ou tool.
 
 ## Regras importantes das tools
 
