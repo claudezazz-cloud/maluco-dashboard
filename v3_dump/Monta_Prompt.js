@@ -259,7 +259,7 @@ if (todosOsPops.length > 0 && !isListingPops) {
     + '- NUNCA oriente de memória sem chamar a tool.\n';
 }
 
-const popsUsados = '';
+const popsUsados = todosOsPops.map(p => p.titulo).join(', ');
 
 // 8. CLIENTES
 let totalClientes = 0;
@@ -331,7 +331,7 @@ if (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {
     .replace(/\{\{COLABORADORES\}\}/g, colaboradoresStr)
     .replace(/\{\{CLIENTES\}\}/g, clienteInfo)
     .replace(/\{\{POPS\}\}/g, pops)
-    .replace(/\{\{EVOLUTIVO\}\}/g, evolutivoSection)
+    .replace(/\{\{EVOLUTIVO\}\}/g, '')
     .replace(/\{\{HISTORICO\}\}/g, '__CACHE_SPLIT__')
     .replace(/\{\{REGRAS\}\}/g, rulesPrompt);
   systemContent = chamadosContext + '\n' + systemContent;
@@ -378,7 +378,7 @@ return [{
   const marker = "__CACHE_SPLIT__";
   if (systemContent.includes(marker)) {
     const [stable, afterMarker] = systemContent.split(marker);
-    const dynamic = (memoriaContext + resolvidosContext + tarefasContext + historicoSection + (afterMarker || "") + skillContext).trim();
+    const dynamic = (evolutivoSection + memoriaContext + resolvidosContext + tarefasContext + historicoSection + (afterMarker || "") + skillContext).trim();
     const blocks = [ { type: "text", text: stable, cache_control: { type: "ephemeral" } } ];
     if (dynamic) blocks.push({ type: "text", text: dynamic });
     return blocks;
