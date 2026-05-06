@@ -65,7 +65,7 @@ A palavra "**pronto**" sozinha matchava qualquer ocorrência. Quando o usuário 
 2. Regex KEY_RE mais restrito: exige contexto de "JÁ está pronto", não só "pronto" solto
 3. Mensagens > 800 chars são ignoradas (briefings raramente são confirmação)
 
-Código em `dashboard/cerebro-evolutivo/.../detecta_resolvido.js` (não vai pro git em raw — é deployado direto via `deploy_full.py`).
+Código em `v3_dump/detecta_resolvido.js` (no VPS em `/opt/zazz/dashboard/v3_dump/`, não vai pro git em raw — é deployado via `deploy_full.py`).
 
 ## Arquivos relacionados
 

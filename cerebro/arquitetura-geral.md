@@ -100,7 +100,7 @@ config:bom_dia_grupo       # JID legado (substituído por grupos_whatsapp)
 
 | Cron | Função |
 |---|---|
-| `* * * * * sync-evolutivo.sh` | Sincroniza cerebro-evolutivo/ pro Postgres |
+| `* * * * * sync-evolutivo.sh` | Sincroniza cerebro/ pro Postgres |
 | `* * * * * .../api/solicitacoes/processar` | Dispara solicitações programadas (bom dia, relatório) |
 | `* * * * * .../api/mensagens-agendadas/processar` | Envia lembretes e cobranças programadas |
 | `5 * * * * scrape.js` | Importa chamados Routerbox (a cada hora, minuto 5) |
@@ -185,7 +185,7 @@ Além do fluxo principal (Webhook → Claude → Resposta), tem:
 
 2. **Memória longa** (`bot_memoria_longa`): fatos duráveis sobre clientes/colaboradores/processos. Bot salva via `aprender_fato` quando percebe padrão. Injetado no contexto via `Busca Memoria Contexto`.
 
-3. **Conhecimento Evolutivo** (`dashboard/cerebro-evolutivo/`): notas Obsidian sobre o sistema. Sincronizadas pro postgres via cron, indexadas, injetadas no prompt via `Busca Evolutivo` quando match semântico com a mensagem.
+3. **Conhecimento Evolutivo** (`dashboard/cerebro/`): notas Obsidian sobre o sistema. Sincronizadas pro postgres via cron, indexadas, injetadas no prompt via `Busca Evolutivo` quando match semântico com a mensagem.
 
 Ver [memoria-evolutiva.md](memoria-evolutiva.md) (se existir) para detalhes.
 
