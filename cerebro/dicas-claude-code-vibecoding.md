@@ -10,7 +10,7 @@ O Claude Code é incrivelmente competente em **executar** mudanças e **diagnost
 
 ### 1. Direcione o início da sessão com contexto
 ❌ "tem um bug, conserta"
-✅ "Lê `dashboard/cerebro-evolutivo/bugs-abertos.md`. O bug X está acontecendo: [print]. Já tentei Y."
+✅ "Lê `dashboard/cerebro/bugs-abertos.md`. O bug X está acontecendo: [print]. Já tentei Y."
 
 Economiza minutos da IA fuçando arquivos errados.
 
@@ -59,7 +59,7 @@ Resultado: a IA fuça 20 arquivos, lê coisas erradas, gasta 30k tokens só pra 
 Ela NÃO LEMBRA. O que persiste é:
 - `CLAUDE.md` (carregado automaticamente)
 - `memory/MEMORY.md` (memória persistente do Claude Code)
-- Notas em `dashboard/cerebro-evolutivo/` (precisam ser lidas explicitamente OU referenciadas no CLAUDE.md)
+- Notas em `dashboard/cerebro/` (precisam ser lidas explicitamente OU referenciadas no CLAUDE.md)
 
 Tudo o resto morre quando a sessão acaba.
 
@@ -84,7 +84,7 @@ Se quebrar, não dá pra saber qual foi. Faça um por vez (ou peça commits sepa
 /plan                              # entra em plan mode (mostra plano antes de mexer)
 /clear                             # limpa contexto da sessão (use se ficar confuso)
 @arquivo.md                        # cita arquivo específico no chat
-@dashboard/cerebro-evolutivo/      # cita pasta inteira (cuidado com tokens)
+@dashboard/cerebro/      # cita pasta inteira (cuidado com tokens)
 ```
 
 ## Quando NÃO confiar 100% no Claude Code
