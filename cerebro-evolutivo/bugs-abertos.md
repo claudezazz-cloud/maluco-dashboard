@@ -65,6 +65,18 @@ Aparentemente Haiku 4.5 não está obedecendo essas regras com força suficiente
 
 ---
 
+## 🔵 TODO operacional — limpar `fix_*.py` da raiz (mai/2026)
+
+Tem ~20 scripts `fix_*.py` na raiz do projeto que foram one-shot fixes (rodaram, aplicaram, terminaram). Estão poluindo o repo. Documentei todos e o que fizeram em [fix-scripts-historicos.md](fix-scripts-historicos.md).
+
+**Plano:** mover para `archive/fix_scripts_2026_q2/` (preservar histórico via git).
+
+**Impacto:** zero — nenhum desses scripts é usado em runtime.
+
+**Substituto para fixes futuros:** `v3_dump/deploy_workflow.py` (workflow N8N) ou scripts em `dashboard/scripts/` (não na raiz).
+
+---
+
 ## 🟢 Resolvidos recentemente
 
 - ✅ **Tokens 30k+ pra "oi"** (resolvido mai/2026): workflow_history não estava sendo atualizado. Fix: `deploy_workflow.py` atualiza `workflow_entity` + `workflow_history` com mesmo versionId. Ver [deploy-workflow.md](deploy-workflow.md).
