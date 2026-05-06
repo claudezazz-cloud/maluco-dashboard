@@ -45,34 +45,45 @@ PYEOF
 "
 ```
 
+## Deploy do workflow N8N (PADRÃO — atualizado mai/2026)
+
+⚠️ **REGRA CRÍTICA**: editar `workflow_entity` direto no SQLite **NÃO BASTA**. O n8n carrega o workflow ativo da tabela `workflow_history` (versão publicada), não da `workflow_entity` (rascunho). Sem atualizar `workflow_history` E sincronizar o `versionId` entre as duas, qualquer edição **será ignorada em runtime**.
+
+**Use SEMPRE o script `/opt/zazz/dashboard/v3_dump/deploy_workflow.py`** — ele faz o ciclo completo:
+
+```bash
+# 1. Edita Monta_Prompt.js localmente, faz scp:
+scp v3_dump/Monta_Prompt.js root@195.200.7.239:/opt/zazz/dashboard/v3_dump/
+
+# 2. Roda o deploy script no VPS:
+ssh root@195.200.7.239 "python3 /opt/zazz/dashboard/v3_dump/deploy_workflow.py"
+```
+
+O script (`deploy_workflow.py`):
+1. Stop n8n (`docker stop n8n-n8n-1`)
+2. `PRAGMA wal_checkpoint(TRUNCATE)` (consolida WAL)
+3. Atualiza `workflow_entity.nodes` (Monta Prompt + Monta Prompt Relatório) + novo `versionId` + `updatedAt`
+4. Atualiza `workflow_history.nodes` com o **mesmo `versionId`** (CRÍTICO — sem isso n8n não acha a versão)
+5. Checkpoint TRUNCATE de novo
+6. Start n8n + chown 1000:1000
+
+Se mudar o **agent_loop_code.js** (Claude API), o mesmo script funciona — basta adicionar `"Claude API"` à lista `NODES_TO_UPDATE` ou estender o script.
+
+**Verificação pós-deploy**: enviar mensagem teste via webhook e checar `bot_conversas.tokens_input` (alvo: 5–8k para "oi", não mais 30k+).
+
+### Por que o método antigo (só `workflow_entity` + restart) não funcionava
+
+n8n v2.14+ usa modelo de versionamento: `workflow_published_version` aponta para uma `versionId` em `workflow_history`. Em runtime, o n8n carrega o workflow da `workflow_history` correspondente — `workflow_entity` é só o rascunho do editor. Edições direto na `workflow_entity` ficam invisíveis até serem "publicadas".
+
+O script `deploy_workflow.py` simula publish replicando o conteúdo nos dois lugares com o mesmo `versionId`. Confirmado em mai/2026 após 5 sessões debugando "por que minhas edições não aplicam".
+
+⚠️ **NÃO APAGAR** linhas em `workflow_published_version` — se a tabela ficar vazia, o webhook responde 404 ("Active version not found"). Se precisar resetar, usar `n8n unpublish:workflow` + `n8n publish:workflow` via CLI dentro do container.
+
 ## Deploy do agent_loop_code.js (nó Claude API)
 
-O arquivo `v3_dump/agent_loop_code.js` contém API keys hardcoded — **não vai pro git**.
-O arquivo fica no VPS em `/opt/zazz/dashboard/v3_dump/agent_loop_code.js` (não sincronizado via git).
+O arquivo `v3_dump/agent_loop_code.js` contém API keys hardcoded — **não vai pro git**. Fica no VPS em `/opt/zazz/dashboard/v3_dump/agent_loop_code.js`.
 
-Para atualizar o nó no N8N via SQLite (quando API key N8N estiver expirada):
-```bash
-# 1. Editar o arquivo local e copiar via SCP
-scp v3_dump/agent_loop_code.js root@195.200.7.239:/opt/zazz/dashboard/v3_dump/
-
-# 2. No VPS: parar N8N, substituir SQLite, reiniciar
-VOLUME=/var/lib/docker/volumes/n8n_data/_data
-docker stop n8n-n8n-1
-python3 -c "
-import json, sqlite3
-with open('/opt/zazz/dashboard/v3_dump/agent_loop_code.js') as f: code = f.read()
-con = sqlite3.connect('$VOLUME/database.sqlite')
-cur = con.cursor()
-cur.execute(\"SELECT nodes FROM workflow_entity WHERE id='Pj5SdaxFh9H9EIX4'\")
-nodes = json.loads(cur.fetchone()[0])
-for n in nodes:
-    if n.get('name') == 'Claude API': n['parameters']['jsCode'] = code
-cur.execute(\"UPDATE workflow_entity SET nodes=? WHERE id='Pj5SdaxFh9H9EIX4'\", (json.dumps(nodes),))
-con.commit(); con.close(); print('ok')
-"
-chown ubuntu:ubuntu $VOLUME/database.sqlite
-docker start n8n-n8n-1
-```
+Mesma lógica acima: usar `deploy_workflow.py` adaptado (adicionar `"Claude API"` à lista de nós), ou rodar com workflow_entity + workflow_history simultaneamente.
 
 ## Infra (Hostinger VPS 195.200.7.239)
 - N8N: https://n8n.srv1537041.hstgr.cloud
