@@ -93,18 +93,6 @@ Aparentemente Haiku 4.5 não está obedecendo essas regras com força suficiente
 
 ---
 
-## 🔵 TODO operacional — limpar `fix_*.py` da raiz (mai/2026)
-
-Tem ~20 scripts `fix_*.py` na raiz do projeto que foram one-shot fixes (rodaram, aplicaram, terminaram). Estão poluindo o repo. Documentei todos e o que fizeram em [fix-scripts-historicos.md](fix-scripts-historicos.md).
-
-**Plano:** mover para `archive/fix_scripts_2026_q2/` (preservar histórico via git).
-
-**Impacto:** zero — nenhum desses scripts é usado em runtime.
-
-**Substituto para fixes futuros:** `v3_dump/deploy_workflow.py` (workflow N8N) ou scripts em `dashboard/scripts/` (não na raiz).
-
----
-
 ## 🟢 Resolvidos recentemente
 
 - ✅ **Tokens 30k+ pra "oi"** (resolvido mai/2026): workflow_history não estava sendo atualizado. Fix: `deploy_workflow.py` atualiza `workflow_entity` + `workflow_history` com mesmo versionId. Ver [deploy-workflow.md](deploy-workflow.md).
@@ -112,6 +100,7 @@ Tem ~20 scripts `fix_*.py` na raiz do projeto que foram one-shot fixes (rodaram,
 - ✅ **Modelo `sonnet` mesmo com SQLite tendo `haiku`** (resolvido mai/2026): mesma raiz do bug do workflow_history.
 - ✅ **Bot inventando "não tenho chamados" em `/chamados`** (resolvido mai/2026): Haiku 4.5 não chamava `buscar_chamados`. Fix: `tool_choice: {type: 'tool', name: 'buscar_chamados'}` forçado quando msg tem `/chamados`, `/relatorio` ou variantes. Ver [tool-choice-forcado.md](tool-choice-forcado.md).
 - ✅ **Auto-resolver tarefa em mensagem de criação** (resolvido 06/05/2026): nó `Detecta Resolvido` matchava "pronto" em "Avisar quando tiver pronto" e marcava tarefa similar como Ok no Notion. Fix: regex restrito + exclusão `CRIA_TAREFA_RE` para templates de pedido. Ver [detecta-resolvido.md](detecta-resolvido.md).
+- ✅ **`fix_*.py` poluindo raiz** (resolvido 06/05/2026): 19 scripts one-shot movidos para `archive/fix_scripts_2026_q2/` via `git mv`. Histórico preservado no git.
 
 ---
 
