@@ -191,3 +191,22 @@ UI, banco e variáveis em Português (BR). Código: mix PT/EN conforme existente
 - [`bugs-abertos.md`](dashboard/cerebro-evolutivo/bugs-abertos.md) — TODO de problemas conhecidos
 
 **Não confundir com `cerebro/`** (pasta legacy/copy local sem submódulo) — TUDO novo vai em `dashboard/cerebro-evolutivo/`.
+
+## 📚 Leitura obrigatória por contexto
+
+ANTES de iniciar uma task que toque uma das áreas abaixo, leia a nota correspondente do Obsidian. Não pular — economiza horas de redescoberta de problemas já resolvidos.
+
+| Se a task envolve... | Leia ANTES |
+|---|---|
+| Editar nó Code do workflow N8N (Monta Prompt, Claude API, etc) | [`deploy-workflow.md`](dashboard/cerebro-evolutivo/deploy-workflow.md) — método correto via `deploy_workflow.py` + por que SQLite direto não basta |
+| Mudar prompt / system prompt / cache split | [`agent-loop-tool-use.md`](dashboard/cerebro-evolutivo/agent-loop-tool-use.md) — bloco estável vs dinâmico, regras de cache |
+| Testar bot sem mandar mensagem real no WhatsApp | [`teste-sintetico-webhook.md`](dashboard/cerebro-evolutivo/teste-sintetico-webhook.md) — payload do Filter1 + script `check_exec.py` |
+| Mexer no fluxo do workflow N8N (nodes, conexões) | [`workflow-n8n.md`](dashboard/cerebro-evolutivo/workflow-n8n.md) — estrutura, nodes críticos, regras de SQLite/WAL |
+| Encontrar bug ou comportamento estranho | [`bugs-abertos.md`](dashboard/cerebro-evolutivo/bugs-abertos.md) — talvez já está mapeado lá |
+| Ver script `fix_*.py` na raiz do projeto | [`fix-scripts-historicos.md`](dashboard/cerebro-evolutivo/fix-scripts-historicos.md) — todos são one-shot já aplicados, NÃO rodar |
+| Tools do agent loop (`buscar_pop`, `criar_tarefa_notion`, etc) | [`agent-loop-tool-use.md`](dashboard/cerebro-evolutivo/agent-loop-tool-use.md) — schemas + regras por tool |
+| Sistema de chamados / importação | `dashboard/cerebro-evolutivo/chamados-sistema.md` (se existir) ou `dashboard/cerebro/Chamados.md` |
+
+**Como ler:** use a tool `Read` direto no path da nota. Não leia o repo inteiro. Se a nota for grande (>500 linhas), procure section relevante via `Grep` antes do `Read`.
+
+**Quando atualizar essas notas:** ao final da task, antes de commitar — incorporar qualquer descoberta nova. Ver regra geral em "## ⚠️ Obsidian é o CÉREBRO do projeto" acima.
