@@ -183,11 +183,15 @@ UI, banco e variáveis em Português (BR). Código: mix PT/EN conforme existente
 
 **Quando:** ao FINAL de qualquer task que envolva descoberta nova, mesmo que pequena. Antes de commitar o código, atualizar a nota correspondente. Não esperar o usuário pedir.
 
-**Notas de referência atual** (lista parcial — mais em `dashboard/cerebro-evolutivo/`):
-- [`workflow-n8n.md`](dashboard/cerebro-evolutivo/workflow-n8n.md) — estrutura, padrões, regras operacionais do workflow n8n
+**Notas de referência atual** (lista completa em [`INDEX.md`](dashboard/cerebro-evolutivo/INDEX.md)):
+- [`INDEX.md`](dashboard/cerebro-evolutivo/INDEX.md) — **MAPA COMPLETO de tudo que existe + comandos de diagnóstico + troubleshooting**
+- [`arquitetura-geral.md`](dashboard/cerebro-evolutivo/arquitetura-geral.md) — visão geral do sistema, stack, fluxos
+- [`workflow-n8n.md`](dashboard/cerebro-evolutivo/workflow-n8n.md) — estrutura, padrões, regras operacionais do workflow
 - [`agent-loop-tool-use.md`](dashboard/cerebro-evolutivo/agent-loop-tool-use.md) — agent loop, 9 tools, cache split
 - [`deploy-workflow.md`](dashboard/cerebro-evolutivo/deploy-workflow.md) — método correto de deploy (workflow_entity + workflow_history)
-- [`teste-sintetico-webhook.md`](dashboard/cerebro-evolutivo/teste-sintetico-webhook.md) — como testar bot via curl sem WhatsApp
+- [`tool-choice-forcado.md`](dashboard/cerebro-evolutivo/tool-choice-forcado.md) — anti-alucinação via tool_choice forçado
+- [`detecta-resolvido.md`](dashboard/cerebro-evolutivo/detecta-resolvido.md) — fluxo paralelo de auto-resolver tarefa
+- [`teste-sintetico-webhook.md`](dashboard/cerebro-evolutivo/teste-sintetico-webhook.md) — testar bot via curl
 - [`bugs-abertos.md`](dashboard/cerebro-evolutivo/bugs-abertos.md) — TODO de problemas conhecidos
 
 **Não confundir com `cerebro/`** (pasta legacy/copy local sem submódulo) — TUDO novo vai em `dashboard/cerebro-evolutivo/`.
