@@ -64,3 +64,7 @@ Numa "oi" simples do bot:
 ## Fallback
 
 Se o branch sem template for usado (DB sem `system_prompt`), o `system` volta a ser string simples — não há cache mas tudo funciona. Ver código em `Monta Prompt` dentro do `workflow_v2.json`.
+
+---
+
+**Notas técnicas relacionadas:** [[agent-loop-tool-use]] · [[deploy-workflow]] · [[arquitetura-geral]] · [[System Prompt]]

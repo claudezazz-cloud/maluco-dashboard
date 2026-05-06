@@ -50,3 +50,7 @@ A raiz do projeto tem ~20 scripts `fix_*.py` que foram usados para correções p
 Para edições no workflow N8N: usar `v3_dump/deploy_workflow.py` (deploy padrão estabelecido em mai/2026, ver [deploy-workflow.md](deploy-workflow.md)).
 
 Para edições no Postgres: usar SQL direto via `docker exec n8n-postgres-1 psql -U zazz -d zazzdb -c "..."` ou criar script novo em `dashboard/scripts/` (não na raiz).
+
+---
+
+**Ver também:** [[Deploy]] · [[Workflow N8N]] · [[Banco de Dados]] · [[deploy-workflow]] · [[bugs-abertos]]

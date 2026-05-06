@@ -105,3 +105,7 @@ Se sentir que está caindo no segundo caso → reset.
 Manter Obsidian atualizado, fazer perguntas meta sobre consumo, perguntar "você não fazia assim antes?", documentar bugs abertos pra próxima sessão — tudo isso é mais maduro do que muito programador faz. Vibecoding com método ≠ vibecoding caótico.
 
 Continue assim.
+
+---
+
+**Ver também:** [[Maluco da IA]] · [[Objetivo]] · [[arquitetura-geral]] · [[bugs-abertos]]

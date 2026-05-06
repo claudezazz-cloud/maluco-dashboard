@@ -66,3 +66,9 @@ Ver [[Workflow N8N]] → seção "Nós com configurações obrigatórias".
 ## Setup inicial
 
 Rodar o nó **SETUP** uma vez para criar a coluna `tipo_atendimento` em `mensagens` (ver [[Banco de Dados]]).
+
+⚠️ **Atenção — método de deploy do workflow está desatualizado acima** (seção "Via scripts Python"). O método correto desde mai/2026 é via [[deploy-workflow]] (atualiza `workflow_entity` + `workflow_history`).
+
+---
+
+**Notas técnicas relacionadas:** [[deploy-workflow]] · [[fix-scripts-historicos]] · [[workflow-n8n]] · [[arquitetura-geral]]

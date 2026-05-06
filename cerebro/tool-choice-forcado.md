@@ -110,3 +110,7 @@ ssh root@195.200.7.239 "docker exec n8n-postgres-1 psql -U zazz -d zazzdb -c 'SE
 ```
 
 Resposta esperada: dados reais de chamados (ex: "Total de chamados: 36, ..."). Se vier "não tenho chamados carregados" → o tool_choice falhou OU o regex não casou.
+
+---
+
+**Ver também:** [[Chamados]] · [[Relatorios]] · [[Notion]] · [[Workflow N8N]] · [[agent-loop-tool-use]] · [[bugs-abertos]]

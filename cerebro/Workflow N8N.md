@@ -75,3 +75,9 @@ IF entre `Parse Resposta` e `Envia WhatsApp`. Quando `chatId.startsWith('dashboa
 ## Deploy do workflow
 
 Ver [[Deploy]] seção "Workflow N8N". Geralmente via scripts Python (`fix_*.py`) que batem na API do N8N — PUT workflow + deactivate + activate (para invalidar cache de código).
+
+⚠️ **Método legado** — ver [[deploy-workflow]] para o método correto atual (mai/2026): atualiza `workflow_entity` + `workflow_history` com mesmo `versionId`.
+
+---
+
+**Notas técnicas relacionadas:** [[arquitetura-geral]] · [[deploy-workflow]] · [[agent-loop-tool-use]] · [[workflow-n8n]] · [[detecta-resolvido]] · [[tool-choice-forcado]]

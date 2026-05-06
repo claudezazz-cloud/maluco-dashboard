@@ -131,3 +131,7 @@ Para uma mensagem `oi` simples (sem chamadas de tool):
 | `model` | `claude-haiku-4-5-20251001` | `claude-sonnet-4-6` |
 
 Se NÃO bater com o alvo após deploy, o `workflow_history` provavelmente continua com versão antiga — ver [deploy-workflow.md](deploy-workflow.md).
+
+---
+
+**Ver também:** [[Workflow N8N]] · [[Infraestrutura]] · [[deploy-workflow]] · [[agent-loop-tool-use]] · [[bugs-abertos]]

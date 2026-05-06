@@ -114,3 +114,7 @@ Possíveis melhorias:
 - Threshold de confiança no Claude do `Match Tarefa Resolvida` (só marcar se confiança > 0.9)
 - Pedir confirmação no chat antes de marcar ("Posso marcar X como Ok?")
 - Limitar tarefas candidatas a apenas as do usuário que falou (usuário X só resolve tarefa atribuída a X)
+
+---
+
+**Ver também:** [[Notion]] · [[Workflow N8N]] · [[Colaboradores]] · [[agent-loop-tool-use]] · [[bugs-abertos]]

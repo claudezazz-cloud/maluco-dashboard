@@ -51,3 +51,7 @@ Token anterior (`ntn_401906...`) retornou 401 "API token is invalid". Gerar um n
 ## Cache
 
 `tarefasContext` entra no **bloco cacheado** (ver [[Prompt Caching]]) — mudança de status é lenta (minutos/horas), então cache de 5min vale a pena.
+
+---
+
+**Notas técnicas relacionadas:** [[detecta-resolvido]] · [[tool-choice-forcado]] · [[agent-loop-tool-use]] · [[arquitetura-geral]]

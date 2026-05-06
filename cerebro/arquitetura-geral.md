@@ -197,3 +197,7 @@ Ver [memoria-evolutiva.md](memoria-evolutiva.md) (se existir) para detalhes.
 - **mai/2026**: descoberto que workflow_history precisa ser atualizada (6 sessões debugando).
 - **mai/2026**: tool_choice forçado pra `/chamados`, `/relatorio` (Haiku preguiçoso).
 - **mai/2026**: Detecta Resolvido refatorado (regex frouxo causava falso-positivo).
+
+---
+
+**Ver também:** [[Maluco da IA]] · [[Workflow N8N]] · [[Stack Tecnologica]] · [[Infraestrutura]] · [[Chamados]] · [[Notion]] · [[POPs]] · [[System Prompt]] · [[Prompt Caching]]
