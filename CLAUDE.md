@@ -165,7 +165,9 @@ UI, banco e variáveis em Português (BR). Código: mix PT/EN conforme existente
 
 ## ⚠️ Obsidian é o CÉREBRO do projeto
 
-**Regra absoluta:** TUDO que envolva o projeto deve ser documentado no Obsidian (`dashboard/cerebro-evolutivo/`). Não importa se é uma anotação simples, dica, descoberta, bug ativo, decisão de arquitetura, ou correção minúscula — vai pro Obsidian. Sempre.
+**REGRA CRÍTICA**: existe APENAS UMA pasta válida pra documentação: **`dashboard/cerebro/`**. É a única que o bot lê (configurada em `evolutive_sources` no postgres como `pasta='cerebro'`). NÃO criar pastas paralelas tipo `cerebro-evolutivo/`, `notas/`, `docs/` — confunde, divide conhecimento e quebra o sync.
+
+**Regra absoluta:** TUDO que envolva o projeto deve ser documentado em `dashboard/cerebro/`. Não importa se é uma anotação simples, dica, descoberta, bug ativo, decisão de arquitetura, ou correção minúscula — vai pra essa pasta. Sempre.
 
 **O que documentar (lista não-exaustiva):**
 - ✅ Bug encontrado (mesmo sem fix) → `bugs-abertos.md`
@@ -179,22 +181,24 @@ UI, banco e variáveis em Português (BR). Código: mix PT/EN conforme existente
 
 **Por que importa:** essas notas são **indexadas e injetadas como contexto no bot** — viram a memória evolutiva do sistema. Sem doc no Obsidian, o conhecimento se perde entre sessões do Claude Code. Já gastamos várias sessões redescobrindo o mesmo problema (ex: 6 sessões pra entender que workflow_history precisa ser atualizada também). **Não deixe isso acontecer de novo.**
 
-**Onde:** `dashboard/cerebro-evolutivo/` (pasta única, sem subpastas). É um submódulo Git — sincronizado para o VPS pelo cron `sync-evolutivo.sh` a cada minuto.
+**Onde:** `dashboard/cerebro/` (pasta única, sem subpastas). É um submódulo Git — sincronizado para o VPS pelo cron `sync-evolutivo.sh` a cada minuto.
 
 **Quando:** ao FINAL de qualquer task que envolva descoberta nova, mesmo que pequena. Antes de commitar o código, atualizar a nota correspondente. Não esperar o usuário pedir.
 
-**Notas de referência atual** (lista completa em [`INDEX.md`](dashboard/cerebro-evolutivo/INDEX.md)):
-- [`INDEX.md`](dashboard/cerebro-evolutivo/INDEX.md) — **MAPA COMPLETO de tudo que existe + comandos de diagnóstico + troubleshooting**
-- [`arquitetura-geral.md`](dashboard/cerebro-evolutivo/arquitetura-geral.md) — visão geral do sistema, stack, fluxos
-- [`workflow-n8n.md`](dashboard/cerebro-evolutivo/workflow-n8n.md) — estrutura, padrões, regras operacionais do workflow
-- [`agent-loop-tool-use.md`](dashboard/cerebro-evolutivo/agent-loop-tool-use.md) — agent loop, 9 tools, cache split
-- [`deploy-workflow.md`](dashboard/cerebro-evolutivo/deploy-workflow.md) — método correto de deploy (workflow_entity + workflow_history)
-- [`tool-choice-forcado.md`](dashboard/cerebro-evolutivo/tool-choice-forcado.md) — anti-alucinação via tool_choice forçado
-- [`detecta-resolvido.md`](dashboard/cerebro-evolutivo/detecta-resolvido.md) — fluxo paralelo de auto-resolver tarefa
-- [`teste-sintetico-webhook.md`](dashboard/cerebro-evolutivo/teste-sintetico-webhook.md) — testar bot via curl
-- [`bugs-abertos.md`](dashboard/cerebro-evolutivo/bugs-abertos.md) — TODO de problemas conhecidos
+**Notas de referência atual** (lista completa em [`INDEX.md`](dashboard/cerebro/INDEX.md)):
+- [`INDEX.md`](dashboard/cerebro/INDEX.md) — **MAPA COMPLETO de tudo que existe + comandos de diagnóstico + troubleshooting**
+- [`arquitetura-geral.md`](dashboard/cerebro/arquitetura-geral.md) — visão geral do sistema, stack, fluxos
+- [`workflow-n8n.md`](dashboard/cerebro/workflow-n8n.md) — estrutura, padrões, regras operacionais do workflow
+- [`agent-loop-tool-use.md`](dashboard/cerebro/agent-loop-tool-use.md) — agent loop, 9 tools, cache split
+- [`deploy-workflow.md`](dashboard/cerebro/deploy-workflow.md) — método correto de deploy (workflow_entity + workflow_history)
+- [`tool-choice-forcado.md`](dashboard/cerebro/tool-choice-forcado.md) — anti-alucinação via tool_choice forçado
+- [`detecta-resolvido.md`](dashboard/cerebro/detecta-resolvido.md) — fluxo paralelo de auto-resolver tarefa
+- [`teste-sintetico-webhook.md`](dashboard/cerebro/teste-sintetico-webhook.md) — testar bot via curl
+- [`bugs-abertos.md`](dashboard/cerebro/bugs-abertos.md) — TODO de problemas conhecidos
 
-**Não confundir com `cerebro/`** (pasta legacy/copy local sem submódulo) — TUDO novo vai em `dashboard/cerebro-evolutivo/`.
+**`cerebro/` no root do projeto** (sem submódulo) é cópia local antiga, não-sincronizada. Ignorar e usar SEMPRE `dashboard/cerebro/` (submódulo).
+
+**Histórico mai/2026:** existia uma pasta paralela `dashboard/cerebro-evolutivo/` com nomes em kebab-case que NÃO era lida pelo bot (config no postgres apontava pra `cerebro/`). Causou várias notas técnicas serem invisíveis. Foi consolidada em `dashboard/cerebro/`. Não recriar essa pasta.
 
 ## 📚 Leitura obrigatória por contexto
 
@@ -202,14 +206,14 @@ ANTES de iniciar uma task que toque uma das áreas abaixo, leia a nota correspon
 
 | Se a task envolve... | Leia ANTES |
 |---|---|
-| Editar nó Code do workflow N8N (Monta Prompt, Claude API, etc) | [`deploy-workflow.md`](dashboard/cerebro-evolutivo/deploy-workflow.md) — método correto via `deploy_workflow.py` + por que SQLite direto não basta |
-| Mudar prompt / system prompt / cache split | [`agent-loop-tool-use.md`](dashboard/cerebro-evolutivo/agent-loop-tool-use.md) — bloco estável vs dinâmico, regras de cache |
-| Testar bot sem mandar mensagem real no WhatsApp | [`teste-sintetico-webhook.md`](dashboard/cerebro-evolutivo/teste-sintetico-webhook.md) — payload do Filter1 + script `check_exec.py` |
-| Mexer no fluxo do workflow N8N (nodes, conexões) | [`workflow-n8n.md`](dashboard/cerebro-evolutivo/workflow-n8n.md) — estrutura, nodes críticos, regras de SQLite/WAL |
-| Encontrar bug ou comportamento estranho | [`bugs-abertos.md`](dashboard/cerebro-evolutivo/bugs-abertos.md) — talvez já está mapeado lá |
-| Ver script `fix_*.py` na raiz do projeto | [`fix-scripts-historicos.md`](dashboard/cerebro-evolutivo/fix-scripts-historicos.md) — todos são one-shot já aplicados, NÃO rodar |
-| Tools do agent loop (`buscar_pop`, `criar_tarefa_notion`, etc) | [`agent-loop-tool-use.md`](dashboard/cerebro-evolutivo/agent-loop-tool-use.md) — schemas + regras por tool |
-| Sistema de chamados / importação | `dashboard/cerebro-evolutivo/chamados-sistema.md` (se existir) ou `dashboard/cerebro/Chamados.md` |
+| Editar nó Code do workflow N8N (Monta Prompt, Claude API, etc) | [`deploy-workflow.md`](dashboard/cerebro/deploy-workflow.md) — método correto via `deploy_workflow.py` + por que SQLite direto não basta |
+| Mudar prompt / system prompt / cache split | [`agent-loop-tool-use.md`](dashboard/cerebro/agent-loop-tool-use.md) — bloco estável vs dinâmico, regras de cache |
+| Testar bot sem mandar mensagem real no WhatsApp | [`teste-sintetico-webhook.md`](dashboard/cerebro/teste-sintetico-webhook.md) — payload do Filter1 + script `check_exec.py` |
+| Mexer no fluxo do workflow N8N (nodes, conexões) | [`workflow-n8n.md`](dashboard/cerebro/workflow-n8n.md) — estrutura, nodes críticos, regras de SQLite/WAL |
+| Encontrar bug ou comportamento estranho | [`bugs-abertos.md`](dashboard/cerebro/bugs-abertos.md) — talvez já está mapeado lá |
+| Ver script `fix_*.py` na raiz do projeto | [`fix-scripts-historicos.md`](dashboard/cerebro/fix-scripts-historicos.md) — todos são one-shot já aplicados, NÃO rodar |
+| Tools do agent loop (`buscar_pop`, `criar_tarefa_notion`, etc) | [`agent-loop-tool-use.md`](dashboard/cerebro/agent-loop-tool-use.md) — schemas + regras por tool |
+| Sistema de chamados / importação | `dashboard/cerebro/chamados-sistema.md` (se existir) ou `dashboard/cerebro/Chamados.md` |
 
 **Como ler:** use a tool `Read` direto no path da nota. Não leia o repo inteiro. Se a nota for grande (>500 linhas), procure section relevante via `Grep` antes do `Read`.
 
