@@ -157,6 +157,27 @@ remetente = COALESCE(
 
 UI: aba `/treinamento` → Colaboradores. Cada card lista os números cadastrados (com apelido opcional) + input inline pra adicionar/remover. Migração automática do `telefone_whatsapp` antigo no primeiro carregamento.
 
+## ⚠️ Deploy correto — versionamento do n8n v2.14+ (mai/2026)
+
+⚠️ **REGRA CRÍTICA — descoberta após 6 sessões de debug:** Editar `workflow_entity.nodes` direto no SQLite **NÃO funciona sozinho**. n8n carrega o código que executa da tabela `workflow_history`, não da `workflow_entity` (que é só o draft do editor).
+
+**Procedimento correto** — usar `/opt/zazz/dashboard/v3_dump/deploy_workflow.py` que:
+1. `docker stop n8n-n8n-1`
+2. `PRAGMA wal_checkpoint(TRUNCATE)`
+3. UPDATE `workflow_entity` (nodes + novo versionId)
+4. UPDATE `workflow_history` (mesmos nodes + mesmo versionId) — **SEM ISSO O DEPLOY NÃO APLICA**
+5. checkpoint TRUNCATE
+6. `docker start n8n-n8n-1` + chown 1000:1000
+
+Detalhes completos em [deploy-workflow.md](deploy-workflow.md).
+
+**Sintomas de deploy quebrado:**
+- `bot_conversas.tokens_input` muito alto após "deploy" (ex: 30k+ pra "oi")
+- `execution_data` mostra modelo errado (`sonnet` em vez de `haiku`) ou system prompt antigo
+- `n8n update:workflow --active=true` retorna `Failed to publish workflow: Version "X" not found`
+
+**workflow_published_version**: pode estar vazia OU consistente. Se vazia, o boot ainda funciona. Se inconsistente (versionId não bate com history), webhook responde 404 "Active version not found". Resetar com `n8n unpublish:workflow` + `n8n publish:workflow` via CLI dentro do container — **NÃO INSERT manual**.
+
 ## Regra operacional — edições no SQLite exigem restart do N8N
 
 O N8N lê os workflows do SQLite **apenas no boot** e mantém em memória durante toda a execução. Edições diretas no `database.sqlite` (via Python/sqlite3) ficam num "limbo" até o próximo restart.

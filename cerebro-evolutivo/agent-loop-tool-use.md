@@ -44,18 +44,29 @@ Para evitar 429 por excesso de tokens (o N8N estava injetando 62k tokens/request
 - `chamadosContext` = vazio — tool `buscar_chamados` sob demanda
 - `tarefasContext` = bloco DINÂMICO (não invalida cache)
 - `resolvidosContext` = bloco DINÂMICO (não invalida cache)
+- `evolutivoSection` = bloco DINÂMICO (notas Obsidian variam por mensagem via semantic search)
 - POPs = APENAS TÍTULOS para TODOS os POPs (incluindo LEIA SEMPRE)
   - LEIA SEMPRE marcados com ⚠️ → bot chama buscar_pop obrigatoriamente antes de responder
   - Outros POPs → bot chama buscar_pop antes de orientar qualquer processo
+- `popsUsados = todosOsPops.map(p => p.titulo).join(', ')` — não vazio (era bug que zerava o campo no dashboard)
 - `redisHistory.slice(-10)` (era -20)
-- Ambos os nós usam o MESMO código — atualizar sempre juntos
+- Ambos os nós usam o MESMO código — `deploy_workflow.py` atualiza os 2 juntos
 
-**Por que o cache importa:** bloco estável vai com `cache_control: ephemeral`. Se dados dinâmicos (tarefas Notion, chamados resolvidos) ficam no estável, o cache invalida a cada request → todos os tokens contam como input (era 30k-60k). Com cache funcionando: só ~4-6k tokens_input.
+**Por que o cache importa:** bloco estável vai com `cache_control: ephemeral`. Se dados dinâmicos (tarefas Notion, chamados resolvidos, EVOLUTIVO) ficam no estável, o cache invalida a cada request → todos os tokens contam como input (era 30k-60k). Com cache funcionando: só ~4-6k tokens_input no primeiro hit, ~1-2k em hits subsequentes.
 
-**Bloco estável (cacheable):** system prompt + POPs títulos + colaboradores = ~26k chars
-**Bloco dinâmico (input real):** memoria + resolvidosHoje + tarefas + histórico + regras = ~8-12k chars
+**Bloco estável (cacheable):** system prompt template + POPs títulos + colaboradores = ~24k chars
+**Bloco dinâmico (input real):** evolutivo + memoria + resolvidosHoje + tarefas + histórico + regras + skill = ~16k chars
 
 **Regra:** qualquer dado que muda entre requests NÃO deve ficar no bloco estável. Mover para dinâmico ou tool.
+
+**Resultado mai/2026 (após fix workflow_history + popsUsados + EVOLUTIVO dinâmico):**
+| Métrica | Antes | Depois |
+|---|---|---|
+| tokens_input "oi" | 30.866 | 6.822 |
+| Modelo executado | claude-sonnet-4-6 | claude-haiku-4-5-20251001 |
+| System size | 79.990 | 40.789 |
+| chamadosCarregados | SIM (7398 chars) | NAO |
+| pops_usados (DB) | vazio (bug) | titles list ✓ |
 
 ## Regras importantes das tools
 
