@@ -163,12 +163,31 @@ Arquivo local: `v3_dump/sysprompt_v3.txt` (vai pro git via `git add -f`).
 ## Idioma
 UI, banco e variáveis em Português (BR). Código: mix PT/EN conforme existente.
 
-## Notas do Obsidian (cerebro/)
+## ⚠️ Obsidian é o CÉREBRO do projeto
 
-**Regra obrigatória:** atualizar o Obsidian após QUALQUER alteração, por menor que seja — novo usuário, mudança de configuração, correção de bug, novo inbox, reset de senha, deploy, etc. Não esperar o usuário pedir.
+**Regra absoluta:** TUDO que envolva o projeto deve ser documentado no Obsidian (`dashboard/cerebro-evolutivo/`). Não importa se é uma anotação simples, dica, descoberta, bug ativo, decisão de arquitetura, ou correção minúscula — vai pro Obsidian. Sempre.
 
-Todas as notas ficam em `cerebro/` — pasta única, sem subpastas.
+**O que documentar (lista não-exaustiva):**
+- ✅ Bug encontrado (mesmo sem fix) → `bugs-abertos.md`
+- ✅ Bug corrigido → atualizar a nota relevante (`workflow-n8n.md`, `deploy-workflow.md`, etc) + adicionar à seção "Resolvidos" de `bugs-abertos.md`
+- ✅ Decisão de arquitetura (movido X para Y, escolhi A em vez de B) → nota da área (ex: `agent-loop-tool-use.md`)
+- ✅ Comando útil de diagnóstico → `workflow-n8n.md` ou `comandos-uteis.md`
+- ✅ Pegadinha do n8n / Postgres / Redis → nota da camada
+- ✅ Mudança de configuração → nota da feature
+- ✅ Aprendizado novo (tipo "n8n carrega de workflow_history, não workflow_entity") → criar nota dedicada se for grande
+- ✅ Comportamento inesperado / hipóteses → mesmo sem confirmação, `bugs-abertos.md`
 
-Essas notas são indexadas e injetadas como contexto no bot — é a memória evolutiva do sistema. O cron do VPS sincroniza a cada minuto via `sync-evolutivo.sh`.
+**Por que importa:** essas notas são **indexadas e injetadas como contexto no bot** — viram a memória evolutiva do sistema. Sem doc no Obsidian, o conhecimento se perde entre sessões do Claude Code. Já gastamos várias sessões redescobrindo o mesmo problema (ex: 6 sessões pra entender que workflow_history precisa ser atualizada também). **Não deixe isso acontecer de novo.**
 
-Ao adicionar nota nova: commit e push — cron do VPS sincroniza automaticamente.
+**Onde:** `dashboard/cerebro-evolutivo/` (pasta única, sem subpastas). É um submódulo Git — sincronizado para o VPS pelo cron `sync-evolutivo.sh` a cada minuto.
+
+**Quando:** ao FINAL de qualquer task que envolva descoberta nova, mesmo que pequena. Antes de commitar o código, atualizar a nota correspondente. Não esperar o usuário pedir.
+
+**Notas de referência atual** (lista parcial — mais em `dashboard/cerebro-evolutivo/`):
+- [`workflow-n8n.md`](dashboard/cerebro-evolutivo/workflow-n8n.md) — estrutura, padrões, regras operacionais do workflow n8n
+- [`agent-loop-tool-use.md`](dashboard/cerebro-evolutivo/agent-loop-tool-use.md) — agent loop, 9 tools, cache split
+- [`deploy-workflow.md`](dashboard/cerebro-evolutivo/deploy-workflow.md) — método correto de deploy (workflow_entity + workflow_history)
+- [`teste-sintetico-webhook.md`](dashboard/cerebro-evolutivo/teste-sintetico-webhook.md) — como testar bot via curl sem WhatsApp
+- [`bugs-abertos.md`](dashboard/cerebro-evolutivo/bugs-abertos.md) — TODO de problemas conhecidos
+
+**Não confundir com `cerebro/`** (pasta legacy/copy local sem submódulo) — TUDO novo vai em `dashboard/cerebro-evolutivo/`.
