@@ -90,3 +90,7 @@ A cada execução, o `_processor.js` grava um snapshot por chamado na tabela `ch
 ## Custo
 
 Zero adicional — Playwright + cron rodam no mesmo VPS Hostinger ([[Infraestrutura]]).
+
+---
+
+**Notas técnicas relacionadas:** [[tool-choice-forcado]] · [[arquitetura-geral]] · [[agent-loop-tool-use]] · [[bugs-abertos]]

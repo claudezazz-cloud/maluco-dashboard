@@ -175,3 +175,7 @@ input_tokens: ['6822']
 | POPs no prompt | conteúdo completo (~30k) | só títulos (~1.5k) |
 | `chamadosContext` | injetado (~7.5k) | vazio (tool sob demanda) |
 | `pops_usados` no DB | vazio (bug) | titles list ✓ |
+
+---
+
+**Ver também:** [[Deploy]] · [[Workflow N8N]] · [[Prompt Caching]] · [[agent-loop-tool-use]] · [[workflow-n8n]] · [[fix-scripts-historicos]]

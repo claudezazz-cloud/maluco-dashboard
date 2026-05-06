@@ -112,3 +112,7 @@ Tem ~20 scripts `fix_*.py` na raiz do projeto que foram one-shot fixes (rodaram,
 - ✅ **Modelo `sonnet` mesmo com SQLite tendo `haiku`** (resolvido mai/2026): mesma raiz do bug do workflow_history.
 - ✅ **Bot inventando "não tenho chamados" em `/chamados`** (resolvido mai/2026): Haiku 4.5 não chamava `buscar_chamados`. Fix: `tool_choice: {type: 'tool', name: 'buscar_chamados'}` forçado quando msg tem `/chamados`, `/relatorio` ou variantes. Ver [tool-choice-forcado.md](tool-choice-forcado.md).
 - ✅ **Auto-resolver tarefa em mensagem de criação** (resolvido 06/05/2026): nó `Detecta Resolvido` matchava "pronto" em "Avisar quando tiver pronto" e marcava tarefa similar como Ok no Notion. Fix: regex restrito + exclusão `CRIA_TAREFA_RE` para templates de pedido. Ver [detecta-resolvido.md](detecta-resolvido.md).
+
+---
+
+**Ver também:** [[Workflow N8N]] · [[Chamados]] · [[Solicitacoes Programadas]] · [[Notion]] · [[deploy-workflow]] · [[tool-choice-forcado]] · [[detecta-resolvido]]

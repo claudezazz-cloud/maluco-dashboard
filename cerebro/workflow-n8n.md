@@ -238,3 +238,7 @@ O system prompt é dividido em duas partes pelo marcador `__CACHE_SPLIT__`:
 - Parte dinâmica (após): histórico, regras, skill context — não cacheada
 
 O placeholder `{{HISTORICO}}` é substituído por `__CACHE_SPLIT__` para marcar o ponto de divisão.
+
+---
+
+**Ver também:** [[Workflow N8N]] · [[Prompt Caching]] · [[deploy-workflow]] · [[agent-loop-tool-use]] · [[arquitetura-geral]] · [[Infraestrutura]]

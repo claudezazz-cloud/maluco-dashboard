@@ -179,3 +179,7 @@ subprocess.run(['docker', 'exec', '-i', 'n8n-postgres-1', 'psql', '-U', 'zazz', 
 - API keys hardcoded no código do nó (NOTION_TOKEN, DASH_TOKEN, API_KEY).
 - `chatId` vem em `$input.first().json.chatId` (output do Monta Prompt confirmado).
 - Modificar o Monta Prompt requer editar o SQLite do N8N e reiniciar o container (`docker restart n8n-n8n-1`).
+
+---
+
+**Ver também:** [[Workflow N8N]] · [[Prompt Caching]] · [[System Prompt]] · [[POPs]] · [[Chamados]] · [[Notion]] · [[deploy-workflow]] · [[tool-choice-forcado]]

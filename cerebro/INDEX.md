@@ -1,6 +1,33 @@
 # Índice — Cerebro Evolutivo
 
-Mapa de todas as notas técnicas do projeto Maluco da IA. Atualizar quando adicionar/renomear nota.
+Mapa de todas as notas do projeto Maluco da IA. Atualizar quando adicionar/renomear nota.
+
+## 📖 Notas Fundacionais (visão geral do projeto)
+
+- [[Maluco da IA]] — visão geral, objetivo, missão do bot
+- [[Objetivo]] — motivação e escopo do projeto
+- [[Stack Tecnologica]] — tecnologias usadas (N8N, Claude, Evolution API, etc)
+- [[Infraestrutura]] — VPS, Docker, PM2, URLs de acesso
+- [[Workflow N8N]] — fluxo do workflow principal, nodes críticos
+- [[System Prompt]] — estrutura e placeholders do prompt
+- [[Prompt Caching]] — otimização de tokens (blocos estável + dinâmico)
+- [[POPs]] — processos operacionais padrão da Zazz
+- [[Chamados]] — importação e uso de chamados técnicos
+- [[Notion]] — integração de tarefas
+- [[Colaboradores]] — time da Zazz
+- [[Clientes]] — lookup de clientes
+- [[Deploy]] — como fazer deploy do dashboard e do workflow
+- [[Banco de Dados]] — tabelas PostgreSQL e Redis
+- [[Relatorios]] — relatório diário de chamados
+- [[Solicitacoes Programadas]] — bom dia e outros crons
+- [[Bom Dia]] — fluxo de mensagem automática matinal
+- [[Skills]] — skills ativadas por comandos /
+- [[Fluxo de Audio]] — transcrição Whisper
+- [[Fluxo de Imagem]] — Claude Vision
+- [[Regras de Treinamento]] — como treinamento funciona
+- [[Funcionalidades]] — features disponíveis
+- [[Custos]] — custos de operação
+- [[Resolvidos Hoje]] — ranking de chamados resolvidos
 
 ## 🏗️ Arquitetura
 
