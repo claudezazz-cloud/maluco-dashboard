@@ -65,6 +65,34 @@ Aparentemente Haiku 4.5 não está obedecendo essas regras com força suficiente
 
 ---
 
+## 🔴 Bom dia rodando 2x + sem chamados (06/05/2026)
+
+**Sintoma:** dia 06/05/2026 às 07:00 BRT, o bot enviou DUAS mensagens de bom dia idênticas e ambas disseram "não tenho os chamados importados/carregados na dashboard agora".
+
+**Diagnóstico:**
+
+1. **Mensagens duplicadas (race condition):**
+   - `dashboard_solicitacoes_programadas` tem só 1 entrada (ID=6 "Bom dia + Resumo dos Chamados" às 07:00)
+   - Mas `bot_conversas` registrou ID 446 (remetente=Dashboard, 10:00:13 UTC) e ID 447 (remetente=Agendamento, 10:00:15 UTC) — 2 segundos de diferença
+   - Causa: cron `/api/solicitacoes/processar` roda a cada minuto. Quando bate 07:00, dois ticks consecutivos pegam a mesma solicitação antes do `ultimo_executado` ser atualizado.
+   - Fix proposto: UPDATE atômico no endpoint, tipo `UPDATE ... SET ultimo_executado=NOW() WHERE id=? AND (ultimo_executado IS NULL OR ultimo_executado::date < CURRENT_DATE) RETURNING id`. Só proceder se RETURNING devolver linha.
+
+2. **Sem chamados loaded:**
+   - Redis `chamados:data` foi importado às `08:05:29 BRT` (TTL 24h)
+   - Bot rodou às `07:00 BRT` — ANTES da importação
+   - Bot estava CORRETO em dizer que não tinha chamados — por isso a mensagem ficou "genérica"
+   - Fix imediato: mover solicitação ID=6 de 07:00 → 08:30 via UI dashboard
+   - Fix definitivo: alinhar horário do import (provavelmente o cron `routerbox-auto` que roda em `5 * * * *`) pra rodar antes do bom dia, ou mover bom dia pra depois
+
+**Impacto:** mensagens duplicadas + texto genérico irritam o grupo. Bug recorrente (todo dia 07:00) até alguém arrumar.
+
+**TODO:**
+- [ ] UI: mover hora de "Bom dia + Resumo dos Chamados" de 07:00 → 08:30
+- [ ] Código: UPDATE atômico em `/api/solicitacoes/processar` pra evitar race
+- [ ] Verificar se outras solicitações (`PARADOS NOTION SUB` 07:30, etc) têm o mesmo race — provavelmente sim mas não disparou hoje por sorte
+
+---
+
 ## 🔵 TODO operacional — limpar `fix_*.py` da raiz (mai/2026)
 
 Tem ~20 scripts `fix_*.py` na raiz do projeto que foram one-shot fixes (rodaram, aplicaram, terminaram). Estão poluindo o repo. Documentei todos e o que fizeram em [fix-scripts-historicos.md](fix-scripts-historicos.md).
