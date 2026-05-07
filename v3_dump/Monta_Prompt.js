@@ -37,11 +37,30 @@ let chamadosContext = '';
 // Chamados agora são buscados sob demanda via tool buscar_chamados no agent loop.
 
 
-// TAREFAS NOTION
+// GRUPO ATUAL — tipos permitidos para filtro de tarefas
+let grupoTipos = [];
+let grupoNome = '';
+try {
+  const grupoInfo = $('Busca Grupo Atual').first().json;
+  grupoNome = grupoInfo?.nome || '';
+  const tiposRaw = grupoInfo?.tipos_filtro_entrega;
+  if (Array.isArray(tiposRaw) && tiposRaw.length > 0) {
+    grupoTipos = tiposRaw.map(t => (t || '').toLowerCase().trim());
+  }
+} catch(e) {}
+
+// TAREFAS NOTION — filtradas pelo escopo do grupo atual
 let tarefasContext = '';
 try {
   const notionResp = $('Busca Tarefas Notion').first().json;
-  const results = notionResp?.results || [];
+  const allResults = notionResp?.results || [];
+  // Filtra por tipo do grupo: se grupoTipos está configurado, só mostra tarefas do grupo
+  const results = grupoTipos.length > 0
+    ? allResults.filter(p => {
+        const tiposTask = (p.properties?.['Tipo']?.multi_select || []).map(t => (t.name || '').toLowerCase().trim());
+        return tiposTask.length === 0 || tiposTask.some(t => grupoTipos.includes(t));
+      })
+    : allResults;
   if (results.length > 0) {
     const fmt = (p) => {
       const props = p.properties || {};
@@ -72,7 +91,7 @@ try {
       + 'Emita no FIM da resposta (uma vez por tarefa marcada):\n'
       + '|||NOTION_OK|||{"page_id":"<id da tarefa>","titulo":"<descricao curta>","cliente":"<nome cliente>"}|||FIM|||\n'
       + 'Use SEMPRE o id exato da lista abaixo (sem traços). Nao invente ids. Se ambiguo, pergunte qual.\n'
-      + 'Se for confirmar acao do usuario ("Sim", "pode marcar"), olhe no historico qual tarefa estava sendo discutida e use o id dela.\n\n'
+      + 'Se for confirmar acao do usuario ("Sim", "pode marcar"), olhe no historico qual tarefa estava sendo discutida e use o id ela.\n\n'
       + linhas.substring(0, 6000);
   }
 } catch(e) {}
