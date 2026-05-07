@@ -69,6 +69,26 @@ for (let i = 0; i < MAX_ITER; i++) {
 - Caso geral / dúvida genérica (deixa o modelo decidir)
 - Quando múltiplas tools fariam sentido (ex: "como tá X" pode ser cliente, chamado ou tarefa — força só uma e perde as outras)
 
+### 3. `CRIAR_NOTION_INTENT` → força `criar_tarefa_notion`
+
+**Status: ATIVO** (implementado 07/05/2026)
+
+Regex: `/(?:\bmarc[ao]\b|\banot[ao]\b|\bregistr[ao]\b)[^.!?]*\bnotion\b|\b(?:abr[eo]|cri[ao])\b[^.!?]*\b(?:tarefa|chamado)\b/i`
+
+Exclusão: `/\bcomo\s+(?:ok|resolvid|conclu)\b/i` — evita conflito com resolver_tarefa_notion
+
+Cobre:
+- "Marcar no Notion" / "Marcar no Notion a mensagem acima"
+- "Anota no Notion" / "Registra no Notion"
+- "Abre uma tarefa" / "Abre chamado"
+- "Cria tarefa" / "Cria um chamado no Notion"
+
+Não dispara para:
+- "Marcar como Ok" / "Marcar como resolvido" (exclusão RESOLVER_EXCL)
+- Mensagens que não têm verbo de criação + notion/tarefa
+
+Histórico (07/05/2026): Haiku alucinava "já está registrada no Notion" sem chamar nenhuma tool (exec 59447: `tools called = []`). A tarefa "Cobrar assinatura - Amanda Caroline" nunca foi criada. tool_choice forçado elimina a alucinação.
+
 ## Próximos candidatos sugeridos (TODO)
 
 ### `BUSCAR_POP_INTENT` → força `buscar_pop`
