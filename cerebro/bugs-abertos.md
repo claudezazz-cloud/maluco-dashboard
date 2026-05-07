@@ -2,48 +2,6 @@
 
 Lista viva de problemas conhecidos e pendentes. Marque com data quando resolver.
 
-## 🔴 Bot alucinando respostas de POPs (mai/2026)
-
-**Sintoma:** após o fix de tokens (mai/2026, 30k → 7k), o bot ficou genérico ao falar de POPs. Está alucinando respostas em vez de chamar `buscar_pop` para ler o conteúdo real.
-
-**Causa provável:** Agora o prompt traz só **títulos** dos POPs (não o conteúdo). O bot deveria:
-1. Ler a pergunta do usuário
-2. Identificar qual POP é relevante (pelo título)
-3. Chamar `buscar_pop(titulo)` para obter o conteúdo
-4. Responder com base no conteúdo retornado
-
-Mas o bot está respondendo direto sem chamar `buscar_pop`, inventando passos que parecem plausíveis. As regras no system prompt dizem:
-
-> - POPs marcados com ⚠️ são OBRIGATÓRIOS — chame buscar_pop para eles SEMPRE antes de responder.
-> - Para outros POPs: chame buscar_pop antes de dar instruções de qualquer processo.
-> - NUNCA oriente de memória sem chamar a tool.
-
-Aparentemente Haiku 4.5 não está obedecendo essas regras com força suficiente.
-
-**Possíveis fixes (ordem de simplicidade):**
-
-1. **Reforçar no sysprompt_v3.txt** uma regra mais forte e em CAPS no início do prompt:
-   ```
-   ⚠️ REGRA ABSOLUTA: ANTES de responder QUALQUER pergunta sobre processos, procedimentos,
-   "como faz", "quais os passos", você DEVE chamar buscar_pop. Sem exceção.
-   Se não chamou buscar_pop, sua resposta está errada e vai ser rejeitada.
-   ```
-
-2. **`tool_choice` forçado** quando detectar intenção de procedimento — similar ao que já fazemos com `criar_lembrete` (LEMBRETE_INTENT). Adicionar PADRAO_INTENT regex.
-
-3. **Pre-injection da tool call** — em casos óbvios (pergunta começa com "como", "qual o processo", "passo a passo", etc), montar o messages com primeiro turn já contendo um tool_use de buscar_pop.
-
-4. **Reverter parcialmente** — manter títulos para POPs que não são "LEIA SEMPRE", mas injetar conteúdo dos LEIA SEMPRE. Custo: ~6k tokens extras só nos LEIA SEMPRE. Tradeoff aceitável se eliminar alucinação.
-
-5. **Fine-tuning do system prompt** com exemplos few-shot mostrando o padrão certo (usuário pergunta → bot chama buscar_pop → responde).
-
-**Métricas para validar fix:**
-- `bot_conversas` deve ter `pops_usados` populado MAS também ver no `execution_data` se a tool `buscar_pop` foi chamada. Se chamada, `tools_used` count > 0.
-- Comparar respostas do bot antes/depois — devem citar `=== Título do POP ===` ou trechos literais (sinal de leitura via tool).
-
-**Histórico:**
-- mai/2026 (commit `c67a543`): movemos POPs para títulos-only + tool. Tokens caíram drasticamente.
-- mai/2026: usuário reportou alucinação. Bug aberto aqui.
 
 ---
 
@@ -101,6 +59,7 @@ Aparentemente Haiku 4.5 não está obedecendo essas regras com força suficiente
 - ✅ **Bot inventando "não tenho chamados" em `/chamados`** (resolvido mai/2026): Haiku 4.5 não chamava `buscar_chamados`. Fix: `tool_choice: {type: 'tool', name: 'buscar_chamados'}` forçado quando msg tem `/chamados`, `/relatorio` ou variantes. Ver [tool-choice-forcado.md](tool-choice-forcado.md).
 - ✅ **Auto-resolver tarefa em mensagem de criação** (resolvido 06/05/2026): nó `Detecta Resolvido` matchava "pronto" em "Avisar quando tiver pronto" e marcava tarefa similar como Ok no Notion. Fix: regex restrito + exclusão `CRIA_TAREFA_RE` para templates de pedido. Ver [detecta-resolvido.md](detecta-resolvido.md).
 - ✅ **`fix_*.py` poluindo raiz** (resolvido 06/05/2026): 19 scripts one-shot movidos para `archive/fix_scripts_2026_q2/` via `git mv`. Histórico preservado no git.
+- ✅ **Bot encurtando respostas de POP** (resolvido 06/05/2026): Haiku chamava `buscar_pop` mas resumia o conteúdo com "RESUMO RÁPIDO". Fix duplo: (1) sysprompt — exceção anti-resumo na seção TOM + regras "TRANSCREVA TODOS os passos" na seção POPs; (2) `agent_loop_code.js` — prefixo "INSTRUCAO OBRIGATORIA" injetado no tool_result de `buscar_pop`. Tokens output: 428 → 1.547; chars resposta: 899 → 3.588; todas as etapas e checklists presentes.
 
 ---
 
