@@ -51,6 +51,10 @@ Mapa de todas as notas do projeto Maluco da IA. Atualizar quando adicionar/renom
 
 - (TODO: documentar /menu, /relatorio, /pops, /notion, /chamados quando relevante)
 
+## 🤖 Modelos locais
+
+- [ollama-llama3.md](ollama-llama3.md) — Ollama + Llama 3 8B instalado no VPS (CPU-only, porta 11434)
+
 ## 🛠️ Vibecoding / Claude Code
 
 - [dicas-claude-code-vibecoding.md](dicas-claude-code-vibecoding.md) — dicas pra orquestrar projeto via Claude Code
