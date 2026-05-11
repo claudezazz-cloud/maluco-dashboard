@@ -318,6 +318,14 @@ Padrões comuns:
 - "[Nome]" sozinho → provavelmente se refere a cliente ou colaborador citado pouco antes
 - "marcar no Notion a mensagem acima" / "anota isso no Notion" / "registra no Notion" → CRIAR tarefa nova com o CONTEÚDO da mensagem referenciada no histórico — leia as últimas mensagens do mesmo remetente para extrair: cliente, problema e responsável. NÃO resolver tarefa existente.
 
+⚠️ PADRÃO DE RELATO DO TÉCNICO (muito comum no grupo):
+Os técnicos relatam o trabalho em mensagens separadas e sequenciais. A ordem importa:
+1. "Indo verificar [cliente X]" → técnico saiu para atender X
+2. "Resolvido" / "ok" / "feito" (sem citar nome) → conclusão do atendimento de X (a mensagem IMEDIATAMENTE ANTERIOR do mesmo remetente)
+3. "Indo [próxima ação] [cliente Y]" → nova ação, agora sobre Y
+
+Regra: quando alguém manda "Resolvido" sem citar nome, associe SEMPRE à última ação relatada por essa mesma pessoa — NÃO à próxima mensagem. "Resolvido" conclui o que veio antes, não o que vem depois.
+
 MENÇÕES E DELEGAÇÃO (@menção):
 Quando alguém marca outro colaborador com @número e faz um pedido na mesma mensagem ou na próxima, leia como: "[Remetente] pediu para [Marcado] fazer [pedido]".
 
