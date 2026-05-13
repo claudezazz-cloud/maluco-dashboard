@@ -40,6 +40,16 @@ Para evitar 429 por excesso de tokens (o N8N estava injetando 62k tokens/request
 | POPs | ~45k chars injetados (todos os POPs) | Só títulos (~500 chars) + tool `buscar_pop` |
 | Chamados | ~30k chars injetados sempre | Removido do prompt + tool `buscar_chamados` |
 
+**Monta_Prompt.js e Monta_Prompt_Relatorio (mai/2026 → mai/2026):**
+
+**Isolamento de tarefas por grupo (13/05/2026):**
+- `Busca Grupo Atual` SQL atualizado → inclui `tipos_filtro_entrega`
+- `Monta_Prompt.js` faz chamada HTTP ao endpoint `/api/grupos/tipos?chatId=...` via `this.helpers.httpRequest` no início do código (antes de montar tarefasContext)
+- Filtra `results` do Notion para só incluir tarefas cujo tipo está em `grupos_whatsapp.tipos_filtro_entrega` do grupo atual
+- `listar_tarefas_notion` TOOL no agent_loop também filtra pelo mesmo endpoint
+- Endpoint: `GET /api/grupos/tipos?chatId=...` → `{tipos: ['Internet', ...]}` (autenticado com `x-token`)
+- **Pegadinha:** `_vM_early` não existe na linha 40 onde o código roda — usar `$('Verifica Menção').first().json?.chatId` diretamente
+
 **Monta_Prompt.js e Monta_Prompt_Relatorio (mai/2026):**
 - `chamadosContext` = vazio — tool `buscar_chamados` sob demanda
 - `tarefasContext` = bloco DINÂMICO (não invalida cache)

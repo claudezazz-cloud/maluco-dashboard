@@ -87,6 +87,8 @@ Não dispara para:
 - "Marcar como Ok" / "Marcar como resolvido" (exclusão RESOLVER_EXCL)
 - Mensagens que não têm verbo de criação + notion/tarefa
 
+**Atenção — Parse Resposta (bug 13/05/2026):** quando CRIAR_NOTION_INTENT força tool_choice e o agent_loop retorna `content: []` (vazio), o `Parse Resposta` quebrava em `content[0].text`. Fix: agent_loop agora verifica `!finalContent || finalContent.length === 0 || !find(text block)`. Parse Resposta agora usa `.find(b => b.type === 'text')` em vez de `content[0]`.
+
 Histórico (07/05/2026): Haiku alucinava "já está registrada no Notion" sem chamar nenhuma tool (exec 59447: `tools called = []`). A tarefa "Cobrar assinatura - Amanda Caroline" nunca foi criada. tool_choice forçado elimina a alucinação.
 
 ## Próximos candidatos sugeridos (TODO)

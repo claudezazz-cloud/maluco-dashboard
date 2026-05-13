@@ -55,6 +55,10 @@ Mapa de todas as notas do projeto Maluco da IA. Atualizar quando adicionar/renom
 
 - [ollama-llama3.md](ollama-llama3.md) — Ollama + Llama 3 8B instalado no VPS (CPU-only, porta 11434)
 
+## 🔀 Multigrupo / Isolamento
+
+- [multigrupo-tipos-implementado.md](multigrupo-tipos-implementado.md) — isolamento de tarefas por grupo (Internet vs Design) via tipos_filtro_entrega
+
 ## 🛠️ Vibecoding / Claude Code
 
 - [dicas-claude-code-vibecoding.md](dicas-claude-code-vibecoding.md) — dicas pra orquestrar projeto via Claude Code
