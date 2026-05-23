@@ -8,7 +8,7 @@ import json, urllib.request, ssl, time, urllib.error, uuid
 N8N_URL = "https://n8n.srv1537041.hstgr.cloud"
 API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkNDE5ZWU0MC0wMmFiLTQ1OGUtODMzMi1lN2E1OWEwYzRmMTAiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiOTQyYWFlZDctYTJkOS00MjJjLWE3OWMtZWMzNzQyMmViOWY4IiwiaWF0IjoxNzc0NzkyNzU2LCJleHAiOjE3NzczNDUyMDB9.bdrA_lXECtGYWsEqQB5FCn4CtZATdI2Mxu3LXQufStA"
 PG_CRED_ID = "AErqeMtSVfS0MNsb"
-PROMPT_FILE = "system_prompt_v2.txt"
+PROMPT_FILE = "v3_dump/sysprompt_v3.txt"
 ctx = ssl.create_default_context()
 
 
