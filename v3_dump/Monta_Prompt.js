@@ -29,6 +29,20 @@ try {
       }
       return m;
     });
+    // Prefixa content com [DD/MM HH:MM] usando ts salvo no Redis e descarta ts
+    // (Claude API rejeita campos extras em messages). Turnos antigos sem ts ficam sem prefixo.
+    redisHistory = redisHistory.map(m => {
+      const { ts, ...rest } = m;
+      if (ts && typeof rest.content === 'string') {
+        try {
+          const d = new Date(new Date(ts).getTime() - 3 * 60 * 60 * 1000);
+          const iso = d.toISOString();
+          const stamp = `${iso.substring(8,10)}/${iso.substring(5,7)} ${iso.substring(11,16)}`;
+          rest.content = `[${stamp}] ${rest.content}`;
+        } catch(e) {}
+      }
+      return rest;
+    });
   }
 } catch(e) {}
 
@@ -161,14 +175,18 @@ try {
   // viram self-fulfilling prophecy quando reinjetadas no histórico. Scrub.
   const FAIL_CONTAMINATION = /(ferramenta|tool)[\s\S]{0,40}(fora\s+do\s+ar|fora\s+no\s+momento|indispon[ií]vel|n[ãa]o\s+respond|n[ãa]o\s+est[áa]\s+funcion|off\s*line)/i;
   for (const msg of uniqueHist) {
-    let hora = '??:??';
+    // Formato [DD/MM HH:MM] em BRT — Claude precisa da data pra não confundir
+    // mensagens de dias anteriores com "hoje" (bug 18/05/2026: relatório listou
+    // chamados de sábado como "resolvidos hoje" porque só hora estava no prompt).
+    let prefixo = '??/?? ??:??';
     try {
       const d = new Date(new Date(msg.data_hora).getTime() - 3 * 60 * 60 * 1000);
-      hora = d.toISOString().substring(11, 16);
+      const iso = d.toISOString();
+      prefixo = `${iso.substring(8,10)}/${iso.substring(5,7)} ${iso.substring(11,16)}`;
     } catch(e) {}
     let texto = (msg.mensagem || '').substring(0, 400);
     if (FAIL_CONTAMINATION.test(texto)) texto = '[resposta antiga do bot removida — bug de ferramenta corrigido]';
-    historico += `[${hora}] ${msg.remetente}: ${texto}\n`;
+    historico += `[${prefixo}] ${msg.remetente}: ${texto}\n`;
   }
   if (historico) historicoSection = `\n\nÚLTIMAS MENSAGENS DO GRUPO:\n${historico}`;
 } catch(e) {}
@@ -257,6 +275,20 @@ const ano = brt.getFullYear();
 const today = `${ano}-${mes}-${dia}`;
 const diasSemana = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
 const diaSemana = diasSemana[brt.getDay()];
+
+// CALEND\u00c1RIO 8 dias \u2014 substitui {{PROXIMOS_DIAS}} no sysprompt. Bot usa como tabela de
+// refer\u00eancia absoluta pra "hoje/amanh\u00e3/depois", em vez de calcular manualmente.
+const _proximosDiasArr = [];
+for (let i = 0; i < 8; i++) {
+  const _dt = new Date(brt.getFullYear(), brt.getMonth(), brt.getDate() + i);
+  const _dd = String(_dt.getDate()).padStart(2, '0');
+  const _mm = String(_dt.getMonth() + 1).padStart(2, '0');
+  const _yyyy = _dt.getFullYear();
+  const _label = i === 0 ? 'HOJE = ' : (i === 1 ? 'AMANH\u00c3 = ' : '');
+  _proximosDiasArr.push(`${_label}${_dd}/${_mm}/${_yyyy} (${diasSemana[_dt.getDay()]})`);
+}
+const proximosDiasStr = _proximosDiasArr.join('\n');
+
 const msgLower = textMessage.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 // 7. MONTAGEM DOS POPs — apenas títulos (conteúdo via tool buscar_pop)
@@ -347,6 +379,7 @@ if (systemPromptTemplate && systemPromptTemplate !== '__RESET_TO_DEFAULT__') {
     .replace(/\{\{DATA\}\}/g, `${diaSemana}, ${dia}/${mes}/${ano}`)
     .replace(/\{\{ANO\}\}/g, String(ano))
     .replace(/\{\{TODAY\}\}/g, today)
+    .replace(/\{\{PROXIMOS_DIAS\}\}/g, proximosDiasStr)
     .replace(/\{\{COLABORADORES\}\}/g, colaboradoresStr)
     .replace(/\{\{CLIENTES\}\}/g, clienteInfo)
     .replace(/\{\{POPS\}\}/g, pops)
@@ -391,7 +424,7 @@ return [{
     popsUsados,
     chamadosCarregados: chamadosContext.length > 0 ? 'SIM (' + chamadosContext.length + ' chars)' : 'NAO',
     claudeBody: {
-      model: "claude-haiku-4-5-20251001",
+      model: "claude-3-5-haiku-20241022",
       max_tokens: 4096,
       system: (function(){
   const marker = "__CACHE_SPLIT__";

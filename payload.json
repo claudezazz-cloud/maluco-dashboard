@@ -1,0 +1,16 @@
+{
+  "number": "554195046364",
+  "title": "Teste de Botões Interativos 🤖",
+  "description": "Essa é uma mensagem interativa enviada diretamente pelo Maluco da IA.",
+  "footerText": "Zazz Internet",
+  "buttonText": "Ver Opções",
+  "sections": [
+    {
+      "title": "Ações",
+      "rows": [
+        { "title": "Sim, funciona!", "rowId": "btn_yes", "description": "Clique aqui se funcionou" },
+        { "title": "Não gostei", "rowId": "btn_no", "description": "Clique aqui se não funcionou" }
+      ]
+    }
+  ]
+}

@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 """
 Deploy padrão para o workflow Maluco Bot v3 (tool_use):
-- Atualiza Monta Prompt + Monta Prompt Relatório com o mesmo Monta_Prompt.js
+- Atualiza Monta Prompt + Monta Prompt Relatório com Monta_Prompt.js
+- Atualiza Parse Resposta com Parse_Resposta.js
 - Atualiza workflow_entity (draft) e workflow_history (publicada — n8n carrega daqui!)
 - Faz stop/start do n8n com PRAGMA wal_checkpoint(TRUNCATE) antes/depois
 - Sai 0 se sucesso, 1 se erro
 
 Uso: python3 deploy_workflow.py
-Pré-requisito: /opt/zazz/dashboard/v3_dump/Monta_Prompt.js tem que estar atualizado.
+Pré-requisito: os arquivos JS correspondentes em /opt/zazz/dashboard/v3_dump/ estão atualizados.
 """
-import sqlite3, json, uuid, subprocess, sys, time
+import sqlite3, json, uuid, subprocess, sys, time, os
 
 DB = "/var/lib/docker/volumes/n8n_data/_data/database.sqlite"
-MP_FILE = "/opt/zazz/dashboard/v3_dump/Monta_Prompt.js"
 WORKFLOW_ID = "Pj5SdaxFh9H9EIX4"
-NODES_TO_UPDATE = ("Monta Prompt", "Monta Prompt Relatório")
+
+# Cada nó aponta para (arquivo_js, marker_obrigatorio_no_arquivo).
+# marker é uma string que tem que estar presente — proteção contra deploy de arquivo vazio/quebrado.
+BASE = "/opt/zazz/dashboard/v3_dump"
+NODES_TO_UPDATE = {
+    "Monta Prompt":           (f"{BASE}/Monta_Prompt.js",   "todosOsPops"),
+    "Monta Prompt Relatório": (f"{BASE}/Monta_Prompt.js",   "todosOsPops"),
+    "Parse Resposta":         (f"{BASE}/Parse_Resposta.js", "novoHistorico"),
+}
 
 def run(cmd):
     r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -23,12 +31,19 @@ def run(cmd):
     return r.stdout
 
 def main():
-    # 1. Read new code
-    with open(MP_FILE) as f:
-        new_code = f.read()
-    print(f"[1/6] Loaded {MP_FILE}: {len(new_code)} chars")
-    if "todosOsPops" not in new_code:
-        print("[FAIL] new code missing 'todosOsPops' marker — aborting", file=sys.stderr); sys.exit(1)
+    # 1. Read & validate all js files referenced
+    code_by_node = {}
+    file_cache = {}
+    for node, (path, marker) in NODES_TO_UPDATE.items():
+        if path not in file_cache:
+            if not os.path.exists(path):
+                print(f"[FAIL] missing file: {path}", file=sys.stderr); sys.exit(1)
+            with open(path) as f:
+                file_cache[path] = f.read()
+            if marker not in file_cache[path]:
+                print(f"[FAIL] {path} missing marker '{marker}' — aborting", file=sys.stderr); sys.exit(1)
+            print(f"[1/6] Loaded {path}: {len(file_cache[path])} chars (marker OK)")
+        code_by_node[node] = file_cache[path]
 
     # 2. Stop n8n
     print("[2/6] Stopping n8n...")
@@ -46,10 +61,14 @@ def main():
     nodes = json.loads(nodes_str)
     updated = 0
     for n in nodes:
-        if n.get("name") in NODES_TO_UPDATE:
-            n["parameters"]["jsCode"] = new_code
+        name = n.get("name")
+        if name in code_by_node:
+            n["parameters"]["jsCode"] = code_by_node[name]
             updated += 1
+            print(f"     - {name}: jsCode replaced")
     print(f"     nodes updated in workflow_entity: {updated}")
+    if updated != len(NODES_TO_UPDATE):
+        print(f"[WARN] expected {len(NODES_TO_UPDATE)} nodes, found {updated}", file=sys.stderr)
 
     new_vid = str(uuid.uuid4())
     nodes_json = json.dumps(nodes)

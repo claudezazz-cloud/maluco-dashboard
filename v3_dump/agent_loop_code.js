@@ -151,11 +151,123 @@ const TOOLS = [
       },
       required: ['mensagem','agendar_para']
     }
+  },
+  {
+    name: 'gerar_relatorio_imagem',
+    description: 'Gera um relatorio visual em formato de IMAGEM (tabela estilo Excel/Dashboard) e envia automaticamente como foto no grupo WhatsApp. Use quando pedirem "relatorio em imagem", "manda o resumo como foto", "gera tabela dos chamados", "manda a planilha", etc. Voce DEVE montar o JSON com os dados estruturados dos chamados/tarefas (busque antes com buscar_chamados ou listar_tarefas_notion se necessario). A imagem sera gerada e enviada automaticamente. REGRAS DE FORMATACAO: (1) id deve ser CURTO (ex: "554", "001", nao use page_id do Notion inteiro); (2) cliente deve ser so o NOME (ex: "C. F. Oliveira", nao inclua codigo ou detalhes extras); (3) categoria deve ser SIMPLES (ex: "Internet", "Contratos", "Instalacao" — NAO inclua responsavel ou outros dados na categoria).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        titulo: { type: 'string', description: 'Titulo do relatorio. Ex: "Resumo Diario", "Chamados Pendentes". Default: "Resumo de Atendimentos"' },
+        data: { type: 'string', description: 'Data de referencia. Ex: "03/06/2026". Default: hoje.' },
+        total: { type: 'number', description: 'Total de itens.' },
+        concluidos: { type: 'number', description: 'Itens concluidos/resolvidos.' },
+        pendentes: { type: 'number', description: 'Itens pendentes/abertos.' },
+        categorias: {
+          type: 'array',
+          description: 'Lista de categorias, cada uma com array de chamados. Categoria deve ser CURTA e LIMPA (ex: "Internet", "Contratos"). NAO inclua responsavel ou tecnico no nome da categoria.',
+          items: {
+            type: 'object',
+            properties: {
+              nome: { type: 'string', description: 'Nome CURTO da categoria. Ex: "Internet", "Instalacao", "Contratos", "Outros". NUNCA inclua nomes de pessoas aqui.' },
+              chamados: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', description: 'ID CURTO do chamado/tarefa. Use numero da OS (ex: "554") ou sequencial (ex: "01"). NUNCA passe page_id do Notion (32+ chars).' },
+                    cliente: { type: 'string', description: 'Nome LIMPO do cliente. Ex: "C. F. Oliveira", "Escola Geremia". Maximo 35 caracteres.' },
+                    topico: { type: 'string', description: 'Topico/motivo do chamado do Routerbox (ex: "ModificaInstala", "RetencaoSPC", "PercadeEquip", "DivMudContrual", "Cancelamento"). Se nao souber, omita.' },
+                    dias: { type: 'number', description: 'Dias em aberto (numero inteiro).' },
+                    alert: { type: 'string', description: 'Emoji de alerta opcional. Ex: "⚠️" para vencido, "🔴" para critico.' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        legenda: { type: 'string', description: 'Texto de legenda que acompanha a imagem no WhatsApp. Default: "📊 Relatório gerado automaticamente"' }
+      },
+      required: ['categorias']
+    }
+  },
+  {
+    name: 'gerar_relatorio_excel',
+    description: 'Gera um relatorio em formato de PLANILHA EXCEL (.xlsx) e envia automaticamente como documento no grupo WhatsApp. Use quando pedirem "gerar xlsx", "gerar excel", "manda a planilha em excel", etc. Voce DEVE montar o JSON com os dados estruturados dos chamados/tarefas (busque antes com buscar_chamados ou listar_tarefas_notion se necessario). O documento sera gerado e enviado automaticamente.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        categorias: {
+          type: 'array',
+          description: 'Lista de categorias, cada uma com array de chamados.',
+          items: {
+            type: 'object',
+            properties: {
+              nome: { type: 'string', description: 'Nome da categoria.' },
+              chamados: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', description: 'Cód. (ID) da OS.' },
+                    cliente: { type: 'string', description: 'Nome do cliente.' },
+                    endereco: { type: 'string', description: 'Endereço/Rua.' },
+                    numero: { type: 'string', description: 'End Nº.' },
+                    topico: { type: 'string', description: 'Tópico/motivo (ex: ModificaInstala).' },
+                    agendamento: { type: 'string', description: 'Agendamento (ex: 25/05/2026 10:05:00).' },
+                    tempo_restante: { type: 'string', description: 'Tempo Restante (ex: -88d 3h corridos).' },
+                    situacao: { type: 'string', description: 'Situação OS (ex: Pausada, Em execução).' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        legenda: { type: 'string', description: 'Texto de legenda que acompanha o arquivo no WhatsApp. Default: "📊 Planilha gerada"' }
+      },
+      required: ['categorias']
+    }
+  },
+  {
+    name: 'gerar_relatorio_excel_notion',
+    description: 'Gera um relatorio em formato de PLANILHA EXCEL (.xlsx) ESPECIFICO para tarefas do NOTION e envia no WhatsApp. Use APENAS quando pedirem planilha/excel sobre os itens/tarefas do Notion (ex: "planilha dos parados do notion"). Voce DEVE montar o JSON com os dados das tarefas.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        fonte: { type: 'string', description: 'Obrigatorio enviar "notion"', enum: ['notion'] },
+        categorias: {
+          type: 'array',
+          description: 'Lista de agrupamentos, cada uma com array de tarefas. Recomenda-se agrupar pelo Status ou pelo Responsavel.',
+          items: {
+            type: 'object',
+            properties: {
+              nome: { type: 'string', description: 'Nome do agrupamento (Ex: "Franquelin" ou "Parado").' },
+              chamados: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    tarefa: { type: 'string', description: 'Tarefa / Descrição.' },
+                    cliente: { type: 'string', description: 'Cliente / Relacionamento.' },
+                    responsavel: { type: 'string', description: 'Responsavel pela tarefa.' },
+                    status: { type: 'string', description: 'Status (ex: Parado, Concluído).' },
+                    prazo: { type: 'string', description: 'Prazo / Data definida.' },
+                    tempo_restante: { type: 'string', description: 'Tempo Restante / Obs.' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        legenda: { type: 'string', description: 'Texto de legenda que acompanha o arquivo no WhatsApp.' }
+      },
+      required: ['categorias', 'fonte']
+    }
   }
 ];
 
 function buildNotionBody(data) {
-  const respNome = (data.responsavel || 'franquelin, victor').toLowerCase()
+  const respNome = (data.responsavel || 'franquelin').toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '');
   let respPeople = [];
   const added = new Set();
@@ -348,6 +460,102 @@ async function executarTool(name, input) {
       const dt = new Date(data.agendar_para).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
       return `Lembrete agendado para ${dt} no grupo ${data.grupo}. id=${data.id}.`;
     }
+    if (name === 'gerar_relatorio_imagem') {
+      const chatId = $input.first().json.chatId || $input.first().json.chat_id || '';
+      if (!chatId) return 'Erro: nao foi possivel identificar o chat atual para enviar a imagem.';
+      // 1. Montar payload para a rota de imagem
+      const today = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      const payload = {
+        data: input.data || today,
+        total: input.total || 0,
+        concluidos: input.concluidos || 0,
+        pendentes: input.pendentes || 0,
+        categorias: input.categorias || []
+      };
+      // 2. Chamar o Dashboard para gerar a imagem PNG
+      const imgResp = await _helpers.httpRequest({
+        method: 'POST',
+        url: `${DASH_BASE}/api/report-image`,
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        json: false,
+        returnFullResponse: true,
+        ignoreHttpStatusErrors: true,
+        encoding: 'arraybuffer'
+      });
+      if (imgResp.statusCode >= 400) {
+        return `Erro ao gerar imagem: HTTP ${imgResp.statusCode}`;
+      }
+      // 3. Converter para base64
+      const imgBuffer = Buffer.from(imgResp.body);
+      const base64 = imgBuffer.toString('base64');
+      // 4. Enviar via Evolution API sendMedia
+      const legenda = input.legenda || '📊 Relatório gerado automaticamente';
+      const evoResp = await http({
+        method: 'POST',
+        url: 'https://lanlunar-evolution.cloudfy.live/message/sendMedia/ZazzClaude',
+        headers: { 'apikey': 'REDACTED-EVO-KEY', 'Content-Type': 'application/json' },
+        body: {
+          number: chatId,
+          mediatype: 'image',
+          mimetype: 'image/png',
+          caption: legenda,
+          media: base64
+        }
+      });
+      if (evoResp.statusCode >= 400) {
+        return `Imagem gerada mas erro ao enviar no WhatsApp: ${JSON.stringify(evoResp.body || {}).substring(0, 200)}`;
+      }
+      return `Relatorio em imagem enviado com sucesso no grupo! (${payload.categorias.length} categorias, ${payload.total} itens)`;
+    }
+    if (name === 'gerar_relatorio_excel' || name === 'gerar_relatorio_excel_notion') {
+      const chatId = $input.first().json.chatId || $input.first().json.chat_id || '';
+      if (!chatId) return 'Erro: nao foi possivel identificar o chat atual para enviar o arquivo.';
+      
+      const payload = { 
+        categorias: input.categorias || [],
+        fonte: input.fonte || 'routerbox'
+      };
+      
+      const excelResp = await _helpers.httpRequest({
+        method: 'POST',
+        url: `${DASH_BASE}/api/report-excel`,
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        json: false,
+        returnFullResponse: true,
+        ignoreHttpStatusErrors: true,
+        encoding: 'arraybuffer'
+      });
+      
+      if (excelResp.statusCode >= 400) {
+        return `Erro ao gerar excel: HTTP ${excelResp.statusCode}`;
+      }
+      
+      const excelBuffer = Buffer.from(excelResp.body);
+      const base64 = excelBuffer.toString('base64');
+      const legenda = input.legenda || '📊 Planilha gerada';
+      const fileName = `Relatorio_Chamados_${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      const evoResp = await http({
+        method: 'POST',
+        url: 'https://lanlunar-evolution.cloudfy.live/message/sendMedia/ZazzClaude',
+        headers: { 'apikey': 'REDACTED-EVO-KEY', 'Content-Type': 'application/json' },
+        body: {
+          number: chatId,
+          mediatype: 'document',
+          mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          fileName: fileName,
+          caption: legenda,
+          media: base64
+        }
+      });
+      
+      if (evoResp.statusCode >= 400) {
+        return `Planilha gerada mas erro ao enviar no WhatsApp: ${JSON.stringify(evoResp.body || {}).substring(0, 200)}`;
+      }
+      return `Relatorio em planilha enviado com sucesso no grupo!`;
+    }
     return `Tool desconhecida: ${name}`;
   } catch (e) {
     return `Excecao: ${String(e).substring(0, 300)}`;
@@ -410,8 +618,12 @@ const forceChamados = CHAMADOS_INTENT.test(userTxt);
 let forcedAlready = false;
 let forcedChamadosAlready = false;
 
+let chamouLembrete = false;
+let chamouTarefa = false;
+
 for (let i = 0; i < MAX_ITER; i++) {
-  const body = { ...baseBody, messages };
+  const cleanMessages = messages.map(m => { const { ts, ...rest } = m; return rest; });
+  const body = { ...baseBody, messages: cleanMessages };
   // Força chamada de criar_lembrete na 1ª iteração quando a intenção é clara.
   if (forceLembrete && !forcedAlready && i === 0) {
     body.tool_choice = { type: 'tool', name: 'criar_lembrete' };
@@ -427,11 +639,23 @@ for (let i = 0; i < MAX_ITER; i++) {
   totalIn += resp.usage?.input_tokens || 0;
   totalOut += resp.usage?.output_tokens || 0;
 
-  if (resp.stop_reason === 'tool_use') {
+  const teveToolUse = (resp.content || []).some(b => b.type === 'tool_use');
+
+  if (resp.stop_reason === 'tool_use' || teveToolUse) {
     messages.push({ role: 'assistant', content: resp.content });
+    
+    // Se estourar as interações e AINDA pedir tool_use, avisa e para.
+    if (i === MAX_ITER - 1) {
+       finalContent = [{ type: 'text', text: 'Tive um erro interno de limites (MAX_ITER) ao tentar executar a tarefa.' }];
+       break;
+    }
+
     const toolResults = [];
     for (const block of resp.content) {
       if (block.type === 'tool_use') {
+        if (block.name === 'criar_lembrete') chamouLembrete = true;
+        if (block.name === 'criar_tarefa_notion') chamouTarefa = true;
+        
         const result = await executarTool(block.name, block.input || {});
         toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result });
       }
@@ -441,16 +665,23 @@ for (let i = 0; i < MAX_ITER; i++) {
   }
 
   // Defesa: se o texto final afirma "Lembrete criado/agendado" sem nenhuma tool ter sido chamada
-  // nesta resposta, é hallucination. Reinjeta como user e força a tool.
+  // nesta resposta ou anteriores, é hallucination. Reinjeta como user e força a tool.
   const respText = (resp.content || []).filter(b => b.type === 'text').map(b => b.text || '').join(' ');
   const hallucinaLembrete = /lembrete\s+(criad|agendad|marcad)|agendei\s+o?\s*lembret|marquei\s+o?\s*lembret/i.test(respText);
-  const teveToolUse = (resp.content || []).some(b => b.type === 'tool_use');
-  if (hallucinaLembrete && !teveToolUse && i < MAX_ITER - 1) {
+  const hallucinaTarefa = /(tarefa|chamado)\s+(criad|agendad|marcad|abert)|(criei|marquei|abri)\s+(a|o|as|os)?\s*(tarefa|chamado)/i.test(respText);
+  
+  if (hallucinaLembrete && !chamouLembrete && i < MAX_ITER - 1) {
     // Não persiste a resposta hallucinada — pede pra refazer com tool forçada.
     messages.push({ role: 'assistant', content: resp.content });
     messages.push({ role: 'user', content: 'Você afirmou que criou um lembrete mas não chamou a tool criar_lembrete. Chame a tool agora com os parâmetros corretos.' });
     // próxima iter vai forçar a tool
     forcedAlready = false;
+    continue;
+  }
+  
+  if (hallucinaTarefa && !chamouTarefa && i < MAX_ITER - 1) {
+    messages.push({ role: 'assistant', content: resp.content });
+    messages.push({ role: 'user', content: 'Você afirmou que criou uma tarefa/chamado mas não chamou a tool criar_tarefa_notion. Chame a tool agora com os parâmetros corretos.' });
     continue;
   }
 

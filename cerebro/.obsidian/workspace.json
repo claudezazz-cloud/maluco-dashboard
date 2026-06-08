@@ -11,13 +11,14 @@
             "id": "f7fa5c3d89eb8467",
             "type": "leaf",
             "state": {
-              "type": "bases",
+              "type": "markdown",
               "state": {
-                "file": "Untitled.base",
-                "viewName": "Table"
+                "file": "auditoria-bugs-corrigidos.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-table",
-              "title": "Untitled"
+              "icon": "lucide-file",
+              "title": "auditoria-bugs-corrigidos"
             }
           }
         ]
@@ -185,6 +186,7 @@
   },
   "active": "f7fa5c3d89eb8467",
   "lastOpenFiles": [
+    "Untitled.base",
     "workflow-n8n.md",
     "treinamento-evolutivo.md",
     "treinamento-evolutivo-sistema.md",
@@ -203,7 +205,6 @@
     "agent-loop-tool-use.md",
     "README.md",
     "Chatwoot.md",
-    "Untitled.base",
     "Chatwoot Usuarios.md",
     "Chatwoot Inboxes.md",
     "IDEIAS.md",
@@ -211,7 +212,6 @@
     "Maluco da IA.md",
     "wikilinks.md",
     "memoria-sistema.md",
-    "Chamados.md",
     "Custos.md.tmp.15684.1776816254382",
     "Stack Tecnologica.md.tmp.15684.1776816222012",
     "Maluco da IA.md.tmp.15684.1776798400640",

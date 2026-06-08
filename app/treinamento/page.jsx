@@ -1064,7 +1064,7 @@ const TOOLS_LIST = [
       { k: 'tipo', v: 'Carimbo, Adesivo, Internet, Gráfica... (enum fixo)' },
       { k: 'cliente', v: 'código - nome (Internet) ou nome literal (outros)' },
       { k: 'valor', v: 'Número puro (ex: 90). NÃO em obs ou descrição.' },
-      { k: 'responsavel', v: 'junior, franquelin, luiz, negos, victor' },
+      { k: 'responsavel', v: 'junior, franquelin, luiz, negos' },
       { k: 'entrega', v: 'YYYY-MM-DD' },
     ],
     obs: 'Pode chamar múltiplas vezes no mesmo turno para criar várias tarefas de uma vez.',

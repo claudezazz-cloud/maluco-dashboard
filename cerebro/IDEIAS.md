@@ -54,4 +54,16 @@ Hoje o bot **cria** tarefas no Notion ([[Notion]]). Falta: quando tarefa é fech
 
 ---
 
+### 7. Canal de "Pânico" (Log de Erros Invisível)
+
+A IA é muito inteligente em contornar erros (como enviar Excel quando o PDF falha), mas o administrador precisa saber quando algo quebra nos bastidores.
+**A Dica:** Criar uma ferramenta (tool) `reportar_falha_sistema` ou um bloco `Catch` no N8N. Sempre que uma automação falhar por erro de código ou integração, o bot envia uma mensagem privada ou num grupo de TI detalhando o problema invisível aos usuários normais.
+
+### 8. Gestão de Memória (Resumo do Dia no BD)
+
+Atualmente o histórico completo é injetado no prompt. Com o tempo, o volume diário crescerá e deixará a IA lenta, confusa e com alto custo de tokens.
+**A Dica:** Criar uma automação de madrugada para condensar e resumir as discussões do dia, salvando em formato compactado ou em um banco vetorial. O bot passa a consultar resumos antigos em vez de carregar a transcrição bruta inteira na memória longa.
+
+---
+
 Qual quer atacar primeiro? Eu recomendaria **#1 (alertas proativos)** — é o que mais muda a percepção da equipe sobre o bot. De "ferramenta que respondo quando lembro" pra "alguém que ajuda sozinho".

@@ -1,0 +1,39 @@
+{
+  "parameters": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "authentication": "genericCredentialType",
+    "genericAuthType": "httpHeaderAuth",
+    "sendHeaders": true,
+    "headerParameters": {
+      "parameters": [
+        {
+          "name": "anthropic-version",
+          "value": "2023-06-01"
+        },
+        {
+          "name": "content-type",
+          "value": "application/json"
+        }
+      ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json.claudeBody) }}",
+    "options": {}
+  },
+  "id": "0803956a-5830-48cc-aadf-d13c688bd989",
+  "name": "Claude API",
+  "type": "n8n-nodes-base.httpRequest",
+  "typeVersion": 4.3,
+  "position": [
+    14544,
+    8736
+  ],
+  "credentials": {
+    "httpHeaderAuth": {
+      "id": "5srt2WMs9eRq2HRa",
+      "name": "YOUR_ANTHROPIC_API_KEY"
+    }
+  }
+}

@@ -59,10 +59,10 @@ cur.execute("""UPDATE workflow_entity
     SET nodes=?, versionId=?, updatedAt=STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')
     WHERE id=?""", (nodes_json, new_vid, WORKFLOW_ID))
 
-cur.execute("""UPDATE workflow_history
-    SET nodes=?, connections=?, versionId=?, updatedAt=STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')
-    WHERE workflowId=?""", (nodes_json, connections_str, new_vid, WORKFLOW_ID))
-print(f"     workflow_history updated: {cur.rowcount}")
+# cur.execute("""UPDATE workflow_history
+#     SET nodes=?, connections=?, versionId=?, updatedAt=STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')
+#     WHERE workflowId=?""", (nodes_json, connections_str, new_vid, WORKFLOW_ID))
+# print(f"     workflow_history updated: {cur.rowcount}")
 
 con.commit()
 cur.execute("PRAGMA wal_checkpoint(TRUNCATE)")

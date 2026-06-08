@@ -24,12 +24,18 @@ export async function POST(req) {
   const diaAtual = diasMap[weekdayClean] || weekdayClean
 
   const result = await query(
-    `SELECT * FROM dashboard_solicitacoes_programadas
-     WHERE ativo = true
-       AND hora = $1
-       AND (dias_semana = 'todos' OR $2 = ANY(string_to_array(dias_semana, ',')))
-       AND (ultimo_executado IS NULL OR ultimo_executado < NOW() - INTERVAL '50 minutes')
-     ORDER BY id ASC`,
+    `UPDATE dashboard_solicitacoes_programadas
+     SET ultimo_executado = NOW()
+     WHERE id IN (
+       SELECT id FROM dashboard_solicitacoes_programadas
+       WHERE ativo = true
+         AND hora = $1
+         AND (dias_semana = 'todos' OR $2 = ANY(string_to_array(dias_semana, ',')))
+         AND (ultimo_executado IS NULL OR ultimo_executado < NOW() - INTERVAL '50 minutes')
+       ORDER BY id ASC
+       FOR UPDATE SKIP LOCKED
+     )
+     RETURNING *`,
     [horaAtual, diaAtual]
   )
 
@@ -75,10 +81,6 @@ export async function POST(req) {
       }
     }
 
-    await query(
-      'UPDATE dashboard_solicitacoes_programadas SET ultimo_executado = NOW() WHERE id = $1',
-      [task.id]
-    )
     executadas.push(task.nome)
   }
 

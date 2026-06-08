@@ -54,4 +54,25 @@ Token anterior (`ntn_401906...`) retornou 401 "API token is invalid". Gerar um n
 
 ---
 
+## 4. Bot GERA Relatórios em Planilha (Excel) do Notion
+
+Quando o usuário solicita uma "planilha do Notion" (ex: "planilha dos parados do notion"), o Claude aciona a ferramenta `gerar_relatorio_excel_notion`.
+
+**Fluxo da Tool:**
+1. O Claude extrai as tarefas do Notion (baseado no contexto injetado no prompt via `Busca Tarefas Notion`).
+2. Ele agrupa as tarefas em categorias (ex: por Status ou Responsável).
+3. O script da engine (em N8N / `executarTool`) desvia a chamada para a mesma rota `POST /api/report-excel` do painel Next.js, injetando a flag `fonte: 'notion'`.
+4. A rota `report-excel` detecta a fonte "notion" e estrutura as colunas do arquivo Excel sob medida:
+   - **Tarefa / Descrição**
+   - **Cliente / Ref**
+   - **Responsável**
+   - **Status**
+   - **Prazo**
+   - **Tempo Restante / Obs**
+5. O painel retorna o binário do Excel, que é enviado diretamente para a Evolution API, anexando a legenda configurada e caindo no WhatsApp do usuário como um arquivo `.xlsx`.
+
+Diferencial: Esta funcionalidade usa o mesmo micro-serviço do Routerbox, porém com renderização condicional de estilos e dados para acomodar a tabela nativa do Notion.
+
+---
+
 **Notas técnicas relacionadas:** [[detecta-resolvido]] · [[tool-choice-forcado]] · [[agent-loop-tool-use]] · [[arquitetura-geral]]

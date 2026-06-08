@@ -155,7 +155,7 @@ function buildAIContext(chamados, importadoEm) {
         c.situacao || c.sit_atualizacao || '',
         calcDiasAberto(c.data_abertura) || (c.data_abertura ? `Aberto: ${c.data_abertura}` : ''),
         c.agendamento ? `Agendado: ${c.agendamento}` : '',
-        c.endereco ? `End: ${c.endereco}${c.complemento ? ', ' + c.complemento : ''}` : '',
+        c.endereco ? `End: ${c.endereco}, Nº ${c.end_num || 'SN'}${c.complemento ? ', ' + c.complemento : ''}` : '',
       ].filter(Boolean)
       detalhes += '  ' + parts.join(' | ') + '\n'
       count++
