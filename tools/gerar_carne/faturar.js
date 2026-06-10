@@ -1,8 +1,8 @@
-import { loginToRouterbox } from '../lib/rbx_auth.js';
+import { loginToRouterboxStealth } from '../lib/rbx_auth_stealth.js';
 
 export async function faturarCliente(codigoCliente, meses) {
-  const { browser, context, page } = await loginToRouterbox({ headless: true });
-  const TIMEOUT_EXECUCAO = 600000; // 10 minutos
+  const { browser, context, page } = await loginToRouterboxStealth({ headless: true });
+  const TIMEOUT_EXECUCAO = 1200000; // 20 minutos (v11: alinhado com N8N runner 900s + Routerbox lentidão HOJE)
   page.setDefaultTimeout(TIMEOUT_EXECUCAO);
   const POLL_INTERVAL = 1000;
   const MAX_TENTATIVAS_POR_MES = 2;
@@ -118,14 +118,25 @@ export async function faturarCliente(codigoCliente, meses) {
     if (!frame2) throw new Error('contentFrame refresh falhou');
     await page.waitForTimeout(3000);
 
-    // 8. Abrir modal de faturamento via JS
+    // 8. Abrir modal de faturamento via JS (v11: retry se menu não carregar)
     console.log('[MODAL] Abrindo modal de faturamento via JS...');
     const faturarUrl = `/routerbox/app_faturamento/app_faturamento.php?script_case_init=1&nmgp_url_saida=modal&nmgp_parms=vcodcli*scin${codigoCliente}*scout&nmgp_outra_jan=true&TB_iframe=true`;
-    await frame2.locator('body').evaluate((body, url) => {
-      const link = body.querySelector('a[onclick*="app_faturamento.php"]');
-      if (link) link.click();
-    }, faturarUrl);
-    await page.waitForTimeout(3000);
+    // v11: Retry openMenuItem até 3x se não achar iframe
+    for (let openTry = 1; openTry <= 3; openTry++) {
+      await frame2.locator('body').evaluate((body, url) => {
+        const link = body.querySelector('a[onclick*="app_faturamento.php"]');
+        if (link) link.click();
+      }, faturarUrl);
+      await page.waitForTimeout(2000); // v11: delay humano entre ações
+      const testIframe = page.locator('iframe[src*="app_faturamento"], iframe#TB_iframeContent').first();
+      if (await testIframe.count()) {
+        console.log(`[MODAL] Modal abriu na tentativa ${openTry}`);
+        break;
+      }
+      console.log(`[MODAL] Tentativa ${openTry} não abriu modal, retry...`);
+      await page.waitForTimeout(3000);
+    }
+    await page.waitForTimeout(2000);
 
     // 9. Achar o frame de Faturamento
     let frameFaturamento = null;
@@ -153,27 +164,49 @@ export async function faturarCliente(codigoCliente, meses) {
         console.log(`[MES] Processando ${mes}/2026 (${i+1}/${meses.length}) — tentativa ${tentativa}...`);
 
         try {
-          // Selecionar Mês + esperar AJAX do Histórico
+          // Selecionar Mês + esperar AJAX do Histórico (v11.2: mais tempo pro histórico carregar)
           await frameFaturamento.locator('select[name="mes"]').selectOption({ label: mes });
-          await page.waitForTimeout(4000);
+          await page.waitForTimeout(6000); // v11.2: 6s pro AJAX do histórico carregar (era 4s)
 
           // Outros campos
           await frameFaturamento.locator('select[name="ano"]').selectOption({ label: '2026' });
+          await page.waitForTimeout(500);
           await frameFaturamento.locator('select[name="composicao"]').selectOption({ label: 'Contratos e Atendimentos' });
+          await page.waitForTimeout(500);
           await frameFaturamento.locator('select[name="conta"]').selectOption({ label: '100-Contas a Receber - OFICIAL' });
+          await page.waitForTimeout(500);
+          // v11.2: Histórico com mais tempo (AJAX pesado)
           await frameFaturamento.locator('select[name="historico"]').selectOption({ label: 'Contas a Receber - LDL' });
+          await page.waitForTimeout(2000);
+          // v11.2: Classificador (v11 não preenchia - bug introduzido por mim na refatoração)
+          const classifOptions = await frameFaturamento.locator('select[name="classificador"] option').allTextContents().catch(() => []);
+          if (classifOptions.length > 1) {
+            // Pula o primeiro (geralmente "Selecione")
+            const firstReal = classifOptions.find(o => o.trim() && !o.toLowerCase().includes('selecione'));
+            if (firstReal) {
+              await frameFaturamento.locator('select[name="classificador"]').selectOption({ label: firstReal });
+              console.log(`[MES] Classificador: ${firstReal}`);
+            }
+          }
           await frameFaturamento.locator('select[name="dia"]').selectOption({ label: '10' });
+          await page.waitForTimeout(500);
           await frameFaturamento.locator('select[name="enviarfaturamentoemail"]').selectOption({ label: 'Sim' });
+          await page.waitForTimeout(500);
           await frameFaturamento.locator('select[name="emailgateway"]').selectOption({ label: 'FATURAMENTO LDL' });
+          // v11.2: espera maior APÓS preencher tudo (Routerbox processa)
+          await page.waitForTimeout(3000);
 
-          // Clicar Executar
+          // Clicar Executar (v11: com delay humano antes)
           console.log(`[MES] ${mes}/2026: Clicando em Executar...`);
+          await page.waitForTimeout(2000); // v11: delay humano antes de clicar
           const btnGerar = frameFaturamento.locator('a#sc_Executar_bot').first();
           await btnGerar.click();
-          await page.waitForTimeout(1500);
+          // v11: espera maior ANTES de começar a pollar (Routerbox lento)
+          await page.waitForTimeout(10000);
 
           // === FASE 1: POLLING por popup de confirmação (texto "Confirma a execução") ===
           console.log(`[POLL] ${mes}/2026: Aguardando popup de confirmação...`);
+          // v11: timeout aumentado pra 20min (Routerbox HOJE demora >10min)
           const confirmou = await pollFor(async () => {
             const loc = await findByTextInAnyFrame('Confirma a execução', false);
             return loc !== null;
