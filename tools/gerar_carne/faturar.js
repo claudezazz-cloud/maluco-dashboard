@@ -269,26 +269,29 @@ export async function faturarCliente(clienteIdOuNome, meses) {
             console.log(`[CONFIRMADO] ${mes}/2026: confirmação OK, esperando resultado real...`);
             alertaAceito = true;
             // Espera Routerbox processar e mostrar popup de resultado
-            await page.waitForTimeout(5000);
+            await page.waitForTimeout(10000);
 
             // SEGUNDO RACE: espera o popup de RESULTADO (sem re-clicar Executar)
             // BUG FIX v7 (Mavis 10/06 09:55): o v6+ reexecutava o `continue` que
             // re-clicava Executar, gerando carnês duplicados ou cancelando o anterior.
             // Agora após clicar Ok no "Confirma execução", esperamos APENAS pelo
             // popup de resultado (sucesso, erro, ou 0 documentos).
+            // BUG FIX v8 (Mavis 10/06 10:20): timeout do segundo race aumentado
+            // de 60s → 180s porque Routerbox tava demorando +60s pra processar
+            // em horário de pico (teste real com 13543 José Antônio).
             try {
               const resultadoFinal = await Promise.race([
-                frameFaturamento.waitForSelector(SUCESSO_SEL, { timeout: 60000, state: 'visible' }).then(() => 'sucesso'),
-                page.waitForSelector(SUCESSO_SEL, { timeout: 60000, state: 'visible' }).then(() => 'sucesso'),
-                frameFaturamento.waitForSelector(ERRO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+                frameFaturamento.waitForSelector(SUCESSO_SEL, { timeout: 180000, state: 'visible' }).then(() => 'sucesso'),
+                page.waitForSelector(SUCESSO_SEL, { timeout: 180000, state: 'visible' }).then(() => 'sucesso'),
+                frameFaturamento.waitForSelector(ERRO_SEL, { timeout: 180000, state: 'visible' }).then(async () => {
                   const titulo = await frameFaturamento.locator(ERRO_SEL).first().innerText().catch(() => '');
                   return 'erro:' + titulo.trim();
                 }),
-                page.waitForSelector(ERRO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+                page.waitForSelector(ERRO_SEL, { timeout: 180000, state: 'visible' }).then(async () => {
                   const titulo = await page.locator(ERRO_SEL).first().innerText().catch(() => '');
                   return 'erro:' + titulo.trim();
                 }),
-                frameFaturamento.waitForSelector(POPUP_TITULO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+                frameFaturamento.waitForSelector(POPUP_TITULO_SEL, { timeout: 180000, state: 'visible' }).then(async () => {
                   const titulo = await frameFaturamento.locator(POPUP_TITULO_SEL).first().innerText().catch(() => '');
                   const corpo = await frameFaturamento.locator(POPUP_CORPO_SEL).first().innerText().catch(() => '');
                   const texto = (titulo + ' ' + corpo).replace(/\s+/g, ' ').trim();
@@ -299,7 +302,7 @@ export async function faturarCliente(clienteIdOuNome, meses) {
                   if (texto.toLowerCase().includes('gerado') || texto.toLowerCase().includes('sucesso')) return 'sucesso';
                   return 'popup_erro:' + texto;
                 }),
-                page.waitForSelector(POPUP_TITULO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+                page.waitForSelector(POPUP_TITULO_SEL, { timeout: 180000, state: 'visible' }).then(async () => {
                   const titulo = await page.locator(POPUP_TITULO_SEL).first().innerText().catch(() => '');
                   const corpo = await page.locator(POPUP_CORPO_SEL).first().innerText().catch(() => '');
                   const texto = (titulo + ' ' + corpo).replace(/\s+/g, ' ').trim();
@@ -328,7 +331,7 @@ export async function faturarCliente(clienteIdOuNome, meses) {
               }
             } catch (e) {
               if (e.message && e.message.startsWith('RouterBox Negou:')) throw e;
-              throw new Error(`RouterBox Negou: Timeout esperando resultado (60s) após confirmação.`);
+              throw new Error(`RouterBox Negou: Timeout esperando resultado (180s) após confirmação.`);
             }
           } else if (resultadoMes.startsWith('popup_erro:')) {
             throw new Error(`RouterBox Negou: ${resultadoMes.replace('popup_erro:', '').trim()}`);
