@@ -214,21 +214,21 @@ export async function faturarCliente(clienteIdOuNome, meses) {
           try {
             resultadoMes = await Promise.race([
               // 1. Caso de Sucesso
-              frameFaturamento.waitForSelector(SUCESSO_SEL, { timeout: 60000, state: 'visible' }).then(() => 'sucesso'),
-              page.waitForSelector(SUCESSO_SEL, { timeout: 60000, state: 'visible' }).then(() => 'sucesso'),
+              frameFaturamento.waitForSelector(SUCESSO_SEL, { timeout: 180000, state: 'visible' }).then(() => 'sucesso'),
+              page.waitForSelector(SUCESSO_SEL, { timeout: 180000, state: 'visible' }).then(() => 'sucesso'),
 
               // 2. Caso de Erro explícito
-              frameFaturamento.waitForSelector(ERRO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+              frameFaturamento.waitForSelector(ERRO_SEL, { timeout: 180000, state: 'visible' }).then(async () => {
                   const titulo = await frameFaturamento.locator(ERRO_SEL).first().innerText().catch(() => '');
                   return 'erro:' + titulo.trim();
               }),
-              page.waitForSelector(ERRO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+              page.waitForSelector(ERRO_SEL, { timeout: 180000, state: 'visible' }).then(async () => {
                   const titulo = await page.locator(ERRO_SEL).first().innerText().catch(() => '');
                   return 'erro:' + titulo.trim();
               }),
 
               // 3. Caso de SweetAlert (Confirmação ou Erro Genérico)
-              frameFaturamento.waitForSelector(POPUP_TITULO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+              frameFaturamento.waitForSelector(POPUP_TITULO_SEL, { timeout: 180000, state: 'visible' }).then(async () => {
                   const titulo = await frameFaturamento.locator(POPUP_TITULO_SEL).first().innerText().catch(() => '');
                   const corpo = await frameFaturamento.locator(POPUP_CORPO_SEL).first().innerText().catch(() => '');
                   const texto = (titulo + ' ' + corpo).replace(/\s+/g, ' ').trim();
@@ -240,7 +240,7 @@ export async function faturarCliente(clienteIdOuNome, meses) {
                   if (texto.includes('0 documentos')) return 'erro:0 documentos gerados';
                   return 'popup_erro:' + texto;
               }),
-              page.waitForSelector(POPUP_TITULO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+              page.waitForSelector(POPUP_TITULO_SEL, { timeout: 180000, state: 'visible' }).then(async () => {
                   const titulo = await page.locator(POPUP_TITULO_SEL).first().innerText().catch(() => '');
                   const corpo = await page.locator(POPUP_CORPO_SEL).first().innerText().catch(() => '');
                   const texto = (titulo + ' ' + corpo).replace(/\s+/g, ' ').trim();
