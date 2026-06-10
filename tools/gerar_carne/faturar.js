@@ -266,9 +266,70 @@ export async function faturarCliente(clienteIdOuNome, meses) {
             mesConcluido = true;
             break;
           } else if (resultadoMes === 'confirmacao') {
-            console.log(`[CONFIRMADO] ${mes}/2026: confirmação aceita, reentrando no juiz...`);
+            console.log(`[CONFIRMADO] ${mes}/2026: confirmação OK, esperando resultado real...`);
             alertaAceito = true;
-            continue; // Reentra no while sem falhar
+            // Espera Routerbox processar e mostrar popup de resultado
+            await page.waitForTimeout(5000);
+
+            // SEGUNDO RACE: espera o popup de RESULTADO (sem re-clicar Executar)
+            // BUG FIX v7 (Mavis 10/06 09:55): o v6+ reexecutava o `continue` que
+            // re-clicava Executar, gerando carnês duplicados ou cancelando o anterior.
+            // Agora após clicar Ok no "Confirma execução", esperamos APENAS pelo
+            // popup de resultado (sucesso, erro, ou 0 documentos).
+            try {
+              const resultadoFinal = await Promise.race([
+                frameFaturamento.waitForSelector(SUCESSO_SEL, { timeout: 60000, state: 'visible' }).then(() => 'sucesso'),
+                page.waitForSelector(SUCESSO_SEL, { timeout: 60000, state: 'visible' }).then(() => 'sucesso'),
+                frameFaturamento.waitForSelector(ERRO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+                  const titulo = await frameFaturamento.locator(ERRO_SEL).first().innerText().catch(() => '');
+                  return 'erro:' + titulo.trim();
+                }),
+                page.waitForSelector(ERRO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+                  const titulo = await page.locator(ERRO_SEL).first().innerText().catch(() => '');
+                  return 'erro:' + titulo.trim();
+                }),
+                frameFaturamento.waitForSelector(POPUP_TITULO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+                  const titulo = await frameFaturamento.locator(POPUP_TITULO_SEL).first().innerText().catch(() => '');
+                  const corpo = await frameFaturamento.locator(POPUP_CORPO_SEL).first().innerText().catch(() => '');
+                  const texto = (titulo + ' ' + corpo).replace(/\s+/g, ' ').trim();
+                  const btnOk = frameFaturamento.locator('.swal2-confirm, .sweet-alert button.confirm, button:has-text("Ok"), button:has-text("OK"), a:has-text("Ok"), a:has-text("OK"), #sc_b_ok_bot, #sc_b_ok_t').first();
+                  if (await btnOk.count()) await btnOk.click().catch(() => {});
+                  if (texto.toLowerCase().includes('confirma a execuç') || texto.toLowerCase().includes('confirma a execuc')) return 'confirmacao';
+                  if (texto.includes('0 documentos')) return 'erro:0 documentos gerados';
+                  if (texto.toLowerCase().includes('gerado') || texto.toLowerCase().includes('sucesso')) return 'sucesso';
+                  return 'popup_erro:' + texto;
+                }),
+                page.waitForSelector(POPUP_TITULO_SEL, { timeout: 60000, state: 'visible' }).then(async () => {
+                  const titulo = await page.locator(POPUP_TITULO_SEL).first().innerText().catch(() => '');
+                  const corpo = await page.locator(POPUP_CORPO_SEL).first().innerText().catch(() => '');
+                  const texto = (titulo + ' ' + corpo).replace(/\s+/g, ' ').trim();
+                  const btnOk = page.locator('.swal2-confirm, .sweet-alert button.confirm, button:has-text("Ok"), button:has-text("OK"), a:has-text("Ok"), a:has-text("OK"), #sc_b_ok_bot, #sc_b_ok_t').first();
+                  if (await btnOk.count()) await btnOk.click().catch(() => {});
+                  if (texto.toLowerCase().includes('confirma a execuç') || texto.toLowerCase().includes('confirma a execuc')) return 'confirmacao';
+                  if (texto.includes('0 documentos')) return 'erro:0 documentos gerados';
+                  if (texto.toLowerCase().includes('gerado') || texto.toLowerCase().includes('sucesso')) return 'sucesso';
+                  return 'popup_erro:' + texto;
+                })
+              ]);
+
+              await page.screenshot({ path: `erro_mes_${mes}_t${tentativa}_resultado.png` }).catch(() => {});
+
+              if (resultadoFinal === 'sucesso') {
+                console.log(`[OK] ${mes}/2026 — sucesso (após confirmação).`);
+                resultado.detalhes.meses_gerados.push(mes);
+                mesConcluido = true;
+                break;
+              } else if (resultadoFinal.startsWith('erro:') || resultadoFinal.startsWith('popup_erro:')) {
+                const msg = resultadoFinal.replace(/^(erro|popup_erro):/, '').trim();
+                throw new Error(`RouterBox Negou: ${msg}`);
+              } else {
+                // 'confirmacao' de novo (improvável) - sai e tenta do zero
+                throw new Error(`RouterBox Negou: 2 confirmações seguidas (Routerbox em loop de confirmação?).`);
+              }
+            } catch (e) {
+              if (e.message && e.message.startsWith('RouterBox Negou:')) throw e;
+              throw new Error(`RouterBox Negou: Timeout esperando resultado (60s) após confirmação.`);
+            }
           } else if (resultadoMes.startsWith('popup_erro:')) {
             throw new Error(`RouterBox Negou: ${resultadoMes.replace('popup_erro:', '').trim()}`);
           } else if (resultadoMes.startsWith('erro:')) {
