@@ -40,7 +40,13 @@ export async function loginToRouterbox({ timeoutMs = 120000, headless = true, sc
   }
 
   const browser = await chromium.launch({ headless });
-  const context = await browser.newContext({ acceptDownloads: true });
+  // Gravação de vídeo: se RB_VIDEO_DIR estiver setado, grava a sessão em .webm
+  const contextOpts = { acceptDownloads: true };
+  if (process.env.RB_VIDEO_DIR) {
+    contextOpts.recordVideo = { dir: process.env.RB_VIDEO_DIR, size: { width: 1280, height: 720 } };
+    console.log(`[RBX_AUTH] Gravando vídeo em ${process.env.RB_VIDEO_DIR}`);
+  }
+  const context = await browser.newContext(contextOpts);
   const page = await context.newPage();
   page.setDefaultTimeout(timeoutMs);
 
@@ -65,19 +71,75 @@ export async function loginToRouterbox({ timeoutMs = 120000, headless = true, sc
   }
 
   console.log(`[RBX_AUTH] Preenchendo credenciais para usuário ${RB_USER}`);
-  await page.fill(userField, RB_USER);
-  await page.fill(passField, RB_PASS);
 
-  const submitCandidates = ['button:has-text("Entrar")', 'button:has-text("Login")', 'input[type="submit"]', 'button[type="submit"]'];
+  // Preenchimento robusto: espera o campo, clica, preenche e VERIFICA o valor.
+  // Routerbox às vezes não registra o fill se for rápido demais (campo com JS/máscara).
+  async function fillVerified(selector, value, label) {
+    const field = page.locator(selector).first();
+    await field.waitFor({ state: 'visible', timeout: 30000 });
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+      await field.click();
+      await field.fill('');                 // limpa qualquer resíduo
+      await field.fill(value);
+      await page.waitForTimeout(300);
+      const atual = await field.inputValue().catch(() => '');
+      if (atual === value) {
+        console.log(`[RBX_AUTH] ${label} preenchido (tentativa ${tentativa}).`);
+        return;
+      }
+      // Fallback: digita tecla por tecla (campos teimosos)
+      console.log(`[RBX_AUTH] ${label} não registrou (got "${atual.length} chars"), digitando manualmente...`);
+      await field.click();
+      await field.fill('');
+      await field.pressSequentially(value, { delay: 50 });
+      await page.waitForTimeout(300);
+      const atual2 = await field.inputValue().catch(() => '');
+      if (atual2 === value) {
+        console.log(`[RBX_AUTH] ${label} preenchido via teclado (tentativa ${tentativa}).`);
+        return;
+      }
+    }
+    throw new Error(`Não consegui preencher o campo ${label} após 3 tentativas.`);
+  }
+
+  await fillVerified(userField, RB_USER, 'Usuário');
+  await fillVerified(passField, RB_PASS, 'Senha');
+
+  // Garantia final: confirma que AMBOS os campos têm valor antes de submeter
+  const userVal = await page.locator(userField).first().inputValue().catch(() => '');
+  const passVal = await page.locator(passField).first().inputValue().catch(() => '');
+  if (!userVal || !passVal) {
+    if (screenshotOnError) await page.screenshot({ path: `screenshots/login-empty-${Date.now()}.png`, fullPage: true });
+    throw new Error(`Campos vazios antes de submeter (user=${userVal.length}c, pass=${passVal.length}c).`);
+  }
+
+  // Botão de login do Routerbox é um <a> do ScriptCase (a#sub_form_b.scButton_ok),
+  // não um <button>. Por isso priorizamos esses seletores.
+  const submitCandidates = [
+    'a#sub_form_b',
+    'a.scButton_ok',
+    'a:has-text("Entrar")',
+    'button:has-text("Entrar")',
+    'button:has-text("Login")',
+    'input[type="submit"]',
+    'button[type="submit"]',
+  ];
   let clicked = false;
   for (const s of submitCandidates) {
-    if (await page.locator(s).count()) {
-      await page.locator(s).first().click();
+    const loc = page.locator(s).first();
+    if (await loc.count()) {
+      console.log(`[RBX_AUTH] Clicando botão de login: ${s}`);
+      await loc.click().catch(() => {});
       clicked = true;
       break;
     }
   }
-  if (!clicked) await page.keyboard.press('Enter');
+  if (!clicked) {
+    console.log('[RBX_AUTH] Nenhum botão encontrado — disparando login via JS/Enter');
+    // Fallback: chama a função do ScriptCase direto, depois Enter
+    await page.evaluate(() => { if (typeof scBtnFn_sys_format_ok === 'function') scBtnFn_sys_format_ok(); }).catch(() => {});
+    await page.keyboard.press('Enter').catch(() => {});
+  }
 
   try {
     await page.waitForURL(url => !url.toString().includes('app_login'), { timeout: 15000 });

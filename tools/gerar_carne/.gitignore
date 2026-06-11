@@ -1,0 +1,5 @@
+# Vídeos gravados e screenshots de diagnóstico — não versionar
+videos/
+*.webm
+*.mp4
+*.png

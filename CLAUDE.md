@@ -13,6 +13,7 @@ N8N · Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) · Whisper (áudio) · Evo
 ```bash
 npm run dev          # dashboard local :3001
 npm run build && pm2 restart maluco-dashboard --update-env  # deploy (no VPS)
+npm run setup-db     # cria/migra tabelas do PostgreSQL (node scripts/setup-db.js)
 docker exec -it n8n-postgres-1 psql -U zazz -d zazzdb
 docker exec -it n8n-redis-1 redis-cli -a REDACTED-REDIS-PW
 ```
@@ -91,6 +92,7 @@ Mesma lógica acima: usar `deploy_workflow.py` adaptado (adicionar `"Claude API"
 - Dashboard: https://dashboard.srv1537041.hstgr.cloud
 - PM2 name: `maluco-dashboard`
 - SQLite N8N: `/var/lib/docker/volumes/n8n_data/_data/database.sqlite`
+- Ollama (Llama 3 8B, CPU-only): porta `11434` — ver `dashboard/cerebro/ollama-llama3.md`
 
 ## Workflows N8N principais
 
@@ -101,17 +103,34 @@ Mesma lógica acima: usar `deploy_workflow.py` adaptado (adicionar `"Claude API"
 | `tPUy8FowXH8v0skk` | Bot Memoria Longa | Extração batch de fatos a cada 6h |
 | `5qTcBwOdBeoU1l7i` | Bot Memoria Dia | Resumo diário por chat (~02h) |
 
-## 7 tools do agent loop
+## 9 tools do agent loop
 
 | Tool | Função |
 |---|---|
 | `buscar_cliente(q)` | Lookup cliente Zazz por nome/código |
+| `buscar_chamados(q)` | Busca nos chamados importados via XLSX (Redis) |
+| `buscar_pop(q)` | Busca POP por query semântica |
 | `criar_tarefa_notion(...)` | Cria tarefa no Notion |
 | `resolver_tarefa_notion(page_id)` | Marca tarefa como Ok |
 | `listar_tarefas_notion(status?)` | Lista tarefas (Parado/Ok/Todas) |
 | `aprender_fato(...)` | Salva fato em bot_memoria_longa |
 | `corrigir_fato(...)` | Corrige fato errado (manual ou autônomo) |
 | `criar_lembrete(mensagem, agendar_para)` | Agenda follow-up no grupo atual |
+
+## v3_dump/ — arquivos críticos do workflow
+
+Diretório local com os arquivos-fonte dos nós Code do N8N. **Não vão pro git** (contêm API keys).
+
+| Arquivo | Conteúdo |
+|---|---|
+| `Monta_Prompt.js` | Nó "Monta Prompt" — monta o array de messages para o Claude |
+| `agent_loop_code.js` | Nó "Claude API" — agent loop com as 9 tools (tem `ANTHROPIC_API_KEY` hardcoded) |
+| `Parse_Resposta.js` | Nó "Parse Resposta" |
+| `Parse_Match_Resolvido.js` | Nó "Parse Match Resolvido" |
+| `sysprompt_v3.txt` | System prompt atual (vai pro git via `git add -f`) |
+| `deploy_workflow.py` | Script de deploy do workflow (ciclo completo com workflow_history) |
+
+Ao editar um nó Code: editar o arquivo local → `scp` para o VPS → `deploy_workflow.py`.
 
 ## Nodes críticos (executeOnce: true obrigatório)
 Busca POPs, Busca System Prompt, Busca Colaboradores, Busca Histórico 10, Busca Histórico Redis, Busca Chamados Redis, Busca Clientes, Busca Regras.
@@ -213,7 +232,8 @@ ANTES de iniciar uma task que toque uma das áreas abaixo, leia a nota correspon
 | Encontrar bug ou comportamento estranho | [`bugs-abertos.md`](dashboard/cerebro/bugs-abertos.md) — talvez já está mapeado lá |
 | Ver script `fix_*.py` na raiz do projeto | [`fix-scripts-historicos.md`](dashboard/cerebro/fix-scripts-historicos.md) — todos são one-shot já aplicados, NÃO rodar |
 | Tools do agent loop (`buscar_pop`, `criar_tarefa_notion`, etc) | [`agent-loop-tool-use.md`](dashboard/cerebro/agent-loop-tool-use.md) — schemas + regras por tool |
-| Sistema de chamados / importação | `dashboard/cerebro/chamados-sistema.md` (se existir) ou `dashboard/cerebro/Chamados.md` |
+| Sistema de chamados / importação | [`Chamados.md`](dashboard/cerebro/Chamados.md) |
+| Filtros por tipo de grupo (Internet vs Design, tipos_filtro_entrega) | [`multigrupo-tipos-implementado.md`](dashboard/cerebro/multigrupo-tipos-implementado.md) |
 
 **Como ler:** use a tool `Read` direto no path da nota. Não leia o repo inteiro. Se a nota for grande (>500 linhas), procure section relevante via `Grep` antes do `Read`.
 
