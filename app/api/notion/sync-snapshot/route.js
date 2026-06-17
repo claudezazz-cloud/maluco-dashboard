@@ -5,7 +5,7 @@ const TOKEN = process.env.MALUCO_INTERNAL_TOKEN || 'MALUCO_POPS_2026'
 const NOTION_TOKEN = process.env.NOTION_TOKEN
 const NOTION_DB = 'd54e5911e8af43dfaed8f2893e59f6ef'
 const EVOLUTION_URL = 'https://lanlunar-evolution.cloudfy.live/message/sendText/ZazzClaude'
-const EVOLUTION_KEY = 'REDACTED-EVO-KEY'
+const EVOLUTION_KEY = process.env.EVO_KEY || ''
 
 async function ensureTable() {
   await query(`

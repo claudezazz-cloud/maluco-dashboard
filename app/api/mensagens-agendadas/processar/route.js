@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 
 const EVOLUTION_URL = 'https://lanlunar-evolution.cloudfy.live/message/sendText/ZazzClaude'
-const EVOLUTION_KEY = 'REDACTED-EVO-KEY'
+const EVOLUTION_KEY = process.env.EVO_KEY || ''
 const AUTH_TOKEN = process.env.MALUCO_INTERNAL_TOKEN || 'MALUCO_POPS_2026'
 const MAX_TENTATIVAS = 3
 
