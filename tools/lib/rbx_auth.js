@@ -40,6 +40,7 @@ export async function loginToRouterbox({ timeoutMs = 120000, headless = true, sc
   }
 
   const browser = await chromium.launch({ headless });
+  try {
   // Gravação de vídeo: se RB_VIDEO_DIR estiver setado, grava a sessão em .webm
   const contextOpts = { acceptDownloads: true };
   if (process.env.RB_VIDEO_DIR) {
@@ -157,4 +158,10 @@ export async function loginToRouterbox({ timeoutMs = 120000, headless = true, sc
   console.log(`[RBX_AUTH] Login OK (URL: ${page.url()})`);
 
   return { browser, context, page };
+  } catch (err) {
+    // Qualquer falha no login fecha o browser pra NÃO vazar Chromium órfão (o finally do
+    // faturarCliente só roda se loginToRouterbox RETORNAR; se lança, o browser ficaria solto).
+    await browser.close().catch(() => {});
+    throw err;
+  }
 }

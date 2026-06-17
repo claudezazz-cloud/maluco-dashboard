@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { getRedis } from '@/lib/redis';
 
 const getCategoryStyle = (nome) => {
   const cat = String(nome || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -36,10 +37,107 @@ const getNotionStatusStyle = (status) => {
   return { argb: 'FFFFFFFF' }; // White
 };
 
+// ===================== NOTION DETERMINÍSTICO (filtro server-side) =====================
+// Quando o relatório do Notion vem com `filtro`, o SERVIDOR consulta o Notion, filtra por
+// responsável e monta as categorias — em vez de confiar no LLM, que subcontava e conflava
+// nomes (ex.: rotular tarefa do Negos como "Franquelin/Negos"). Match por ID de pessoa (com
+// aliases: Russo→Junior, Gester→Negos) + fallback por nome.
+const NOTION_TOKEN = process.env.NOTION_TOKEN || '';
+const NOTION_DB = process.env.NOTION_DB || 'd54e5911e8af43dfaed8f2893e59f6ef';
+const RESP_ALIAS = {
+  junior: '60f0907844d04a2e9b56b8917fdfd87e', russo: '60f0907844d04a2e9b56b8917fdfd87e',
+  franquelin: '826e94f5aed74421ae97deee67c6f6af', franque: '826e94f5aed74421ae97deee67c6f6af',
+  luiz: 'f6b0bba1309e46a99b37d5a18c150a16',
+  negos: '7630461fd1894b51a13928043faae78f', nego: '7630461fd1894b51a13928043faae78f', gester: '7630461fd1894b51a13928043faae78f',
+  victor: '309d872b594c8150a6550002842c1ef6', vitor: '309d872b594c8150a6550002842c1ef6',
+};
+const normNome = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+// IDs de pessoa do Notion que um nome-de-filtro resolve (via alias).
+function filtroIds(nomeFiltro) {
+  const nf = normNome(nomeFiltro);
+  const prim = nf.split(' ')[0];
+  const ids = new Set();
+  for (const [alias, id] of Object.entries(RESP_ALIAS)) {
+    if (nf === alias || nf.includes(alias) || prim === alias) ids.add(id);
+  }
+  return ids;
+}
+// Qual nome-de-filtro a tarefa casa (pra agrupar), ou null se não casa nenhum.
+function casaResponsavel(peopleIds, peopleNames, responsaveis) {
+  for (const f of responsaveis) {
+    const ids = filtroIds(f);
+    if (peopleIds.some((id) => ids.has(id))) return f;
+    const nf = normNome(f);
+    if (peopleNames.some((p) => { const np = normNome(p); return np && (np === nf || np.includes(nf) || nf.includes(np) || np.split(' ')[0] === nf.split(' ')[0]); })) return f;
+  }
+  return null;
+}
+// Consulta o Notion (paginado) e monta as categorias agrupadas pelo responsável pedido.
+async function buildNotionCategorias(filtro) {
+  if (!NOTION_TOKEN) throw new Error('NOTION_TOKEN não configurado no servidor.');
+  const status = filtro.status || 'Parado';
+  const responsaveis = Array.isArray(filtro.responsaveis) ? filtro.responsaveis.filter(Boolean) : [];
+  const base = (status && normNome(status) !== 'todas') ? { filter: { property: 'status', select: { equals: status } } } : {};
+  let results = [], cursor = null;
+  do {
+    const r = await fetch(`https://api.notion.com/v1/databases/${NOTION_DB}/query`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${NOTION_TOKEN}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...base, page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(`Notion ${r.status}: ${d.message || ''}`);
+    results = results.concat(d.results || []);
+    cursor = d.has_more ? d.next_cursor : null;
+  } while (cursor);
+
+  const grupos = {};
+  const hoje = new Date();
+  for (const p of results) {
+    const pr = p.properties || {};
+    const desc = (pr['Descrição']?.title || []).map((t) => t.plain_text).join('') || '(sem descrição)';
+    const cli = (pr['Cliente']?.rich_text || []).map((t) => t.plain_text).join('');
+    const st = pr['status']?.select?.name || '';
+    const entrega = pr['Entrega']?.date?.start || pr['Data']?.date?.start || '';
+    const obs = (pr['Obs']?.rich_text || []).map((t) => t.plain_text).join('');
+    const people = pr['Responsável']?.people || [];
+    const peopleNames = people.map((pe) => pe.name || pe.id);
+    const peopleIds = people.map((pe) => (pe.id || '').replace(/-/g, ''));
+
+    let label;
+    if (responsaveis.length) {
+      label = casaResponsavel(peopleIds, peopleNames, responsaveis);
+      if (!label) continue; // não bate o filtro → fora da planilha
+    } else {
+      label = peopleNames[0] || 'Sem responsável';
+    }
+    let tempo = obs;
+    if (entrega) {
+      const dias = Math.floor((new Date(entrega + 'T00:00:00') - hoje) / 86400000);
+      const tag = dias < 0 ? `${-dias}d atrasado` : dias === 0 ? 'vence hoje' : `em ${dias}d`;
+      tempo = obs ? `${tag} · ${obs}` : tag;
+    }
+    (grupos[label] = grupos[label] || []).push({
+      tarefa: desc, cliente: cli, responsavel: peopleNames.join(', '), status: st, prazo: entrega, tempo_restante: tempo,
+    });
+  }
+  const ordem = responsaveis.length ? responsaveis : Object.keys(grupos);
+  const cats = [];
+  for (const label of ordem) if (grupos[label]?.length) cats.push({ nome: label, chamados: grupos[label] });
+  for (const [k, v] of Object.entries(grupos)) if (!ordem.includes(k) && v.length) cats.push({ nome: k, chamados: v });
+  return cats;
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();
     const isNotion = body.fonte === 'notion';
+    // DETERMINÍSTICO: com `filtro`, o servidor consulta o Notion e monta as categorias
+    // (em vez de confiar no JSON do LLM — fonte de subcount/conflação de responsáveis).
+    if (isNotion && body.filtro) {
+      body.categorias = await buildNotionCategorias(body.filtro);
+    }
     
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(isNotion ? 'Tarefas Notion' : 'Relatório de Atendimentos', { views: [{ showGridLines: true }] });
@@ -139,7 +237,23 @@ export async function POST(req) {
       worksheet.autoFilter = 'A1:H1';
 
       let currentRow = 2;
-      const chamados = (body.categorias || []).flatMap(cat => cat.chamados || []);
+      let chamados = [];
+      
+      try {
+        const redis = getRedis();
+        const data = await redis.get('chamados:data');
+        if (data) {
+          chamados = JSON.parse(data).chamados || [];
+        }
+      } catch (err) {
+        console.error('[report-excel] Error fetching from Redis:', err);
+      }
+
+      // Se não vier do Redis, tenta fallback para o body (legado)
+      if (!chamados.length) {
+        chamados = (body.categorias || []).flatMap(cat => cat.chamados || []);
+      }
+
       const groupedByTopico = {};
       chamados.forEach(ch => {
         const t = ch.topico || 'OUTROS';
