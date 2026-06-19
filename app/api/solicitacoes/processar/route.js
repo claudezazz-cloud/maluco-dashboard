@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { foraDeExpediente } from '@/lib/feriados'
 
 const TOKEN = process.env.MALUCO_INTERNAL_TOKEN || 'MALUCO_POPS_2026'
 const N8N_WEBHOOK = 'https://n8n.srv1537041.hstgr.cloud/webhook/whatsapp'
@@ -11,6 +12,10 @@ const BOT_NUMBER = '554396543242@s.whatsapp.net'
 export async function POST(req) {
   const tok = req.headers.get('x-token')
   if (tok !== TOKEN) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+
+  // Fora do expediente (feriado, domingo, ou sábado fora de 09h–12h)? Não dispara rotina.
+  const off = await foraDeExpediente()
+  if (off) return NextResponse.json({ ok: true, executadas: 0, motivo: off.motivo, detalhe: off.detalhe })
 
   // Hora e dia em BRT (América/São Paulo)
   const brtFmt = new Intl.DateTimeFormat('pt-BR', {

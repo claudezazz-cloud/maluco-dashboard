@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { foraDeExpediente } from '@/lib/feriados'
 
 const TOKEN = process.env.MALUCO_INTERNAL_TOKEN || 'MALUCO_POPS_2026'
 const NOTION_TOKEN = process.env.NOTION_TOKEN
@@ -54,6 +55,17 @@ async function fetchTarefasVencidas(hoje) {
 export async function POST(req) {
   const tok = req.headers.get('x-token')
   if (tok !== TOKEN) return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+
+  // ⛔ DESATIVADO (19/06/2026): a cobrança de tarefas vencidas em TEXTO PURO foi removida a
+  // pedido — é redundante com a planilha Excel que as rotinas da manhã já enviam. O cron já
+  // estava comentado; este return garante que nem chamada manual dispare. (Código abaixo
+  // mantido só pra referência / reativação futura.)
+  return NextResponse.json({ ok: true, desativado: true, motivo: 'cobrança em texto puro desativada — tarefas vão na planilha Excel da manhã' })
+
+  // eslint-disable-next-line no-unreachable
+  // Fora do expediente (feriado/domingo/sábado fora de 09h–12h)? Não cobra.
+  const off = await foraDeExpediente()
+  if (off) return NextResponse.json({ ok: true, cobrados: 0, motivo: off.motivo, detalhe: off.detalhe })
 
   // Garante coluna e constraint para idempotência
   // UNIQUE CONSTRAINT (não índice parcial) é necessário para ON CONFLICT (dedup_key) funcionar

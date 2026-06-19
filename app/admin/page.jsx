@@ -1153,12 +1153,20 @@ export default function AdminPage() {
 
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-white font-semibold">Agendamentos ({solicitacoes.length})</h2>
-              <button
-                onClick={() => setMostraNovaSolicitacao(!mostraNovaSolicitacao)}
-                className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition"
-              >
-                {mostraNovaSolicitacao ? 'Cancelar' : '+ Nova Solicitação'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => router.push('/admin/feriados')}
+                  className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg transition"
+                >
+                  📅 Feriados
+                </button>
+                <button
+                  onClick={() => setMostraNovaSolicitacao(!mostraNovaSolicitacao)}
+                  className="bg-brand hover:bg-brand-dark text-white text-sm px-4 py-2 rounded-lg transition"
+                >
+                  {mostraNovaSolicitacao ? 'Cancelar' : '+ Nova Solicitação'}
+                </button>
+              </div>
             </div>
 
             {mostraNovaSolicitacao && (
