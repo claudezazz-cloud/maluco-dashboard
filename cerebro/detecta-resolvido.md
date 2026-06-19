@@ -106,6 +106,29 @@ for v in arr:
 \""
 ```
 
+## Fix mai/2026 (14/05) — novas exclusões CRIA_TAREFA_RE
+
+**Problema:** "Marcar para passar na casa dela de tarde. Já foi feito o processo para atualizar a Rede" disparou o Detecta Resolvido porque "já foi feito" casou no KEY_RE. A tarefa "Instabilidade na conexão - Maria Conceição Marconato" foi marcada como Ok indevidamente.
+
+**Fix adicionado à CRIA_TAREFA_RE:**
+```js
+|marcar\s+(?:para|pra)\s+(?:passar|ir|visitar|agendar|fazer|checar|verificar)
+|passar\s+(?:na|em)\s+casa
+|agendar\s+(?:uma?\s+)?(?:visita|passagem|ida)
+|j[aá]\s+foi\s+feito\s+o\s+processo
+|j[aá]\s+foi\s+(?:feito|realizado|executado)\s+(?:o\s+)?(?:processo|atualiza|configura|reboot|reset)
+```
+
+Estes padrões indicam CRIAÇÃO de tarefa ou contexto de background (não confirmação de resolução).
+
+## Fix 17/06/2026 — entende REPLY CITADO (quote)
+
+**Problema:** o Russo respondeu "Resolvido, roteador travado..." **citando** o chamado da Celinalva (sem dizer o nome na resposta). O `Detecta Resolvido` re-extraía só o texto cru (`eText`) e **ignorava o quote** — então o `Match Tarefa Resolvida` (que exige cliente explícito, regra 4) via uma msg vaga → `action=nenhum` → tarefa ficou Parado. Aí a cobrança das 13:40 disparou em algo já resolvido.
+
+**Fix:** o `Detecta Resolvido` agora captura o `contextInfo.quotedMessage` (igual o `Extrai Dados Mensagem` já fazia) e **anexa ao `text`** que vai pro Match: `Resolvido... [em resposta a: "482 - Celinalva sem internet"]`. Assim o Claude resolve a referência do quote e casa a tarefa. As regras (CRIA_TAREFA_RE, KEY_RE, >800 chars) continuam rodando só no texto da RESPOSTA; o quote entra só no output pra contexto.
+
+Deploy: `v3_dump/deploy_detecta_resolvido.py` (string-replace do `return` do nó + `workflow_entity`/`workflow_history` mesmo versionId + republish). Testado via webhook sintético (quote flui até o Match). **Complemento:** o processador de cobrança (`/api/mensagens-agendadas/processar`) também passou a re-checar o status no Notion antes de disparar — ver `bugs-abertos.md`.
+
 ## Considerações futuras
 
 Esse fluxo paralelo tem **valor real** quando funciona — economiza tempo em "ah, já resolvi o chamado da Maria" sem precisar abrir o Notion. Mas false positives são caros (cliente recebe "marquei como Ok" sem ter pedido).
