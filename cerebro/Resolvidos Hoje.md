@@ -4,10 +4,12 @@
 
 Pipeline que responde "quem resolveu chamados hoje" sem ninguém precisar contar manualmente. Calculado por **diff de snapshots** — chamado some do Routerbox quando é resolvido, então a diferença entre o que apareceu hoje e o que ainda está aberto = ranking do dia.
 
-## Cadeia de hora em hora
+## Cadeia de snapshots (3x/dia desde 20/06/2026)
+
+> ⚠️ Era hourly (`5 * * * *`); virou **3x/dia** a pedido: 07:00, 11:20, 17:10 BRT (= 10:00/14:20/20:10 UTC, servidor em UTC). **Impacto no ranking:** chamado aberto+resolvido dentro da mesma janela pode não ser capturado (menos snapshots = menos granularidade). Se a contagem ficar furada, voltar a hourly só no comercial: `0 10-20 * * *`. Detalhe e backup do crontab em [[Chamados]].
 
 ```
-[Cron VPS :05]
+[Cron VPS 10:00 / 14:20 / 20:10 UTC]
    ↓
 routerbox-auto/scrape.js (Playwright)
    ↓ XLSX baixado

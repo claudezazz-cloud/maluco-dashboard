@@ -43,16 +43,20 @@ Redis expira em 24h. Admin pode limpar antes pelo botão "Remover" na [[Dashboar
 
 ## Auto-import via Routerbox (abr/2026)
 
-Como o Routerbox não libera API (alegação dos devs deles: multi-tenancy entre cidades), montamos um **Playwright headless** que faz o trabalho manual: loga, clica em **Botões → Excel**, captura o XLSX, e posta no dashboard. Roda no VPS via cron de hora em hora.
+Como o Routerbox não libera API (alegação dos devs deles: multi-tenancy entre cidades), montamos um **Playwright headless** que faz o trabalho manual: loga, clica em **Botões → Excel**, captura o XLSX, e posta no dashboard. Roda no VPS via cron **3x/dia** (alterado de hora-em-hora em 20/06/2026 a pedido do Franquelin): **07:00, 11:20 e 17:10 BRT**.
 
 **Localização do código:** `routerbox-auto/scrape.js` na raiz do projeto. Documentação detalhada em `routerbox-auto/README.md`.
 
 **Endpoint dedicado:** `POST /api/chamados/auto-import` — autenticação via header `x-auto-token` (env `CHAMADOS_AUTO_TOKEN`), igual ao padrão do `/api/pops-n8n`. Reutiliza `_processor.js` da pasta de chamados (mesma lógica de mapping/resumo/Redis), então o bot consome do mesmo lugar — zero mudança no [[Workflow N8N]].
 
-**Cron sugerido:**
+**Cron atual** (⚠️ servidor em **UTC** — horários abaixo já convertidos de BRT somando +3h):
 ```
-5 * * * * cd /opt/zazz/routerbox-auto && /usr/bin/node scrape.js >> /var/log/routerbox-auto.log 2>&1
+# 07:00 / 11:20 / 17:10 BRT = 10:00 / 14:20 / 20:10 UTC
+0 10 * * * cd /opt/zazz/routerbox-auto && /usr/bin/node scrape.js >> /var/log/routerbox-auto.log 2>&1
+20 14 * * * cd /opt/zazz/routerbox-auto && /usr/bin/node scrape.js >> /var/log/routerbox-auto.log 2>&1
+10 20 * * * cd /opt/zazz/routerbox-auto && /usr/bin/node scrape.js >> /var/log/routerbox-auto.log 2>&1
 ```
+> ⚠️ **Trade-off (3x/dia em vez de hourly):** o ranking [[Resolvidos Hoje]] é calculado por *diff de snapshots*. Com só 3 snapshots/dia, um chamado **aberto e resolvido dentro da mesma janela** (ex: entre 07:00 e 11:20) pode não entrar no ranking. O bot ainda tem os dados (Redis TTL 24h cobre a noite). Se a contagem de resolvidos ficar imprecisa, considerar voltar a hourly **só no horário comercial** (ex: `0 10-20 * * *`). Backup do crontab antigo: `/root/crontab.bak.20260620`.
 
 **Fluxo real (descoberto por engenharia reversa — abr/2026):**
 1. Login → URL muda de `app_login` → `app_menu` (detecção via URL, SPA)
