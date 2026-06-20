@@ -37,6 +37,8 @@ Mapa de todas as notas do projeto Maluco da IA. Atualizar quando adicionar/renom
 ## 🚀 Deploy & operação
 
 - [deploy-workflow.md](deploy-workflow.md) — método correto de deploy (workflow_entity + workflow_history)
+- [deploy-rotas-nos.md](deploy-rotas-nos.md) — **receitas validadas jun/2026**: deploy de rota dashboard (scp+build+restart), nó n8n (deploy_*.py), system prompt (psql), testar sem WhatsApp, mention real Evolution, reindex cerebro
+- [repo-git-segredos.md](repo-git-segredos.md) — **estrutura do repo + faxina de segredos**: cerebro top-level vs submódulo, filter-repo, como commitar/pushar sem reintroduzir keys, por que o git pull do VPS trava
 - [teste-sintetico-webhook.md](teste-sintetico-webhook.md) — testar bot via curl sem WhatsApp
 - [bugs-abertos.md](bugs-abertos.md) — TODO list de problemas conhecidos
 - [fix-scripts-historicos.md](fix-scripts-historicos.md) — catálogo dos scripts `fix_*.py` da raiz (todos one-shot, já aplicados)
