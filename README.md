@@ -4,6 +4,20 @@
 
 ---
 
+> ### ⚠️ Estado atual — leia primeiro
+> Este README descreve a **base** do projeto. O bot já evoluiu para a arquitetura **v3 (tool_use / agent loop)** — workflow N8N `Pj5SdaxFh9H9EIX4`. As seções de "Arquitetura do Workflow" abaixo refletem em parte a v2 antiga (single-shot); o fluxo atual usa um **agent loop com ferramentas** (ver "Tools do agent loop" mais abaixo).
+>
+> **A fonte de verdade SEMPRE atualizada é a pasta [`cerebro/`](cerebro/INDEX.md)** — comece por [`cerebro/INDEX.md`](cerebro/INDEX.md) e [`cerebro/arquitetura-geral.md`](cerebro/arquitetura-geral.md). Toda descoberta/decisão nova é documentada lá (não neste README).
+>
+> **Capacidades novas desde este doc** (detalhe em `cerebro/`):
+> - 🧾 **Gerar carnê** — fatura boletos no Routerbox via automação Playwright (fila `maluco-fila`), com guard que impede faturar o cliente errado e anti-duplicidade
+> - 💰 **Cobrança inteligente** — cobra tarefas paradas no Notion, mas pula automaticamente o que já foi resolvido e respeita feriados/expediente
+> - 📅 **Calendário de feriados + expediente** — não dispara rotina/cobrança em feriado, domingo ou sábado à tarde (painel em Admin → 📅 Feriados)
+> - 🧠 **Memória longa e do dia** — o bot lembra fatos duráveis (cross-grupo) e resume cada dia por chat
+> - 🔀 **Multigrupo por tipo** — isola tarefas/alertas por grupo (ex: Internet vs Design)
+> - 📊 **Relatório em Excel determinístico** — números conferem com o Notion (filtro server-side, não "no olho" do modelo)
+> - 🔔 **Menções reais no WhatsApp** — `@fulano` vira marcação de verdade, não texto cru
+
 ## Objetivo do Projeto
 
 O Maluco da IA e um bot de WhatsApp com inteligencia artificial que funciona como assistente interno da empresa Zazz Internet. Ele atende os colaboradores diretamente no grupo de WhatsApp da equipe, respondendo duvidas sobre procedimentos da empresa (POPs), criando tarefas no Notion, gerando relatorios e aprendendo novas regras de comportamento em tempo real.
@@ -239,13 +253,25 @@ Agendamento de execucoes automaticas de comandos.
 | `ultimo_executado` | TIMESTAMP | Ultima execucao (protecao contra duplicatas) |
 | `criado_em` | TIMESTAMP | Data de criacao |
 
+### Tabelas adicionadas na v3
+Resumo (detalhe vive em `cerebro/`):
+| Tabela | Para que serve |
+|--------|----------------|
+| `grupos_whatsapp` | Grupos internos com toggles (`bom_dia`, `alertas`) e filtros por tipo (`tipos_filtro_entrega[]`, `tipos_filtro_ok[]`) — base do multigrupo |
+| `mensagens_agendadas` | Mensagens/cobranças programadas por grupo (status: pendente/enviado/erro/cancelado), com dedup |
+| `bot_memoria_longa` | Fatos duráveis cross-grupo (UNIQUE: entidade_tipo + entidade_id + fato) |
+| `bot_memoria_dia` | Resumo diário por `chat_id` |
+| `feriados` | Calendário (data UNIQUE, descrição, tipo) — bot não cobra/dispara em feriado |
+| `bot_conversas` | Log de interações do bot com tokens (já existia; é onde se confere consumo) |
+| `bot_erros` | Erros do N8N gravados pelo Error Trigger global |
+
 ### Redis
 | Chave | Descricao | TTL |
 |-------|-----------|-----|
-| `conv:{chatId}` | Historico de conversa (JSON array role/content, ultimas 20 msgs) | Sem TTL |
+| `conv:{chatId}` | Historico de conversa (JSON array role/content, ~ultimas 8 msgs apos corte por tokens) | Sem TTL |
 | `chamados:data` | Chamados importados via XLSX (JSON com ai_context) | 24h |
 | `clientes:data` | Clientes importados via XLSX | 24h |
-| `config:bom_dia_grupo` | ID do grupo WhatsApp para mensagem de bom dia | Sem TTL |
+| `config:bom_dia_grupo` | _(legado)_ JID do grupo de bom dia — hoje substituido por `grupos_whatsapp` | Sem TTL |
 
 ---
 
@@ -352,6 +378,24 @@ Formata Imagem (Code: monta dbMensagem, carrega allImages[] adiante)
 - Settings: `errorWorkflow = <proprio-id>` + `saveDataErrorExecution = 'all'` (aponta o error workflow pra ele mesmo)
 - Insere em `bot_erros`: `no_n8n = $json.execution.lastNodeExecuted`, `mensagem_erro = $json.execution.error.message` (ate 2000 chars)
 - A dashboard le essa tabela via `/api/erros` e mostra em `/conversas` (aba Erros) + contador "ERROS HOJE" em `/dashboard`
+
+### Tools do agent loop (v3 — arquitetura atual)
+No fluxo v3, o nó **Claude API** roda um *agent loop*: o Claude pode chamar ferramentas (tool_use) em vez de responder de uma vez. As ferramentas disponíveis:
+
+| Tool | Função |
+|------|--------|
+| `buscar_cliente(q)` | Lookup de cliente Zazz por nome/código |
+| `buscar_chamados(q)` | Busca nos chamados importados via XLSX (Redis) |
+| `buscar_pop(q)` | Busca POP por query semântica |
+| `criar_tarefa_notion(...)` | Cria tarefa no Notion |
+| `resolver_tarefa_notion(page_id)` | Marca tarefa como Ok |
+| `listar_tarefas_notion(status?)` | Lista tarefas (Parado/Ok/Todas) |
+| `aprender_fato(...)` | Salva fato em `bot_memoria_longa` |
+| `corrigir_fato(...)` | Corrige fato errado |
+| `criar_lembrete(mensagem, agendar_para)` | Agenda follow-up no grupo atual |
+
+> Detalhes (schemas, regras por tool, cache split do prompt): [`cerebro/agent-loop-tool-use.md`](cerebro/agent-loop-tool-use.md).
+> Deploy de nó Code do N8N tem pegadinha (precisa atualizar `workflow_history`): [`cerebro/deploy-workflow.md`](cerebro/deploy-workflow.md).
 
 ### Fluxo de Agendamento (Solicitacoes Programadas)
 ```
@@ -478,9 +522,12 @@ Estes nos precisam de `executeOnce: true`:
 ├── deploy_workflow.json      # Config de deploy do workflow
 ├── DEPLOY.md                 # Guia de deploy N8N (API) + Dashboard + Docker
 ├── README.md                 # Este arquivo
-├── CLAUDE.md                 # Instrucoes para Claude Code
+├── CLAUDE.md                 # Instrucoes para Claude Code (LEIA — guia de como trabalhar no projeto)
 ├── COMO_FUNCIONA_CHAMADOS.md # Documentacao do fluxo XLSX -> Redis -> Bot
 ├── GUIA_DE_ESTUDO.md         # Guia de estudo do projeto
+├── cerebro/                  # 🧠 SOURCE OF TRUTH viva — notas indexadas pelo bot (comece em INDEX.md)
+├── tools/                    # Automacoes Node (ex: gerar_carne/ = faturamento Playwright no Routerbox)
+├── _arquivo_oneshot/         # Scripts one-shot ja aplicados / dumps / prints de debug (gitignored, pode apagar)
 ├── hostinger/                # Docker Compose, Nginx, .env.example do VPS
 │
 └── dashboard/                # Dashboard web (Next.js 14)

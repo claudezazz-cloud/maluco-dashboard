@@ -9,6 +9,17 @@ Bot WhatsApp interno da Zazz Internet (fibra óptica, Lunardelli-PR).
 ## Stack
 N8N · Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) · Whisper (áudio) · Evolution API v2 · PostgreSQL · Redis · Notion API · Next.js/React/Tailwind · JWT · PM2 no VPS
 
+## 👤 Quem é o dono do projeto (LEIA SEMPRE)
+O Franquelin **não é programador** — ele conhece o negócio (Zazz, provedor de internet), não o código. Ele depende de você pra enxergar o que ele não enxerga. Por isso, em TODA tarefa:
+
+1. **Explique em português simples.** Nada de jargão sem traduzir. Ao terminar, diga o que mudou, por que, e o que ele deve testar — em 2-3 linhas, linguagem de leigo.
+2. **Seja proativo com ideias.** Ao final de cada tarefa, sugira (curto, opcional) 1-3 melhorias que VOCÊ percebeu mas ele não pediria: novas features que fazem sentido pro bot, simplificações, automações, riscos. Marque como sugestão — ele decide. Ex: "💡 Notei que X — quer que eu faça?".
+3. **Cuide da organização do projeto (ele não percebe bagunça).** Se durante a tarefa você notar: arquivos lixo/duplicados na raiz, scripts one-shot já aplicados poluindo, README/docs desatualizados, segredo hardcoded, código morto, dependência sem uso → **aponte e ofereça arrumar**. Não precisa esperar ele pedir faxina; ele confia em você pra manter a casa limpa. Antes de **apagar** algo irreversível, confirme ou **arquive** (mover pra pasta gitignored) em vez de deletar.
+4. **Proteja contra erros que ele não veria.** Custo de API explodindo, faturar cliente errado, mandar mensagem real num teste, vazar chave — você é a última linha de defesa. Em dúvida, pare e pergunte.
+5. **Documente no cérebro** (ver seção Obsidian abaixo) — é o que evita re-descobrir tudo na próxima sessão.
+
+> Resumo: aja como um sócio técnico que cuida do projeto, não só como executor de pedidos. Ele quer ser **guiado**.
+
 ## Comandos essenciais
 ```bash
 npm run dev          # dashboard local :3001
@@ -92,7 +103,7 @@ Mesma lógica acima: usar `deploy_workflow.py` adaptado (adicionar `"Claude API"
 - Dashboard: https://dashboard.srv1537041.hstgr.cloud
 - PM2 name: `maluco-dashboard`
 - SQLite N8N: `/var/lib/docker/volumes/n8n_data/_data/database.sqlite`
-- Ollama (Llama 3 8B, CPU-only): porta `11434` — ver `dashboard/cerebro/ollama-llama3.md`
+- Ollama (Llama 3 8B, CPU-only): porta `11434` — ver `cerebro/ollama-llama3.md`
 
 ## Workflows N8N principais
 
@@ -162,7 +173,7 @@ Arquivo local: `v3_dump/sysprompt_v3.txt` (vai pro git via `git add -f`).
 
 ## Crons no VPS
 - `15 8 * * 1-6` — `/api/tarefas/cobrar` (cobrança automática de tarefas vencidas)
-- `* * * * *` — `sync-evolutivo.sh` (sincroniza cerebro-evolutivo/)
+- `* * * * *` — `sync-evolutivo.sh` (sincroniza `cerebro/` top-level: `git pull origin main` + reindex evolutivo)
 - `0 4 * * *` — purge chamados_snapshots > 30 dias
 
 ## POPs — convenção de título
@@ -184,9 +195,9 @@ UI, banco e variáveis em Português (BR). Código: mix PT/EN conforme existente
 
 ## ⚠️ Obsidian é o CÉREBRO do projeto
 
-**REGRA CRÍTICA**: existe APENAS UMA pasta válida pra documentação: **`dashboard/cerebro/`**. É a única que o bot lê (configurada em `evolutive_sources` no postgres como `pasta='cerebro'`). NÃO criar pastas paralelas tipo `cerebro-evolutivo/`, `notas/`, `docs/` — confunde, divide conhecimento e quebra o sync.
+**REGRA CRÍTICA**: existe APENAS UMA pasta válida pra documentação: **`cerebro/`** — no **TOP-LEVEL do repo maluco-dashboard** (raiz do projeto, mesmo nível de `app/` e `lib/`). É a única que o bot lê (config `evolutive_sources` no postgres `pasta='cerebro'` → `/opt/zazz/dashboard/cerebro/` no VPS). NÃO usar o `dashboard/cerebro/` (submódulo gitlink desatualizado — ver aviso abaixo) nem criar pastas paralelas (`cerebro-evolutivo/`, `notas/`, `docs/`).
 
-**Regra absoluta:** TUDO que envolva o projeto deve ser documentado em `dashboard/cerebro/`. Não importa se é uma anotação simples, dica, descoberta, bug ativo, decisão de arquitetura, ou correção minúscula — vai pra essa pasta. Sempre.
+**Regra absoluta:** TUDO que envolva o projeto deve ser documentado em `cerebro/`. Não importa se é uma anotação simples, dica, descoberta, bug ativo, decisão de arquitetura, ou correção minúscula — vai pra essa pasta. Sempre.
 
 **O que documentar (lista não-exaustiva):**
 - ✅ Bug encontrado (mesmo sem fix) → `bugs-abertos.md`
@@ -200,24 +211,24 @@ UI, banco e variáveis em Português (BR). Código: mix PT/EN conforme existente
 
 **Por que importa:** essas notas são **indexadas e injetadas como contexto no bot** — viram a memória evolutiva do sistema. Sem doc no Obsidian, o conhecimento se perde entre sessões do Claude Code. Já gastamos várias sessões redescobrindo o mesmo problema (ex: 6 sessões pra entender que workflow_history precisa ser atualizada também). **Não deixe isso acontecer de novo.**
 
-**Onde:** `dashboard/cerebro/` (pasta única, sem subpastas). É um submódulo Git — sincronizado para o VPS pelo cron `sync-evolutivo.sh` a cada minuto.
+**Onde:** `cerebro/` no TOP-LEVEL do repo (NÃO é submódulo — é tracked direto no maluco-dashboard). Sync pro VPS pelo `sync-evolutivo.sh` a cada minuto: `git pull origin main` + reindex (`POST /api/treinamento-evolutivo/sync`). ⚠️ Se o `git pull` do VPS travar (mudanças scp não-commitadas no clone), `scp` os `.md` pro `/opt/zazz/dashboard/cerebro/` e dispare o reindex manualmente.
 
 **Quando:** ao FINAL de qualquer task que envolva descoberta nova, mesmo que pequena. Antes de commitar o código, atualizar a nota correspondente. Não esperar o usuário pedir.
 
-**Notas de referência atual** (lista completa em [`INDEX.md`](dashboard/cerebro/INDEX.md)):
-- [`INDEX.md`](dashboard/cerebro/INDEX.md) — **MAPA COMPLETO de tudo que existe + comandos de diagnóstico + troubleshooting**
-- [`arquitetura-geral.md`](dashboard/cerebro/arquitetura-geral.md) — visão geral do sistema, stack, fluxos
-- [`workflow-n8n.md`](dashboard/cerebro/workflow-n8n.md) — estrutura, padrões, regras operacionais do workflow
-- [`agent-loop-tool-use.md`](dashboard/cerebro/agent-loop-tool-use.md) — agent loop, 9 tools, cache split
-- [`deploy-workflow.md`](dashboard/cerebro/deploy-workflow.md) — método correto de deploy (workflow_entity + workflow_history)
-- [`tool-choice-forcado.md`](dashboard/cerebro/tool-choice-forcado.md) — anti-alucinação via tool_choice forçado
-- [`detecta-resolvido.md`](dashboard/cerebro/detecta-resolvido.md) — fluxo paralelo de auto-resolver tarefa
-- [`teste-sintetico-webhook.md`](dashboard/cerebro/teste-sintetico-webhook.md) — testar bot via curl
-- [`bugs-abertos.md`](dashboard/cerebro/bugs-abertos.md) — TODO de problemas conhecidos
+**Notas de referência atual** (lista completa em [`INDEX.md`](cerebro/INDEX.md)):
+- [`INDEX.md`](cerebro/INDEX.md) — **MAPA COMPLETO de tudo que existe + comandos de diagnóstico + troubleshooting**
+- [`arquitetura-geral.md`](cerebro/arquitetura-geral.md) — visão geral do sistema, stack, fluxos
+- [`workflow-n8n.md`](cerebro/workflow-n8n.md) — estrutura, padrões, regras operacionais do workflow
+- [`agent-loop-tool-use.md`](cerebro/agent-loop-tool-use.md) — agent loop, 9 tools, cache split
+- [`deploy-workflow.md`](cerebro/deploy-workflow.md) — método correto de deploy (workflow_entity + workflow_history)
+- [`tool-choice-forcado.md`](cerebro/tool-choice-forcado.md) — anti-alucinação via tool_choice forçado
+- [`detecta-resolvido.md`](cerebro/detecta-resolvido.md) — fluxo paralelo de auto-resolver tarefa
+- [`teste-sintetico-webhook.md`](cerebro/teste-sintetico-webhook.md) — testar bot via curl
+- [`bugs-abertos.md`](cerebro/bugs-abertos.md) — TODO de problemas conhecidos
 
-**`cerebro/` no root do projeto** (sem submódulo) é cópia local antiga, não-sincronizada. Ignorar e usar SEMPRE `dashboard/cerebro/` (submódulo).
+⚠️ **NÃO confundir (corrigido 20/06/2026):** o `cerebro/` **top-level** (tracked direto no maluco-dashboard) é o CANÔNICO — é ele que o VPS pulla e o bot indexa. Já o **`dashboard/cerebro/`** é um SUBMÓDULO (gitlink) com história divergente/desatualizada — **NÃO editar lá** (não chega no bot). Editar SEMPRE o `cerebro/` top-level → commit no maluco-dashboard → push. (A doc antiga dizia o contrário e fez notas irem pro lugar errado.)
 
-**Histórico mai/2026:** existia uma pasta paralela `dashboard/cerebro-evolutivo/` com nomes em kebab-case que NÃO era lida pelo bot (config no postgres apontava pra `cerebro/`). Causou várias notas técnicas serem invisíveis. Foi consolidada em `dashboard/cerebro/`. Não recriar essa pasta.
+**Histórico mai/2026:** existia uma pasta paralela `dashboard/cerebro-evolutivo/` com nomes em kebab-case que NÃO era lida pelo bot (config no postgres apontava pra `cerebro/`). Causou várias notas técnicas serem invisíveis. Foi consolidada em `cerebro/`. Não recriar essa pasta.
 
 ## 📚 Leitura obrigatória por contexto
 
@@ -225,15 +236,15 @@ ANTES de iniciar uma task que toque uma das áreas abaixo, leia a nota correspon
 
 | Se a task envolve... | Leia ANTES |
 |---|---|
-| Editar nó Code do workflow N8N (Monta Prompt, Claude API, etc) | [`deploy-workflow.md`](dashboard/cerebro/deploy-workflow.md) — método correto via `deploy_workflow.py` + por que SQLite direto não basta |
-| Mudar prompt / system prompt / cache split | [`agent-loop-tool-use.md`](dashboard/cerebro/agent-loop-tool-use.md) — bloco estável vs dinâmico, regras de cache |
-| Testar bot sem mandar mensagem real no WhatsApp | [`teste-sintetico-webhook.md`](dashboard/cerebro/teste-sintetico-webhook.md) — payload do Filter1 + script `check_exec.py` |
-| Mexer no fluxo do workflow N8N (nodes, conexões) | [`workflow-n8n.md`](dashboard/cerebro/workflow-n8n.md) — estrutura, nodes críticos, regras de SQLite/WAL |
-| Encontrar bug ou comportamento estranho | [`bugs-abertos.md`](dashboard/cerebro/bugs-abertos.md) — talvez já está mapeado lá |
-| Ver script `fix_*.py` na raiz do projeto | [`fix-scripts-historicos.md`](dashboard/cerebro/fix-scripts-historicos.md) — todos são one-shot já aplicados, NÃO rodar |
-| Tools do agent loop (`buscar_pop`, `criar_tarefa_notion`, etc) | [`agent-loop-tool-use.md`](dashboard/cerebro/agent-loop-tool-use.md) — schemas + regras por tool |
-| Sistema de chamados / importação | [`Chamados.md`](dashboard/cerebro/Chamados.md) |
-| Filtros por tipo de grupo (Internet vs Design, tipos_filtro_entrega) | [`multigrupo-tipos-implementado.md`](dashboard/cerebro/multigrupo-tipos-implementado.md) |
+| Editar nó Code do workflow N8N (Monta Prompt, Claude API, etc) | [`deploy-workflow.md`](cerebro/deploy-workflow.md) — método correto via `deploy_workflow.py` + por que SQLite direto não basta |
+| Mudar prompt / system prompt / cache split | [`agent-loop-tool-use.md`](cerebro/agent-loop-tool-use.md) — bloco estável vs dinâmico, regras de cache |
+| Testar bot sem mandar mensagem real no WhatsApp | [`teste-sintetico-webhook.md`](cerebro/teste-sintetico-webhook.md) — payload do Filter1 + script `check_exec.py` |
+| Mexer no fluxo do workflow N8N (nodes, conexões) | [`workflow-n8n.md`](cerebro/workflow-n8n.md) — estrutura, nodes críticos, regras de SQLite/WAL |
+| Encontrar bug ou comportamento estranho | [`bugs-abertos.md`](cerebro/bugs-abertos.md) — talvez já está mapeado lá |
+| Ver script `fix_*.py` na raiz do projeto | [`fix-scripts-historicos.md`](cerebro/fix-scripts-historicos.md) — todos são one-shot já aplicados, NÃO rodar |
+| Tools do agent loop (`buscar_pop`, `criar_tarefa_notion`, etc) | [`agent-loop-tool-use.md`](cerebro/agent-loop-tool-use.md) — schemas + regras por tool |
+| Sistema de chamados / importação | [`Chamados.md`](cerebro/Chamados.md) |
+| Filtros por tipo de grupo (Internet vs Design, tipos_filtro_entrega) | [`multigrupo-tipos-implementado.md`](cerebro/multigrupo-tipos-implementado.md) |
 
 **Como ler:** use a tool `Read` direto no path da nota. Não leia o repo inteiro. Se a nota for grande (>500 linhas), procure section relevante via `Grep` antes do `Read`.
 

@@ -44,3 +44,16 @@ v3_10_fix_prepara_body_multi.py
 v3_11_fix_memoria_longa.py
 v3_12_continuous_learning.py
 v3_13_polling_filtro_tipo.py
+
+# Faxina jun/2026: scripts one-shot já aplicados, dumps e screenshots de debug.
+# Movidos pra cá pra não poluir a raiz (ver cerebro/fix-scripts-historicos.md).
+# Nada aqui é usado em runtime — é só histórico. Pode apagar a pasta sem medo.
+_arquivo_oneshot/
+
+# Padrões de lixo que reaparecem (one-shots, dumps, prints de debug). Se precisar
+# versionar um desses de propósito, use `git add -f <arquivo>`.
+fix_*.py
+patch_*.py
+*.v[0-9]_patched
+v3_nodes*.json
+erro_mes_*.png
