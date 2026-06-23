@@ -116,11 +116,12 @@ Mesma lógica acima: usar `deploy_workflow.py` adaptado (adicionar `"Claude API"
 | `tPUy8FowXH8v0skk` | Bot Memoria Longa | Extração batch de fatos a cada 6h |
 | `5qTcBwOdBeoU1l7i` | Bot Memoria Dia | Resumo diário por chat (~02h) |
 
-## 9 tools do agent loop
+## 10 tools do agent loop
 
 | Tool | Função |
 |---|---|
 | `buscar_cliente(q)` | Lookup cliente Zazz por nome/código |
+| `historico_cliente(q)` | Puxa o histórico aprendido do cliente (fatos de `bot_memoria_longa`) sob demanda — ver [`historico-cliente.md`](cerebro/historico-cliente.md) |
 | `buscar_chamados(q)` | Busca nos chamados importados via XLSX (Redis) |
 | `buscar_pop(q)` | Busca POP por query semântica |
 | `criar_tarefa_notion(...)` | Cria tarefa no Notion |

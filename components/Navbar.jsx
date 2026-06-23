@@ -3,11 +3,12 @@ import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Sidebar from './Sidebar'
-import { LayoutDashboard, Brain, Ticket, Settings, MessageSquare, MessageCircle, Shield, LogOut, Menu, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, Brain, Ticket, Settings, MessageSquare, MessageCircle, Shield, LogOut, Menu, ChevronDown, Users } from 'lucide-react'
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/chamados', label: 'Chamados', icon: Ticket },
+  { href: '/clientes', label: 'Clientes', icon: Users },
   { href: '/chat', label: 'Chat', icon: MessageCircle },
 ]
 

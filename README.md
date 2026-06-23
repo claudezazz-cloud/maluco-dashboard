@@ -385,6 +385,7 @@ No fluxo v3, o nó **Claude API** roda um *agent loop*: o Claude pode chamar fer
 | Tool | Função |
 |------|--------|
 | `buscar_cliente(q)` | Lookup de cliente Zazz por nome/código |
+| `historico_cliente(q)` | Puxa o histórico/contexto aprendido do cliente (fatos duráveis) sob demanda |
 | `buscar_chamados(q)` | Busca nos chamados importados via XLSX (Redis) |
 | `buscar_pop(q)` | Busca POP por query semântica |
 | `criar_tarefa_notion(...)` | Cria tarefa no Notion |
