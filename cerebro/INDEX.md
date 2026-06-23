@@ -48,6 +48,7 @@ Mapa de todas as notas do projeto Maluco da IA. Atualizar quando adicionar/renom
 
 - [agent-loop-tool-use.md](agent-loop-tool-use.md) — agent loop, tools, cache split do prompt (cache nos 2 blocos)
 - [historico-cliente.md](historico-cliente.md) — tool `historico_cliente` + página /clientes (histórico do cliente sob demanda)
+- [extrator-lista-clientes.md](extrator-lista-clientes.md) — scraper diário (20:30) da lista de clientes do Routerbox → dashboard (Cod, CPF, Nome, Grupo)
 - [tool-choice-forcado.md](tool-choice-forcado.md) — anti-alucinação via tool_choice forçado (lembrete, chamados)
 - [detecta-resolvido.md](detecta-resolvido.md) — fluxo paralelo de auto-resolução de tarefas no Notion
 

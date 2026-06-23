@@ -56,4 +56,8 @@ fix_*.py
 patch_*.py
 *.v[0-9]_patched
 v3_nodes*.json
+
+# Planilhas de clientes/chamados — contêm PII (CPF, nomes). NUNCA versionar.
+*.xls
+*.xlsx
 erro_mes_*.png

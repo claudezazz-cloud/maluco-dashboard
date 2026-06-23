@@ -97,13 +97,19 @@ export default function ClientesPage() {
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'none', border: 'none', color: '#e5e7eb', cursor: 'pointer', textAlign: 'left' }}
                   >
                     {aberto ? <ChevronDown size={16} color="#6b7280" /> : <ChevronRight size={16} color="#6b7280" />}
-                    <span style={{ fontFamily: 'monospace', color: '#6b7280', fontSize: 13, minWidth: 60 }}>{c.cod}</span>
-                    <span style={{ fontWeight: 600 }}>{c.nome}</span>
-                    {c.n_fatos > 0 && (
-                      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#93c5fd', background: '#071de31a', padding: '2px 9px', borderRadius: 20 }}>
-                        <Brain size={12} /> {c.n_fatos}
-                      </span>
-                    )}
+                    <span style={{ fontFamily: 'monospace', color: '#6b7280', fontSize: 13, minWidth: 56, flexShrink: 0 }}>{c.cod}</span>
+                    <span style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                      <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nome}</span>
+                      {c.cpf && <span style={{ fontSize: 11, color: '#6b7280', fontFamily: 'monospace' }}>{c.cpf}</span>}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      {c.grupo && <span style={{ fontSize: 11, color: '#a5b4fc', background: '#1e1b4b', padding: '2px 8px', borderRadius: 6 }}>{c.grupo}</span>}
+                      {c.n_fatos > 0 && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#93c5fd', background: '#071de31a', padding: '2px 9px', borderRadius: 20 }}>
+                          <Brain size={12} /> {c.n_fatos}
+                        </span>
+                      )}
+                    </span>
                   </button>
                   {aberto && (
                     <div style={{ padding: '0 14px 14px 40px', display: 'flex', flexDirection: 'column', gap: 6 }}>

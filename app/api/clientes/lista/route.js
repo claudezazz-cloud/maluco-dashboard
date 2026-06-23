@@ -41,7 +41,7 @@ export async function GET(req) {
 
     const dataParams = [...params, PAGE_SIZE, page * PAGE_SIZE]
     const r = await query(
-      `SELECT c.cod, c.nome,
+      `SELECT c.cod, c.nome, c.cpf, c.grupo,
               COUNT(m.id)::int AS n_fatos,
               COALESCE(
                 json_agg(
@@ -55,7 +55,7 @@ export async function GET(req) {
        LEFT JOIN bot_memoria_longa m
          ON m.entidade_tipo='cliente' AND m.ativo=true AND split_part(m.entidade_id,' - ',1)=c.cod
        WHERE ${where}
-       GROUP BY c.cod, c.nome
+       GROUP BY c.cod, c.nome, c.cpf, c.grupo
        ${havingHist}
        ORDER BY ${comHistorico ? 'COUNT(m.id) DESC,' : ''} c.nome
        LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`,
