@@ -38,14 +38,18 @@ Use `deploy_workflow.py` (já no VPS em `/opt/zazz/dashboard/v3_dump/deploy_work
 # 2. SCP para o VPS:
 scp v3_dump/Monta_Prompt.js root@195.200.7.239:/opt/zazz/dashboard/v3_dump/
 
-# 3. Rodar o deploy:
+# 3. SEMPRE rodar o dry-run antes (não mexe em nada, só compara):
+ssh root@195.200.7.239 "python3 /opt/zazz/dashboard/v3_dump/deploy_workflow.py --check"
+# 4. Se o --check der OK, rodar o deploy real:
 ssh root@195.200.7.239 "python3 /opt/zazz/dashboard/v3_dump/deploy_workflow.py"
 ```
+
+⚠️ **Corrigido 22/06/2026:** os nós **'Monta Prompt' e 'Monta Prompt Relatório' DIVERGEM** (o Relatório filtra `redisHistory` pelo dia BRT). A versão antiga gravava o MESMO `Monta_Prompt.js` nos dois → **clobberava** a diferença do Relatório. A versão nova mantém UMA fonte (`Monta_Prompt.js` = nó 'Monta Prompt') e **gera o Relatório aplicando a divergência** (transform determinístico); aborta se não achar o anchor. Tem `--check` (dry-run). Versão antiga: `deploy_workflow.py.PERIGOSO.bak`.
 
 O script faz, em ordem:
 1. `docker stop n8n-n8n-1`
 2. `PRAGMA wal_checkpoint(TRUNCATE)` — consolida WAL antes de qualquer write
-3. Lê `workflow_entity.nodes`, atualiza Monta Prompt + Monta Prompt Relatório com novo código
+3. Lê `Monta_Prompt.js`, atualiza Monta Prompt (igual) + Monta Prompt Relatório (com o filtro de dia aplicado), com backup em `/root/nodes_backup_deploywf_*`
 4. Gera novo `versionId = uuid.uuid4()`
 5. `UPDATE workflow_entity SET nodes=?, versionId=?, updatedAt=NOW()`
 6. `UPDATE workflow_history SET nodes=?, connections=?, versionId=?, updatedAt=NOW()` ← **chave do fix**
@@ -162,7 +166,7 @@ input_tokens: ['6822']
 - [ ] Block 1 (dinâmico) **não** tem `cache_control`
 - [ ] `model: "claude-haiku-4-5-20251001"`
 - [ ] `redisHistory.slice(-10)` (não -20)
-- [ ] Após deploy, ambos `Monta Prompt` e `Monta Prompt Relatório` com mesmo conteúdo (deploy_workflow.py faz isso automaticamente)
+- [ ] Após deploy, `Monta Prompt` e `Monta Prompt Relatório` corretos — eles NÃO são idênticos (o Relatório tem o filtro de histórico por dia); o `--check` do deploy_workflow.py confirma que cada nó ficou com o código certo
 
 ## Resultado final
 

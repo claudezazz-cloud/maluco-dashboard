@@ -79,6 +79,8 @@ O script (`deploy_workflow.py`):
 5. Checkpoint TRUNCATE de novo
 6. Start n8n + chown 1000:1000
 
+⚠️ **Corrigido 22/06/2026:** rode SEMPRE `deploy_workflow.py --check` antes (dry-run que compara o que geraria com os nós vivos, sem mexer em nada). Os nós **Monta Prompt e Monta Prompt Relatório DIVERGEM** (o Relatório filtra histórico por dia) — a versão antiga do script clobberava essa diferença; a nova gera o Relatório aplicando a divergência e aborta se não achar o anchor. Para mudança pontual, prefira patch cirúrgico (`v3_dump/deploy_cache_fix.py` / `deploy_token_opt.py`). Ver [`agent-loop-tool-use.md`](cerebro/agent-loop-tool-use.md) e [`deploy-workflow.md`](cerebro/deploy-workflow.md).
+
 Se mudar o **agent_loop_code.js** (Claude API), o mesmo script funciona — basta adicionar `"Claude API"` à lista `NODES_TO_UPDATE` ou estender o script.
 
 **Verificação pós-deploy**: enviar mensagem teste via webhook e checar `bot_conversas.tokens_input` (alvo: 5–8k para "oi", não mais 30k+).

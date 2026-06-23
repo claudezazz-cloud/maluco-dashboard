@@ -57,7 +57,8 @@ Para evitar 429 por excesso de tokens (o N8N estava injetando 62k tokens/request
 - POPs = APENAS TÍTULOS (LEIA SEMPRE ⚠️ → buscar_pop obrigatório antes de responder)
 - `popsUsados = todosOsPops.map(p => p.titulo).join(', ')`
 - `redisHistory.slice(-10)`
-- ⚠️ **Os 2 nós DIVERGEM** (Monta Prompt Relatório filtra `redisHistory` pelo dia BRT, linha ~441). Por isso **`deploy_workflow.py` é PERIGOSO** — grava o MESMO `Monta_Prompt.js` nos dois, clobberando a diferença do Relatório. **Use patch cirúrgico**: lê o jsCode VIVO de cada nó e faz string-replace só do trecho. Template pronto em `v3_dump/deploy_cache_fix.py` e `deploy_token_opt.py` (mecanismo entity+history mesmo versionId + republish; backup em `/root/nodes_backup_*`).
+- ⚠️ **Os 2 nós DIVERGEM** (Monta Prompt Relatório filtra `redisHistory` pelo dia BRT, linha ~441). O **`deploy_workflow.py` foi CORRIGIDO (22/06/2026)**: antes gravava o MESMO `Monta_Prompt.js` nos dois (clobberava a diferença do Relatório); agora mantém UMA fonte (`Monta_Prompt.js` = nó 'Monta Prompt') e **gera o nó Relatório aplicando a divergência conhecida** (transform `...redisHistory.slice(-10),` → versão com filtro de dia). Se o anchor sumir, ABORTA (fail-safe). Tem **`--check`** (dry-run que compara o gerado com os nós vivos sem mexer em nada — rodar SEMPRE antes do deploy real). Versão antiga em `deploy_workflow.py.PERIGOSO.bak`.
+- Para mudança PONTUAL (1 trecho), prefira **patch cirúrgico** (lê o jsCode VIVO de cada nó, string-replace): templates em `v3_dump/deploy_cache_fix.py` e `deploy_token_opt.py`. Mesmo mecanismo (entity+history mesmo versionId + republish; backup em `/root/nodes_backup_*`).
 
 **Cache split — 2 breakpoints (corrigido 22/06/2026):** o system vai como 2 blocos, AMBOS com `cache_control: ephemeral`:
 ```js
