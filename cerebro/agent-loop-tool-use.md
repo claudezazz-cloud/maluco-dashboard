@@ -50,32 +50,38 @@ Para evitar 429 por excesso de tokens (o N8N estava injetando 62k tokens/request
 - Endpoint: `GET /api/grupos/tipos?chatId=...` → `{tipos: ['Internet', ...]}` (autenticado com `x-token`)
 - **Pegadinha:** `_vM_early` não existe na linha 40 onde o código roda — usar `$('Verifica Menção').first().json?.chatId` diretamente
 
-**Monta_Prompt.js e Monta_Prompt_Relatorio (mai/2026):**
+**Monta_Prompt.js e Monta_Prompt_Relatorio:**
 - `chamadosContext` = vazio — tool `buscar_chamados` sob demanda
-- `tarefasContext` = bloco DINÂMICO (não invalida cache)
-- `resolvidosContext` = bloco DINÂMICO (não invalida cache)
-- `evolutivoSection` = bloco DINÂMICO (notas Obsidian variam por mensagem via semantic search)
-- POPs = APENAS TÍTULOS para TODOS os POPs (incluindo LEIA SEMPRE)
-  - LEIA SEMPRE marcados com ⚠️ → bot chama buscar_pop obrigatoriamente antes de responder
-  - Outros POPs → bot chama buscar_pop antes de orientar qualquer processo
-- `popsUsados = todosOsPops.map(p => p.titulo).join(', ')` — não vazio (era bug que zerava o campo no dashboard)
-- `redisHistory.slice(-10)` (era -20)
-- Ambos os nós usam o MESMO código — `deploy_workflow.py` atualiza os 2 juntos
+- `tarefasContext` / `resolvidosContext` = bloco DINÂMICO
+- `evolutivoSection` + `memoriaContext` = **DESATIVADOS (22/06/2026)** — removidos do bloco dinâmico (`const dynamic = (resolvidosContext + tarefasContext + historicoSection + afterMarker + skillContext)`). Davam pouco valor pro bot (cerebro virou majoritariamente dev-doc; memória ia pro prompt toda hora) e inflavam o cache_creation. Compensação: system prompt reforçado (seção **🧠 CONTEXTO E MEMÓRIA** — usar buscar_cliente/buscar_chamados/buscar_pop, nunca inventar). Os nós upstream "Busca Evolutivo"/"Busca Memoria Contexto" ainda rodam, mas a saída é ignorada (reativar = re-adicionar as 2 vars no `const dynamic`).
+- POPs = APENAS TÍTULOS (LEIA SEMPRE ⚠️ → buscar_pop obrigatório antes de responder)
+- `popsUsados = todosOsPops.map(p => p.titulo).join(', ')`
+- `redisHistory.slice(-10)`
+- ⚠️ **Os 2 nós DIVERGEM** (Monta Prompt Relatório filtra `redisHistory` pelo dia BRT, linha ~441). Por isso **`deploy_workflow.py` é PERIGOSO** — grava o MESMO `Monta_Prompt.js` nos dois, clobberando a diferença do Relatório. **Use patch cirúrgico**: lê o jsCode VIVO de cada nó e faz string-replace só do trecho. Template pronto em `v3_dump/deploy_cache_fix.py` e `deploy_token_opt.py` (mecanismo entity+history mesmo versionId + republish; backup em `/root/nodes_backup_*`).
 
-**Por que o cache importa:** bloco estável vai com `cache_control: ephemeral`. Se dados dinâmicos (tarefas Notion, chamados resolvidos, EVOLUTIVO) ficam no estável, o cache invalida a cada request → todos os tokens contam como input (era 30k-60k). Com cache funcionando: só ~4-6k tokens_input no primeiro hit, ~1-2k em hits subsequentes.
+**Cache split — 2 breakpoints (corrigido 22/06/2026):** o system vai como 2 blocos, AMBOS com `cache_control: ephemeral`:
+```js
+const blocks = [ { type:'text', text: stable,  cache_control:{type:'ephemeral'} } ];
+if (dynamic) blocks.push({ type:'text', text: dynamic, cache_control:{type:'ephemeral'} }); // <- ESTE cache_control foi o fix
+```
+**O bug que existia:** só o bloco ESTÁVEL tinha cache_control. O agent loop **SOMA `input_tokens` de toda volta** (`totalIn += resp.usage.input_tokens`, até 5 iterações). Como o bloco DINÂMICO não era cacheado, era reenviado a preço cheio em CADA volta → mensagem que chama ferramenta somava 18-23k. Com cache_control nos DOIS blocos, voltas 2-5 leem tudo do cache (0.1×).
 
-**Bloco estável (cacheable):** system prompt template + POPs títulos + colaboradores = ~24k chars
-**Bloco dinâmico (input real):** evolutivo + memoria + resolvidosHoje + tarefas + histórico + regras + skill = ~16k chars
+**Regra:** dado que muda entre requests NÃO fica no estável (quebra cache cross-mensagem). `clienteInfo` ({{CLIENTES}}) ainda está no estável — varia quando há cliente buscado; mover pro dinâmico é ganho residual ainda não feito.
 
-**Regra:** qualquer dado que muda entre requests NÃO deve ficar no bloco estável. Mover para dinâmico ou tool.
+**Resultado 22/06/2026 (cache nos 2 blocos + evolutivo/memória off):**
+| tokens_input | antes | agora |
+|---|---|---|
+| "oi" (sem tool) | 5-8k | **325** |
+| pergunta de procedimento (chama buscar_pop) | 18-23k | **1.519** |
 
-**Resultado mai/2026 (após fix workflow_history + popsUsados + EVOLUTIVO dinâmico):**
+Bot continua respondendo certo (POP citado). `/relatorio` e `/chamados` seguem pesados (44-89k) porque processam as mensagens do dia inteiro — trabalho real, rodam 3×/dia, não vale degradar.
+
+**Resultado mai/2026 (fix anterior — workflow_history + popsUsados + EVOLUTIVO dinâmico):**
 | Métrica | Antes | Depois |
 |---|---|---|
 | tokens_input "oi" | 30.866 | 6.822 |
 | Modelo executado | claude-sonnet-4-6 | claude-haiku-4-5-20251001 |
 | System size | 79.990 | 40.789 |
-| chamadosCarregados | SIM (7398 chars) | NAO |
 | pops_usados (DB) | vazio (bug) | titles list ✓ |
 
 ## Regras importantes das tools
@@ -128,15 +134,15 @@ System prompt segue formato com cache:
 
 ```js
 system: [
-  { type: 'text', text: <bloco estável>, cache_control: { type: 'ephemeral' } },
-  { type: 'text', text: <bloco dinâmico (memória, histórico, skill)> }
+  { type: 'text', text: <bloco estável>,  cache_control: { type: 'ephemeral' } },
+  { type: 'text', text: <bloco dinâmico>, cache_control: { type: 'ephemeral' } } // 2º breakpoint (fix 22/06/2026)
 ]
 ```
 
-Estável = system_prompt + colaboradores + POPs + chamados.
-Dinâmico = histórico + memoria_contexto + skill ativada.
+Estável = system_prompt template + colaboradores + POPs (títulos) + clienteInfo.
+Dinâmico = resolvidosHoje + tarefas + histórico + skill. (evolutivo e memória **desativados** 22/06/2026.)
 
-Cache da Anthropic (5min TTL): após o 1º hit, repetições a 0.1× do custo.
+Cache da Anthropic (5min TTL): após o 1º hit, repetições a 0.1× do custo. **AMBOS os blocos** são cacheados — sem isso o bloco dinâmico era reenviado a preço cheio em cada volta do agent loop (somava 18-23k/msg).
 
 Placeholders do system prompt: `{{DATA}}` `{{ANO}}` `{{TODAY}}` `{{PROXIMOS_DIAS}}` `{{COLABORADORES}}` `{{CLIENTES}}` `{{POPS}}` `{{HISTORICO}}` `{{REGRAS}}`
 
