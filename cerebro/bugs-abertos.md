@@ -5,13 +5,13 @@ Lista viva de problemas conhecidos e pendentes. Marque com data quando resolver.
 
 ---
 
-## 🔴 ABERTO — Camada 2 "Bot Memoria Dia" (`5qTcBwOdBeoU1l7i`) erra a cada 30min (desde 25/05/2026)
+## ✅ Camada 2 "Bot Memoria Dia" (`5qTcBwOdBeoU1l7i`) errava a cada 30min (23/06/2026 — DESATIVADO)
 
-**Sintoma:** todas as execuções do workflow "Bot Memoria Dia" terminam em `error`. Última `bot_memoria_dia` produzida foi 25/05. Como a Camada 3 (Bot Memoria Longa) lia esses resumos, os fatos de cliente pararam de crescer (travou em ~27).
+**Sintoma:** todas as execuções do workflow "Bot Memoria Dia" terminavam em `error` (desde 25/05). Última `bot_memoria_dia` produzida foi 25/05. Como a Camada 3 lia esses resumos, os fatos de cliente pararam de crescer (travou em ~27).
 
-**Impacto hoje:** baixo. O `memoriaContext` foi desligado do prompt (token opt 22/06), então os resumos diários não são mais injetados. E o crescimento de fatos foi resolvido por outro caminho (extrator direto — ver [[historico-cliente]]). Mas o workflow ativo errando 48×/dia polui `execution_entity` (e talvez `bot_erros`).
+**Resolução (23/06, com OK do Franquelin):** workflow **DESATIVADO** — está superado. O `memoriaContext` saiu do prompt (token opt 22/06) e o crescimento de fatos foi resolvido pelo extrator direto ([[historico-cliente]]), então os resumos diários não eram mais usados. Comando: `docker exec n8n-n8n-1 n8n update:workflow --id=5qTcBwOdBeoU1l7i --active=false` + **restart do n8n** (o CLI só grava `active=0` no banco; o agendador em memória só solta o trigger após restart — `docker restart n8n-n8n-1`). Confirmado: `active=0`, bot principal voltou (webhook 200). Os outros 2 workflows de memória/bot seguem `active=1`.
 
-**Pendente:** ou **desativar** o workflow (`n8n update:workflow --id=5qTcBwOdBeoU1l7i --active=false`) já que está superado, ou achar a causa do erro e consertar (se quiserem manter os resumos diários da aba Admin→Memória). NÃO desativado ainda — aguardando OK do Franquelin.
+**Se quiserem os resumos diários de volta** (aba Admin→Memória): reativar + achar a causa do erro (não investigada — provavelmente o nó Claude ou a query de mensagens do dia).
 
 ---
 
