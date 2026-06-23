@@ -23,6 +23,16 @@ System prompt (seção 🧠 CONTEXTO E MEMÓRIA) instrui: *"Para o histórico/co
 - Tool no agent loop: **`v3_dump/deploy_agentloop_historico.py`** — patch cirúrgico no nó 'Claude API' (insere schema após `buscar_cliente` + handler antes de `criar_tarefa_notion`), com **`node --check`** antes de tocar o n8n e backup em `/root/nodes_backup_agentloop_*`. Mesmo mecanismo entity+history+republish de [[deploy-workflow]].
 - ⚠️ O nó 'Claude API' tem **API keys hardcoded** — o arquivo `v3_dump/agent_loop_code.js` NÃO vai pro git; edição é sempre no VPS.
 
+## Como o histórico CRESCE (extrator automático — 23/06/2026)
+Antes os fatos cresciam devagar (~27 em meses) porque a [[memoria-sistema]] Camada 3 lia os **resumos diários** (Camada 2) — e a Camada 2 (workflow "Bot Memoria Dia") **estava quebrada desde 25/05** (erro a cada 30min). Substituído por um extrator direto:
+
+- **`POST /api/memoria/extrair-clientes?horas=24&dry=0`** (`app/api/memoria/extrair-clientes/route.js`, token-auth): lê as mensagens de grupo das últimas N horas, manda pro **Claude Haiku** (chave `ANTHROPIC_API_KEY` no `.env` do VPS — reusa a do bot, NÃO vai pro git), que extrai **um fato durável por cliente mencionado com evento** (sem internet, instalação, carnê, reclamação, etc.). Casa o nome com `dashboard_clientes` pra ter o código e faz upsert em `bot_memoria_longa`.
+- **Match de cliente (conservador, anti-atribuição-errada):** código exato → nome exato → prefixo único → **fuzzy seguro** (1º + último nome batem E é único; pega "Rafael Fernando Fitz"→"Rafael Fernandes Fitz"). Ambíguo/não-achado = PULA (reportado em `pulados`).
+- **`?dry=1`** mostra o que extrairia SEM salvar (testar antes).
+- **Cron:** `30 0 * * *` (00:30 UTC = 21:30 BRT) lookback 24h. Log em `/var/log/extrair-clientes.log`. Dedup pela UNIQUE (entidade_tipo+entidade_id+fato) → ON CONFLICT incrementa `ocorrencias`.
+- **Resultado 1ª rodada (7 dias):** 99 msgs → 10 fatos → 8 salvos (27→35). Qualidade boa (ex.: "482 - Celinalva: roteador travado com sujeira e formigueiro").
+- ⚠️ **Camada 2 (Bot Memoria Dia, `5qTcBwOdBeoU1l7i`) segue quebrada/ativa** — erra a cada 30min, output não é mais usado (memoriaContext desligado). Candidata a desativar (ver [[bugs-abertos]]).
+
 ## Teste (validado 23/06)
 Webhook sintético "o que você sabe sobre o cliente Lucas Porto?" → bot chamou `historico_cliente`, respondeu com o fato ("upgrade 700Mb com ZAZZ TV"), **1.377 tokens**. API testada: `?q=10847` e `?q=Lucas Porto` retornam o cliente + fatos.
 

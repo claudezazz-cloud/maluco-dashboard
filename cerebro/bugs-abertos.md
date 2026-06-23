@@ -5,6 +5,16 @@ Lista viva de problemas conhecidos e pendentes. Marque com data quando resolver.
 
 ---
 
+## 🔴 ABERTO — Camada 2 "Bot Memoria Dia" (`5qTcBwOdBeoU1l7i`) erra a cada 30min (desde 25/05/2026)
+
+**Sintoma:** todas as execuções do workflow "Bot Memoria Dia" terminam em `error`. Última `bot_memoria_dia` produzida foi 25/05. Como a Camada 3 (Bot Memoria Longa) lia esses resumos, os fatos de cliente pararam de crescer (travou em ~27).
+
+**Impacto hoje:** baixo. O `memoriaContext` foi desligado do prompt (token opt 22/06), então os resumos diários não são mais injetados. E o crescimento de fatos foi resolvido por outro caminho (extrator direto — ver [[historico-cliente]]). Mas o workflow ativo errando 48×/dia polui `execution_entity` (e talvez `bot_erros`).
+
+**Pendente:** ou **desativar** o workflow (`n8n update:workflow --id=5qTcBwOdBeoU1l7i --active=false`) já que está superado, ou achar a causa do erro e consertar (se quiserem manter os resumos diários da aba Admin→Memória). NÃO desativado ainda — aguardando OK do Franquelin.
+
+---
+
 ## ✅ Relatório puxava PENDÊNCIA DE ONTEM num dia sem mensagens (18/06/2026 — RESOLVIDO)
 
 **Sintoma:** o relatório da manhã de hoje (18/06) reportou e cobrou "Celinalva Barbosa Lima (482)" — mas esse caso foi de ONTEM (17/06). Hoje o grupo não teve NENHUMA mensagem sobre Celinalva (só os comandos de rotina + um vídeo). O bot "puxou" um caso velho como se fosse de hoje.
