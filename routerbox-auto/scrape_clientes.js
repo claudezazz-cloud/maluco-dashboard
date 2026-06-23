@@ -136,13 +136,31 @@ async function exportarExcel(page) {
   }
   if (!baixar) { await dumpScreenshot(page, 'sem-baixar'); throw new Error('Link "Baixar" não apareceu') }
 
-  log('Link "Baixar" encontrado, baixando…')
-  const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 60000 }),
-    baixar.click(),
-  ])
+  log('Link "Baixar" encontrado…')
   const filepath = path.join(DOWNLOAD_DIR, `clientes-${Date.now()}.xls`)
-  await download.saveAs(filepath)
+
+  // O botão Baixar (#idBtnDown, onclick="downloadClick()") começa com class "disabled"
+  // enquanto o Routerbox gera o arquivo. Clicar disabled NÃO faz nada — esperar ativar.
+  log('Aguardando o botão "Baixar" ativar (arquivo terminar de gerar)…')
+  let ativo = false
+  const enStart = Date.now()
+  while (Date.now() - enStart < 120000) {
+    const cls = (await baixar.getAttribute('class').catch(() => '')) || ''
+    if (!/\bdisabled\b/.test(cls)) { ativo = true; break }
+    await page.waitForTimeout(1000)
+  }
+  log(ativo ? '  Baixar ativo, clicando…' : '  (Baixar ainda disabled após 120s — tentando mesmo assim)')
+
+  // Captura o download em QUALQUER aba (downloadClick() pode abrir popup/iframe).
+  let captured = null
+  const handler = (d) => { if (!captured) captured = d }
+  page.on('download', handler)
+  page.context().on('page', (np) => { try { np.on('download', handler) } catch {} })
+  await baixar.click().catch(() => {})
+  const dlStart = Date.now()
+  while (!captured && Date.now() - dlStart < 60000) await page.waitForTimeout(500)
+  if (!captured) { await dumpScreenshot(page, 'sem-download'); throw new Error('Download não iniciou após clicar "Baixar"') }
+  await captured.saveAs(filepath)
   log(`Arquivo salvo em ${filepath}`)
   return filepath
 }
