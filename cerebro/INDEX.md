@@ -36,6 +36,7 @@ Mapa de todas as notas do projeto Maluco da IA. Atualizar quando adicionar/renom
 
 ## 🚀 Deploy & operação
 
+- [dashboard-overview-online.md](dashboard-overview-online.md) — por que o card "BOTS ONLINE" dava 0/1 (workflow_id v2 + N8N_API_KEY vencida + group_chat_id); fix lê do SQLite do n8n
 - [deploy-workflow.md](deploy-workflow.md) — método correto de deploy (workflow_entity + workflow_history)
 - [deploy-rotas-nos.md](deploy-rotas-nos.md) — **receitas validadas jun/2026**: deploy de rota dashboard (scp+build+restart), nó n8n (deploy_*.py), system prompt (psql), testar sem WhatsApp, mention real Evolution, reindex cerebro
 - [repo-git-segredos.md](repo-git-segredos.md) — **estrutura do repo + faxina de segredos**: cerebro top-level vs submódulo, filter-repo, como commitar/pushar sem reintroduzir keys, por que o git pull do VPS trava

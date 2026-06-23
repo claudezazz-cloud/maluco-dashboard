@@ -1,7 +1,30 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { query } from '@/lib/db'
-import { getWorkflow, getExecutions } from '@/lib/n8n'
+import { execFileSync } from 'child_process'
+
+// Estado do n8n lido DIRETO do SQLite (o dashboard roda como root e o arquivo é world-readable).
+// Assim NÃO dependemos da N8N_API_KEY, que expira a cada ~3 meses e derrubava o card "online".
+const N8N_SQLITE = process.env.N8N_SQLITE_PATH || '/var/lib/docker/volumes/n8n_data/_data/database.sqlite'
+const N8N_STATE_PY = `
+import sqlite3, json, sys
+wf = sys.argv[1]
+try:
+    c = sqlite3.connect('file:' + sys.argv[2] + '?mode=ro', uri=True, timeout=5)
+    a = c.execute("SELECT active, name FROM workflow_entity WHERE id=?", (wf,)).fetchone()
+    e = c.execute("SELECT id, status, startedAt, stoppedAt FROM execution_entity WHERE workflowId=? ORDER BY id DESC LIMIT 1", (wf,)).fetchone()
+    c.close()
+    print(json.dumps({"active": bool(a[0]) if a else False, "name": (a[1] if a else None), "exec": ({"id": e[0], "status": e[1], "startedAt": e[2], "stoppedAt": e[3]} if e else None)}))
+except Exception as ex:
+    print(json.dumps({"error": str(ex)}))
+`
+function n8nStateFromDb(workflowId) {
+  try {
+    const out = execFileSync('python3', ['-c', N8N_STATE_PY, workflowId, N8N_SQLITE], { timeout: 6000 }).toString()
+    const d = JSON.parse(out)
+    return d.error ? null : d
+  } catch { return null }
+}
 
 export async function GET() {
   const session = await getSession()
@@ -13,79 +36,56 @@ export async function GET() {
     const primeiraFilialId = filiais[0]?.id
 
     const results = await Promise.all(filiais.map(async (filial) => {
-      const incluirDashboard = filial.id === primeiraFilialId
       let workflow = null
-      let executions = []
       let lastExecution = null
-
-      try {
-        if (filial.n8n_workflow_id) {
-          workflow = await getWorkflow(filial.n8n_workflow_id)
-          const execData = await getExecutions(filial.n8n_workflow_id, 50)
-          executions = execData?.data || []
-          lastExecution = executions[0] || null
+      let stateActive = null
+      if (filial.n8n_workflow_id) {
+        const st = n8nStateFromDb(filial.n8n_workflow_id)
+        if (st) {
+          stateActive = st.active
+          if (st.name) workflow = { name: st.name, active: st.active }
+          lastExecution = st.exec || null
         }
-      } catch {}
+      }
 
-      // Respostas do Claude hoje (timezone America/Sao_Paulo)
-      // Conta toda linha de bot_conversas — cada interação = 1 resposta do Claude
-      // Inclui: WhatsApp + Solicitações Programadas (chat_id = group_chat_id) + Dashboard /chat (chat_id LIKE 'dashboard-%')
-      // Dashboard /chat só conta na 1ª filial pra não duplicar entre filiais
+      // Respostas do Claude hoje (timezone America/Sao_Paulo).
+      // NOTA: o bot atende VÁRIOS grupos sob uma só filial, então contamos TODAS as
+      // interações do dia (não filtra por group_chat_id, que era um valor único e
+      // desatualizado — causava "0" mesmo com movimento). Não depende da API do n8n.
       let mensagensHoje = 0
       try {
-        const chatId = filial.group_chat_id
-        const baseQuery = `
+        const r = await query(`
           SELECT COUNT(*)::int AS total FROM bot_conversas
           WHERE (criado_em AT TIME ZONE 'America/Sao_Paulo')::date
               = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date
-        `
-        let r
-        if (chatId && incluirDashboard) {
-          r = await query(baseQuery + " AND (chat_id = $1 OR chat_id LIKE 'dashboard-%')", [chatId])
-        } else if (chatId) {
-          r = await query(baseQuery + ' AND chat_id = $1', [chatId])
-        } else if (incluirDashboard) {
-          r = await query(baseQuery + " AND chat_id LIKE 'dashboard-%'")
-        } else {
-          r = await query(baseQuery)
-        }
+        `)
         mensagensHoje = r.rows[0]?.total || 0
       } catch {}
 
-      // Erros hoje — fonte primária: bot_erros (populada pelo próprio workflow)
-      // Fallback: contagem de execuções do N8N com status 'error'
+      // Erros hoje — bot_erros (Postgres, populada pelo próprio workflow). Todos os grupos.
       let errosHoje = 0
       try {
-        const chatId = filial.group_chat_id
-        const baseQuery = `
+        const r = await query(`
           SELECT COUNT(*)::int AS total FROM bot_erros
           WHERE (criado_em AT TIME ZONE 'America/Sao_Paulo')::date
               = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date
-        `
-        const r = chatId
-          ? await query(baseQuery + ' AND chat_id = $1', [chatId])
-          : await query(baseQuery)
+        `)
         errosHoje = r.rows[0]?.total || 0
-      } catch {
-        // Fallback para execuções do N8N se a tabela bot_erros não existir ainda
-        const today = new Date().toISOString().split('T')[0]
-        errosHoje = executions.filter(e => e.status === 'error' && e.startedAt?.startsWith(today)).length
-      }
+      } catch {}
 
-      // "Online" — considerado online se:
-      //   1) workflow.active === true (quando workflow_id configurado), OU
-      //   2) houve pelo menos uma mensagem no chat nos últimos 15 minutos (heurística)
-      let online = workflow?.active === true
-      if (!online) {
+      // Online: estado REAL do workflow (lido do SQLite do n8n). Se não conseguiu ler,
+      // cai pra heurística de atividade recente (últimos 40min).
+      let online
+      if (stateActive !== null) {
+        online = stateActive === true
+      } else {
+        online = false
         try {
-          const chatId = filial.group_chat_id
-          const recenteQuery = `
-            SELECT 1 FROM mensagens
-            WHERE data_hora >= NOW() - INTERVAL '15 minutes'
-            ${chatId ? 'AND chat_id = $1' : ''}
-            LIMIT 1
-          `
-          const r = chatId ? await query(recenteQuery, [chatId]) : await query(recenteQuery)
+          const r = await query(`
+            SELECT 1 WHERE
+              EXISTS (SELECT 1 FROM bot_conversas WHERE criado_em >= NOW() - INTERVAL '40 minutes')
+              OR EXISTS (SELECT 1 FROM mensagens WHERE data_hora >= NOW() - INTERVAL '40 minutes')
+          `)
           if (r.rows.length > 0) online = true
         } catch {}
       }
