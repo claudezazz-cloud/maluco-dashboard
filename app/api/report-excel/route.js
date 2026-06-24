@@ -204,11 +204,12 @@ export async function POST(req) {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: rowBgColor };
             cell.font = { name: 'Calibri', color: { argb: 'FF000000' } };
             cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            if (colNumber === 4 || colNumber === 5) {
-              cell.alignment = { vertical: 'middle', horizontal: 'center' }; // Status, Prazo
-            } else {
-              cell.alignment = { vertical: 'middle', horizontal: 'left' };
-            }
+            // wrapText: texto longo (descrição/obs/cliente) quebra linha em vez de ser cortado
+            cell.alignment = {
+              vertical: 'top',
+              horizontal: (colNumber === 4 || colNumber === 5) ? 'center' : 'left', // Status, Prazo centralizados
+              wrapText: true,
+            };
           });
           currentRow++;
         });
@@ -286,8 +287,11 @@ export async function POST(req) {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: rowBgColor };
             cell.font = { name: 'Calibri', color: rowTextColor };
             cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-            if (colNumber === 6 || colNumber === 8) cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            else cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            cell.alignment = {
+              vertical: 'top',
+              horizontal: (colNumber === 6 || colNumber === 8) ? 'center' : 'left',
+              wrapText: true, // endereço/cliente longos quebram linha em vez de cortar
+            };
           });
           currentRow++;
         });

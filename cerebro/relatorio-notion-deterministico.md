@@ -1,5 +1,7 @@
 # Relatório Notion (planilha) — filtro DETERMINÍSTICO no servidor (17/06/2026)
 
+> **Ajuste 24/06:** planilha vinha com **texto cortado** (colunas de largura fixa, sem quebra). Fix em `app/api/report-excel/route.js`: `cell.alignment.wrapText=true` + `vertical:'top'` em TODAS as células de dados (abas Notion e Chamados). Texto longo agora quebra linha em vez de cortar. Verificado gerando a planilha (66 células com wrap).
+
 ## Sintoma
 Na solicitação programada "PARADOS NOTION SUB" (07:35, filtra "Luiz Felipe ou Negos"), o bot mandou texto _"16 do Luiz Felipe e **2 do Franquelin/Negos**"_. Franquelin não foi pedido. Verdade no Notion (status Parado): **17 Luiz, 3 Negos, 9 Franquelin — nenhuma tarefa com Franquelin+Negos juntos**. Ou seja, o bot **subcontou** (16/2 em vez de 17/3) e **inventou** o rótulo "Franquelin/Negos".
 
