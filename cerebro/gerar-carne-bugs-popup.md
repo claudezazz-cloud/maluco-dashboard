@@ -29,7 +29,7 @@ A conclusão de 10/06 ("Routerbox throttla o IP do VPS") estava **ERRADA**. A pi
 - **`tools/gerar_carne/faturar.js`** — reescrito: waits adaptativos (espera opção/elemento, não tempo fixo), skip de já-faturado, sucesso por reset de form, vídeo 1.5x.
 - **`tools/gerar_carne/run_local.mjs`** — runner local (roda do PC, IP residencial). Uso:
   ```bash
-  RB_USER="ldl.luiz..garcia" RB_PASS="123mudar" RB_HEADLESS=false RB_VIDEO_DIR=videos \
+  RB_USER="ldl.luiz..garcia" RB_PASS="«senha no .env do VPS»" RB_HEADLESS=false RB_VIDEO_DIR=videos \
     node run_local.mjs 13543 "Junho,Julho,Agosto,Setembro,Outubro,Novembro"
   ```
 - **`next.config.js`** — webpack `externals` pra playwright/puppeteer (senão o build do Next quebra com require dinâmico do stealth).
@@ -46,7 +46,7 @@ O fluxo "GERE CARNÊ DE FULANO" no WhatsApp está **funcionando end-to-end**:
 5. **GUARDA DE NEGÓCIO**: `worker.js` bloqueia **Dezembro** (gera boleto 2027, proibido). Regra também no system prompt.
 
 ### Config (no `.env` do dashboard no VPS)
-- `RB_USER=ldl.luiz..garcia`, `RB_PASS=123mudar` (conta de teste; trocar por conta dedicada)
+- `RB_USER=ldl.luiz..garcia`, `RB_PASS=«senha no .env do VPS»` (conta de teste; trocar por conta dedicada)
 - `RB_VIDEO_DIR`, `RB_VIDEO_SPEED=1.5`
 - `EVO_URL=https://lanlunar-evolution.cloudfy.live`, `EVO_KEY=...`, `EVO_INSTANCE=ZazzClaude` ⚠️ **Evolution ainda é CloudFy** (não migrou pro Hostinger; instância `ZazzClaude` viva)
 - `CARNE_CHAT_DEFAULT=120363409735124488@g.us` (Claudebot2)
