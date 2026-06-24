@@ -23,7 +23,7 @@ Atualiza `dashboard_clientes` 1x/dia com a base completa do Routerbox, agora com
 
 ## Cron e conta
 - **`30 23 * * *`** (23:30 UTC = **20:30 BRT**), log em `/var/log/routerbox-clientes.log`.
-- ⚠️ **Conta RBX compartilhada** (`ldl.franquelin.2`) — por isso roda 20:30, **fora do expediente**: se um humano estiver logado no Routerbox, a sessão do bot cai (mesmo problema do gerar_carne). NÃO rodar durante o dia.
+- ⚠️ **Conta RBX = `ldl.luiz..garcia`** (trocada de `ldl.franquelin.2` em 24/06; mesma conta do gerar_carne — ver [[backup-custos-conta-rbx]]). Ainda **compartilhada** → roda 20:30, **fora do expediente**: se um humano logar com essa conta no Routerbox, a sessão do bot cai. NÃO rodar durante o dia.
 - ✅ **Teste live OK (23/06, 20:54):** roda fim a fim — login → Clientes>Cadastro → Opções>Excel → Baixar → 1128 clientes importados (com CPF e grupo).
 - 🐞 **Pegadinha do "Baixar" (resolvida):** o botão é `<a id="idBtnDown" onclick="downloadClick(); return false;" class="scButton_default disabled">` — começa com a **classe `disabled`** enquanto o Routerbox gera o .xls. Playwright clica mesmo assim (a "desabilitação" é por CSS, não pelo atributo `disabled`), mas o `downloadClick()` não faz nada → download nunca dispara. **Fix:** esperar a classe `disabled` SAIR do botão (poll até 120s) ANTES de clicar; e capturar o download em qualquer aba (`page` + popups). Sem isso dava "Timeout waiting for download".
 

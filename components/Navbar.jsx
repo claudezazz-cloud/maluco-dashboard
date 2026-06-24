@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Sidebar from './Sidebar'
-import { LayoutDashboard, Brain, Ticket, Settings, MessageSquare, MessageCircle, Shield, LogOut, Menu, ChevronDown, Users } from 'lucide-react'
+import { LayoutDashboard, Brain, Ticket, Settings, MessageSquare, MessageCircle, Shield, LogOut, Menu, ChevronDown, Users, DollarSign } from 'lucide-react'
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -16,6 +16,7 @@ const adminLinks = [
   { href: '/treinamento', label: 'Treinamento', icon: Brain },
   { href: '/system-prompt', label: 'Prompt', icon: Settings },
   { href: '/conversas', label: 'Conversas', icon: MessageSquare },
+  { href: '/custos', label: 'Custos', icon: DollarSign },
   { href: '/admin', label: 'Admin', icon: Shield },
 ]
 
