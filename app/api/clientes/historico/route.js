@@ -19,7 +19,7 @@ export async function GET(req) {
   try {
     // 1. Resolve clientes que casam com q (por nome sem acento ou por código)
     const clientesRes = await query(
-      `SELECT cod, nome
+      `SELECT cod, nome, grupo
        FROM dashboard_clientes
        WHERE ativo = true AND (
          cod = $1
@@ -56,6 +56,7 @@ export async function GET(req) {
     const resultados = clientes.map(c => ({
       cod: c.cod,
       nome: c.nome,
+      grupo: c.grupo || '',
       fatos: fatosPorCod[c.cod] || [],
     }))
 

@@ -18,6 +18,10 @@ Os **fatos aprendidos** em `bot_memoria_longa` (`entidade_tipo='cliente'`, `enti
 ## Como o bot usa
 System prompt (seção 🧠 CONTEXTO E MEMÓRIA) instrui: *"Para o histórico/contexto aprendido de um cliente, USE historico_cliente ANTES de responder algo sobre ele."* O `buscar_cliente` continua pra achar o código exato (faturamento); `buscar_chamados` pra tickets. Os três são complementares.
 
+**Campos que o bot vê (24/06):** `historico_cliente` devolve **código, nome, GRUPO** e os fatos. O grupo foi adicionado na API (`SELECT ... grupo`) e no handler do nó Claude API (`[grupo X]` na saída — deploy via `v3_dump/deploy_agentloop_grupo.py`). O bot **NÃO vê CPF** (fica só no dashboard, pra humanos).
+
+**System prompt — ACESSO AOS CLIENTES (24/06):** explicado que o bot **NÃO acessa o Routerbox direto**; a base vem do dashboard via scraping 1x/dia ([[extrator-lista-clientes]]) → pode estar ~1 dia desatualizada (cliente novo de hoje pode só aparecer amanhã). Vê só código, nome, grupo e histórico (se houver).
+
 ## Deploy
 - Dashboard (rotas + página + Navbar): `scp` + `npm run build` + `pm2 restart maluco-dashboard`.
 - Tool no agent loop: **`v3_dump/deploy_agentloop_historico.py`** — patch cirúrgico no nó 'Claude API' (insere schema após `buscar_cliente` + handler antes de `criar_tarefa_notion`), com **`node --check`** antes de tocar o n8n e backup em `/root/nodes_backup_agentloop_*`. Mesmo mecanismo entity+history+republish de [[deploy-workflow]].
