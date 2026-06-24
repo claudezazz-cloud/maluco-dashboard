@@ -25,8 +25,11 @@ function loadEnv() {
 loadEnv()
 
 const RB_LOGIN_URL = process.env.RB_LOGIN_URL || 'https://routerbox.zazzinternet.com/routerbox/app_login/'
-const RB_USER = process.env.RB_USER
-const RB_PASS = process.env.RB_PASS
+// Conta dedicada do scraper de CLIENTES (Luiz). Cai pro RB_USER/RB_PASS default se não setado.
+// O scraper de CHAMADOS (scrape.js) usa o default — precisa da conta que enxerga TODOS os
+// chamados (Franquelin); a conta do Luiz só vê 2 (visão restrita).
+const RB_USER = process.env.RB_USER_CLIENTES || process.env.RB_USER
+const RB_PASS = process.env.RB_PASS_CLIENTES || process.env.RB_PASS
 const DASHBOARD_URL = process.env.DASHBOARD_URL || 'https://dashboard.srv1537041.hstgr.cloud'
 const TOKEN = process.env.CHAMADOS_AUTO_TOKEN || 'CHAMADOS_AUTO_2026'
 const HEADLESS = process.env.HEADLESS !== '0'

@@ -14,8 +14,14 @@ Três melhorias de saúde/operação (ideias escolhidas pelo Franquelin).
 - Mostra a economia da otimização de 22/06 (cache + enxugar contexto). Mês atual (24/06): ~228 msgs, ~3.9M tokens, ~R$ 25.
 - Link no Navbar (admin), ícone $.
 
-## 3. Conta do Routerbox → Luiz (`ldl.luiz..garcia`)
-- Os scrapers (`routerbox-auto/scrape.js` chamados + `scrape_clientes.js`) usavam `ldl.franquelin.2`. Trocado pra **`ldl.luiz..garcia`** (a conta que o gerar_carne já usa; creds no `.env` do dashboard) a pedido do Franquelin. Atualizado em `/opt/zazz/routerbox-auto/.env` (RB_USER/RB_PASS; backup `.env.bak.*`).
-- Verificado: scraper de clientes roda fim a fim com a conta do Luiz (1128 clientes). ⚠️ Continua **conta compartilhada** ([[project_gerar_carne_conta_compartilhada]]) — se um humano logar com a conta do Luiz, derruba a sessão do bot. Por isso os scrapers rodam fora do pico (clientes 20:30; chamados 07:00/11:20/17:10). Dedicar uma conta só pro bot ainda é o fix ideal.
+## 3. Conta do Routerbox — SPLIT por robô (corrigido 24/06)
+⚠️ **Pegadinha (24/06):** troquei TODOS os scrapers pra `ldl.luiz..garcia` e a **planilha de chamados saiu com 2 em vez de ~20** — a conta do Luiz tem **visão restrita** dos chamados (vê quase nada); a do Franquelin vê todos. Cada conta enxerga um subconjunto diferente da grade de chamados.
+
+**Config final** (`/opt/zazz/routerbox-auto/.env`):
+- **Chamados** (`scrape.js`) → `RB_USER`/`RB_PASS` = **`ldl.franquelin.2`** (vê TODOS os chamados). NÃO trocar pra Luiz.
+- **Clientes** (`scrape_clientes.js`) → `RB_USER_CLIENTES`/`RB_PASS_CLIENTES` = **`ldl.luiz..garcia`** (a lista de clientes é a base inteira, independe da conta; funciona). `scrape_clientes.js` lê `RB_USER_CLIENTES` com fallback no default.
+- **gerar_carne** → `ldl.luiz..garcia` (no `.env` do dashboard, inalterado).
+
+**Lição:** no Routerbox a VISÃO DE CHAMADOS depende da conta/permissão. Clientes e faturamento não. ⚠️ Todas ainda **compartilhadas** ([[project_gerar_carne_conta_compartilhada]]) — rodam fora do pico. Conta dedicada com permissão total ainda é o fix ideal.
 
 Ver: [[extrator-lista-clientes]] · [[Chamados]] · [[Infraestrutura]]
