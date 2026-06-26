@@ -52,6 +52,7 @@ Mapa de todas as notas do projeto Maluco da IA. Atualizar quando adicionar/renom
 - [extrator-lista-clientes.md](extrator-lista-clientes.md) — scraper diário (20:30) da lista de clientes do Routerbox → dashboard (Cod, CPF, Nome, Grupo)
 - [tool-choice-forcado.md](tool-choice-forcado.md) — anti-alucinação via tool_choice forçado (lembrete, chamados)
 - [detecta-resolvido.md](detecta-resolvido.md) — fluxo paralelo de auto-resolução de tarefas no Notion
+- [contato-reclamacao-encaminhada.md](contato-reclamacao-encaminhada.md) — reclamação encaminhada + contato compartilhado → atribuir ao CLIENTE (não a quem postou); captura nome do contato
 
 ## 📚 Skills / Comandos
 
