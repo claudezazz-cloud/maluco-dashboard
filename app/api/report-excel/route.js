@@ -217,11 +217,12 @@ export async function POST(req) {
 
     } else {
       // ROUTERBOX COLUMNS
+      // Cód. = código do CLIENTE (cod_cliente). A coluna "End Nº" foi removida (mostrava o
+      // número do CHAMADO, não do endereço — não é necessária).
       worksheet.columns = [
         { header: 'Cód.', key: 'id', width: 10 },
         { header: 'Cliente', key: 'cliente', width: 45 },
         { header: 'Endereço', key: 'endereco', width: 40 },
-        { header: 'End Nº', key: 'numero', width: 10 },
         { header: 'Tópico', key: 'topico', width: 20 },
         { header: 'Agendamento', key: 'agendamento', width: 22 },
         { header: 'Tempo Restante', key: 'tempo_restante', width: 25 },
@@ -235,7 +236,7 @@ export async function POST(req) {
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
       });
-      worksheet.autoFilter = 'A1:H1';
+      worksheet.autoFilter = 'A1:G1';
 
       let currentRow = 2;
       let chamados = [];
@@ -264,7 +265,7 @@ export async function POST(req) {
 
       for (const [topico, items] of Object.entries(groupedByTopico)) {
         const catRow = worksheet.getRow(currentRow);
-        worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+        worksheet.mergeCells(`A${currentRow}:G${currentRow}`);
         const mergedCell = worksheet.getCell(`A${currentRow}`);
         
         mergedCell.value = getTopicoDisplayName(topico);
@@ -280,7 +281,7 @@ export async function POST(req) {
         items.forEach(ch => {
           const row = worksheet.getRow(currentRow);
           row.values = {
-            id: ch.id || '', cliente: ch.cliente || '', endereco: ch.endereco || '', numero: ch.numero || '',
+            id: ch.cod_cliente || ch.id || '', cliente: ch.cliente || '', endereco: ch.endereco || '',
             topico: ch.topico || '-', agendamento: ch.agendamento || '', tempo_restante: ch.tempo_restante || '', situacao: ch.situacao || ''
           };
           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
@@ -289,7 +290,7 @@ export async function POST(req) {
             cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             cell.alignment = {
               vertical: 'top',
-              horizontal: (colNumber === 6 || colNumber === 8) ? 'center' : 'left',
+              horizontal: (colNumber === 5 || colNumber === 7) ? 'center' : 'left', // Agendamento, Situação
               wrapText: true, // endereço/cliente longos quebram linha em vez de cortar
             };
           });
