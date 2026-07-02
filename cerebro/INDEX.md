@@ -50,6 +50,7 @@ Mapa de todas as notas do projeto Maluco da IA. Atualizar quando adicionar/renom
 - [agent-loop-tool-use.md](agent-loop-tool-use.md) — agent loop, tools, cache split do prompt (cache nos 2 blocos)
 - [historico-cliente.md](historico-cliente.md) — tool `historico_cliente` + página /clientes (histórico do cliente sob demanda)
 - [extrator-lista-clientes.md](extrator-lista-clientes.md) — scraper diário (20:30) da lista de clientes do Routerbox → dashboard (Cod, CPF, Nome, Grupo)
+- [carnes-videos-dashboard.md](carnes-videos-dashboard.md) — aba "Carnês gerados" em /clientes (nome + vídeo da geração, streaming com Range)
 - [tool-choice-forcado.md](tool-choice-forcado.md) — anti-alucinação via tool_choice forçado (lembrete, chamados)
 - [detecta-resolvido.md](detecta-resolvido.md) — fluxo paralelo de auto-resolução de tarefas no Notion
 - [contato-reclamacao-encaminhada.md](contato-reclamacao-encaminhada.md) — reclamação encaminhada + contato compartilhado → atribuir ao CLIENTE (não a quem postou); captura nome do contato

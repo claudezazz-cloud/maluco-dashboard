@@ -5,6 +5,18 @@ Lista viva de problemas conhecidos e pendentes. Marque com data quando resolver.
 
 ---
 
+## ✅ Alertas Notion (`Urf233bK6RqoSlQs`) errava TODA execução — fiação errada (02/07/2026 — RESOLVIDO)
+
+**Sintoma:** 1.440 erros/dia (1/min) — "Node 'Busca Grupos OK' hasn't been executed" no nó `Filtra e Decide`. Como a retenção do n8n só guarda ~4 dias de execução, não dá pra saber há quanto tempo estava assim — **os alertas de "Tarefa Ok" e "Entrega" NÃO estavam saindo** (quebrado silenciosamente, possivelmente desde o multigrupo de maio).
+
+**Causa:** o código multigrupo de `Filtra e Decide`/`Filtra Entrega` lê os grupos DENTRO do código (`$('Busca Grupos OK')`), mas a FIAÇÃO ainda era a antiga (grupos ligados DEPOIS do filtro: `Tem Novas? → Busca Grupos OK → Envia`). Nó referenciado antes de rodar ⇒ throw em toda execução.
+
+**Fix (só conexões, código intacto):** `Busca Visto Redis → Busca Grupos OK → Filtra e Decide → Tem Novas? → Envia WhatsApp Notif` (e o espelho no ramo Entrega). Script `/tmp/fix_alertas_notion.py` (mesmo mecanismo entity+history+republish); backup `/root/alertas_notion_backup_*`. Verificado: execuções `success` desde o deploy.
+
+**Pegadinhas anotadas:** o trigger se chama "A cada 5 minutos" mas o parâmetro real é **1 minuto** (nome enganoso); esse workflow não tem linha em `workflow_published_version` (unpublish/publish tolerante).
+
+---
+
 ## ✅ Camada 2 "Bot Memoria Dia" (`5qTcBwOdBeoU1l7i`) errava a cada 30min (23/06/2026 — DESATIVADO)
 
 **Sintoma:** todas as execuções do workflow "Bot Memoria Dia" terminavam em `error` (desde 25/05). Última `bot_memoria_dia` produzida foi 25/05. Como a Camada 3 lia esses resumos, os fatos de cliente pararam de crescer (travou em ~27).
