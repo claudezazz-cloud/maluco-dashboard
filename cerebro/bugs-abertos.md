@@ -5,6 +5,12 @@ Lista viva de problemas conhecidos e pendentes. Marque com data quando resolver.
 
 ---
 
+## 🟡 ABERTO — Token interno das rotas é fallback hardcoded (`MALUCO_POPS_2026`)
+
+Confirmado na revisão adversarial de 02/07: `process.env.MALUCO_INTERNAL_TOKEN || 'MALUCO_POPS_2026'` — a env **não está setada no VPS**, então o fallback (commitado no git) é o token ativo de TODAS as rotas internas (cobrar, processar, lembretes, clientes/buscar, detectar-promessas...). Risco moderado (repo privado), mas rotação é higiene devida. **Fix exige coordenação**: gerar token novo → setar `MALUCO_INTERNAL_TOKEN` no `.env` → atualizar TODOS os crons do VPS + nós HTTP do n8n que mandam `x-token` → só então remover o fallback do código. Não fazer por partes (quebra os crons).
+
+---
+
 ## ✅ Alertas Notion (`Urf233bK6RqoSlQs`) errava TODA execução — fiação errada (02/07/2026 — RESOLVIDO)
 
 **Sintoma:** 1.440 erros/dia (1/min) — "Node 'Busca Grupos OK' hasn't been executed" no nó `Filtra e Decide`. Como a retenção do n8n só guarda ~4 dias de execução, não dá pra saber há quanto tempo estava assim — **os alertas de "Tarefa Ok" e "Entrega" NÃO estavam saindo** (quebrado silenciosamente, possivelmente desde o multigrupo de maio).

@@ -96,7 +96,7 @@ export async function POST(req) {
 
   // Busca dados completos das msgs claims
   const pendentes = await query(`
-    SELECT ma.id, ma.mensagem, ma.tentativas, g.chat_id, g.nome AS grupo
+    SELECT ma.id, ma.mensagem, ma.tentativas, ma.criado_por, g.chat_id, g.nome AS grupo
     FROM mensagens_agendadas ma
     JOIN grupos_whatsapp g ON g.id = ma.grupo_id
     WHERE ma.id = ANY($1)
@@ -108,8 +108,20 @@ export async function POST(req) {
   const results = []
   for (const row of pendentes.rows) {
     try {
+      // Lembrete de PROMESSA (detector-promessas) não é cobrança: se o texto da promessa
+      // casar o regex de cobrança (ex.: "resolver a pendência do X") NÃO cancela — em dia
+      // fora do expediente ele REAGENDA +24h; e nunca passa pelo check de "já resolvido".
+      const ehPromessa = row.criado_por === 'detector-promessas'
       // Fora do expediente: equipe não trabalha → não envia cobrança (cancela pra não ficar pendurada).
       if (off && ehCobranca(row.mensagem)) {
+        if (ehPromessa) {
+          await query(
+            `UPDATE mensagens_agendadas SET status='pendente', agendar_para=NOW() + interval '24 hours' WHERE id=$1`,
+            [row.id]
+          )
+          results.push({ id: row.id, status: 'reagendado', motivo: off.motivo })
+          continue
+        }
         await query(
           `UPDATE mensagens_agendadas SET status='cancelado', enviado_em=NOW(), erro=$2 WHERE id=$1`,
           [row.id, 'cobrança pulada: ' + off.detalhe]
@@ -118,7 +130,7 @@ export async function POST(req) {
         continue
       }
       // Anti-cobrança-de-resolvido: se a cobrança já não tem pendência no Notion, pula.
-      if (await cobrancaResolvida(row.mensagem)) {
+      if (!ehPromessa && await cobrancaResolvida(row.mensagem)) {
         await query(
           `UPDATE mensagens_agendadas SET status='cancelado', enviado_em=NOW(), erro='cobrança pulada: pendência(s) já resolvida(s) no Notion' WHERE id=$1`,
           [row.id]

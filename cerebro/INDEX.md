@@ -54,6 +54,7 @@ Mapa de todas as notas do projeto Maluco da IA. Atualizar quando adicionar/renom
 - [tool-choice-forcado.md](tool-choice-forcado.md) — anti-alucinação via tool_choice forçado (lembrete, chamados)
 - [detecta-resolvido.md](detecta-resolvido.md) — fluxo paralelo de auto-resolução de tarefas no Notion
 - [contato-reclamacao-encaminhada.md](contato-reclamacao-encaminhada.md) — reclamação encaminhada + contato compartilhado → atribuir ao CLIENTE (não a quem postou); captura nome do contato
+- [lembretes-promessas.md](lembretes-promessas.md) — detector de promessas ("amanhã eu...") → lembrete automático no grupo (cron 30min, LLM por grupo, validação estrita)
 
 ## 📚 Skills / Comandos
 
