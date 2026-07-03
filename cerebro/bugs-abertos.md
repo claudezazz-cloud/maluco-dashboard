@@ -21,6 +21,8 @@ Confirmado na revisão adversarial de 02/07: `process.env.MALUCO_INTERNAL_TOKEN 
 
 **Pegadinhas anotadas:** o trigger se chama "A cada 5 minutos" mas o parâmetro real é **1 minuto** (nome enganoso); esse workflow não tem linha em `workflow_published_version` (unpublish/publish tolerante).
 
+**⚠️ Efeito colateral do fix (03/07) — ramo Entrega DESATIVADO de novo:** ao ressuscitar o workflow, o ramo **"Tarefa com entrega hoje"** voltou a funcionar depois de ~2 meses morto — e disparou à **MEIA-NOITE** (roda 1/min; à 00:00 a tarefa passa a "vencer hoje"), **duplicando** a cobrança da manhã (07:50, `mensagens_agendadas`, que foi construída justamente enquanto o alerta estava morto). Resultado: 2 cobranças da mesma tarefa (Lidiane Jardim), 1 fora de hora. Fix: **early-return no topo do nó `Filtra Entrega`** (`/tmp/desativa_entrega_alertas.py`, backup `/root/alertas_entrega_backup_*`) — o ramo **"Tarefa Ok" continua ativo**. Pra reativar o alerta de entrega um dia: remover o return e adicionar gate de horário comercial + dedup contra a cobrança da manhã. **Lição:** ao ressuscitar um sistema morto há meses, conferir se outro fluxo já foi criado pra cobrir o buraco — os dois juntos duplicam.
+
 ---
 
 ## ✅ Camada 2 "Bot Memoria Dia" (`5qTcBwOdBeoU1l7i`) errava a cada 30min (23/06/2026 — DESATIVADO)
